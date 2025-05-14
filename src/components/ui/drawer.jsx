@@ -7,10 +7,39 @@ import { cn } from "@/lib/utils"
 
 const Drawer = ({
   shouldScaleBackground = true,
+  direction = "bottom",
   ...props
-}) => (
-  <DrawerPrimitive.Root shouldScaleBackground={shouldScaleBackground} {...props} />
-)
+}) => {
+  // If direction is an object with responsive breakpoints
+  const [activeDirection, setActiveDirection] = React.useState(
+    typeof direction === 'object' && direction !== null ? direction.base : direction
+  );
+  
+  React.useEffect(() => {
+    // Update direction on client-side only
+    if (typeof direction === 'object' && direction !== null && typeof window !== 'undefined') {
+      const handleResize = () => {
+        const isDesktop = window.matchMedia('(min-width: 768px)').matches;
+        setActiveDirection(isDesktop && direction.md ? direction.md : direction.base);
+      };
+      
+      // Set initial value
+      handleResize();
+      
+      // Add event listener
+      window.addEventListener('resize', handleResize);
+      return () => window.removeEventListener('resize', handleResize);
+    }
+  }, [direction]);
+
+  return (
+    <DrawerPrimitive.Root 
+      shouldScaleBackground={shouldScaleBackground} 
+      direction={activeDirection}
+      {...props} 
+    />
+  );
+}
 Drawer.displayName = "Drawer"
 
 const DrawerTrigger = DrawerPrimitive.Trigger
@@ -27,21 +56,58 @@ const DrawerOverlay = React.forwardRef(({ className, ...props }, ref) => (
 ))
 DrawerOverlay.displayName = DrawerPrimitive.Overlay.displayName
 
-const DrawerContent = React.forwardRef(({ className, children, ...props }, ref) => (
-  <DrawerPortal>
-    <DrawerOverlay />
-    <DrawerPrimitive.Content
-      ref={ref}
-      className={cn(
-        "fixed inset-x-0 bottom-0 z-50 mt-24 flex h-auto flex-col rounded-t-[10px] border bg-background",
-        className
-      )}
-      {...props}>
-      <div className="mx-auto mt-4 h-2 w-[100px] rounded-full bg-muted" />
-      {children}
-    </DrawerPrimitive.Content>
-  </DrawerPortal>
-))
+const DrawerContent = React.forwardRef(({ className, children, direction = "bottom", ...props }, ref) => {
+  // If direction is an object with responsive breakpoints
+  const [activeDirection, setActiveDirection] = React.useState(
+    typeof direction === 'object' && direction !== null ? direction.base : direction
+  );
+  
+  React.useEffect(() => {
+    // Update direction on client-side only
+    if (typeof direction === 'object' && direction !== null && typeof window !== 'undefined') {
+      const handleResize = () => {
+        const isDesktop = window.matchMedia('(min-width: 768px)').matches;
+        setActiveDirection(isDesktop && direction.md ? direction.md : direction.base);
+      };
+      
+      // Set initial value
+      handleResize();
+      
+      // Add event listener
+      window.addEventListener('resize', handleResize);
+      return () => window.removeEventListener('resize', handleResize);
+    }
+  }, [direction]);
+  
+  const getDirectionStyles = () => {
+    switch (activeDirection) {
+      case "left":
+        return "fixed inset-y-0 left-0 right-auto z-50 flex h-full w-3/4 max-w-sm flex-col border-r bg-background"
+      case "right":
+        return "fixed inset-y-0 right-0 left-auto z-50 flex h-full w-3/4 max-w-sm flex-col border-l bg-background"
+      case "top":
+        return "fixed inset-x-0 top-0 bottom-auto z-50 flex w-full flex-col rounded-b-[10px] border-b bg-background"
+      default: // bottom
+        return "fixed inset-x-0 bottom-0 top-auto z-50 flex h-auto flex-col rounded-t-[10px] border bg-background"
+    }
+  }
+  
+  return (
+    <DrawerPortal>
+      <DrawerOverlay />
+      <DrawerPrimitive.Content
+        ref={ref}
+        className={cn(
+          getDirectionStyles(),
+          className
+        )}
+        {...props}>
+        {activeDirection === "bottom" && <div className="mx-auto mt-4 h-2 w-[100px] rounded-full bg-muted" />}
+        {children}
+      </DrawerPrimitive.Content>
+    </DrawerPortal>
+  )
+})
 DrawerContent.displayName = "DrawerContent"
 
 const DrawerHeader = ({

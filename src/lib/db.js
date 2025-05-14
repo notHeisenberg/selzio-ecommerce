@@ -7,6 +7,7 @@ if (!MONGODB_URI) {
 }
 
 let cached = global.mongoose;
+let isConnected = false; // Track direct connection status
 
 if (!cached) {
   cached = global.mongoose = { conn: null, promise: null };
@@ -20,9 +21,13 @@ export async function connectDB() {
   if (!cached.promise) {
     const opts = {
       bufferCommands: false,
+      useNewUrlParser: true,
+      useUnifiedTopology: true,
     };
 
     cached.promise = mongoose.connect(MONGODB_URI, opts).then((mongoose) => {
+      console.log('MongoDB connected successfully');
+      isConnected = true;
       return mongoose;
     });
   }
@@ -31,6 +36,8 @@ export async function connectDB() {
     cached.conn = await cached.promise;
   } catch (e) {
     cached.promise = null;
+    isConnected = false;
+    console.error('Error connecting to MongoDB:', e);
     throw e;
   }
 

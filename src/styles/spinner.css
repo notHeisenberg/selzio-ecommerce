@@ -1,0 +1,24 @@
+.spinner {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+  height: 20px;
+  justify-content: center;
+}
+
+.spinner-dot {
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  transform: translateY(0);
+}
+
+/* Light theme */
+:root .spinner-dot {
+  background-color: hsl(267, 65%, 50%); /* primary in light mode */
+}
+
+/* Dark theme */
+.dark .spinner-dot {
+  background-color: hsl(267, 65%, 65%); /* primary in dark mode */
+} 

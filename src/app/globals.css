@@ -1,3 +1,4 @@
+@import '../styles/spinner.css';
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -8,31 +9,58 @@ body {
 
 @layer base {
   :root {
-    --background: 0 0% 100%;
-    --foreground: 224 71.4% 4.1%;
+    /* Base colors */
+    --background: 40 33% 98%;
+    --foreground: 20 14% 4%;
+    
+    /* Card and content elements */
     --card: 0 0% 100%;
-    --card-foreground: 224 71.4% 4.1%;
+    --card-foreground: 20 14% 4%;
     --popover: 0 0% 100%;
-    --popover-foreground: 224 71.4% 4.1%;
-    --primary: 220.9 39.3% 11%;
-    --primary-foreground: 210 20% 98%;
-    --secondary: 220 14.3% 95.9%;
-    --secondary-foreground: 220.9 39.3% 11%;
-    --muted: 220 14.3% 95.9%;
-    --muted-foreground: 220 8.9% 46.1%;
-    --accent: 220 14.3% 95.9%;
-    --accent-foreground: 220.9 39.3% 11%;
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 210 20% 98%;
-    --border: 220 13% 91%;
-    --input: 220 13% 91%;
-    --ring: 224 71.4% 4.1%;
+    --popover-foreground: 20 14% 4%;
+    
+    /* Brand colors */
+    --primary: 267 65% 50%; /* Violet primary */
+    --primary-foreground: 0 0% 100%;
+    --primary-hover: 267 65% 45%;
+    --secondary: 60 4% 95%;
+    --secondary-foreground: 24 9% 27%;
+    
+    /* UI elements */
+    --muted: 60 4% 95%;
+    --muted-foreground: 25 5% 45%;
+    --accent: 60 4% 95%;
+    --accent-foreground: 24 9% 27%;
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 60 9% 97%;
+    --success: 142 76% 36%;
+    --success-foreground: 0 0% 100%;
+    --warning: 35 92% 65%;
+    --warning-foreground: 30 10% 15%;
+    
+    /* Borders and inputs */
+    --border: 20 5% 90%;
+    --input: 20 5% 90%;
+    --ring: 267 65% 50%; /* Match primary */
+    
+    /* Cart-specific colors */
+    --cart-badge: 267 65% 50%;
+    --cart-badge-text: 0 0% 100%;
+    --cart-item-hover: 267 65% 97%;
+    --cart-btn-minus: 0 84% 60%;
+    --cart-btn-plus: 142 76% 36%;
+    
+    /* Chart colors */
     --chart-1: 12 76% 61%;
     --chart-2: 173 58% 39%;
     --chart-3: 197 37% 24%;
     --chart-4: 43 74% 66%;
     --chart-5: 27 87% 67%;
+    
+    /* Other UI properties */
     --radius: 0.5rem;
+    
+    /* Sidebar */
     --sidebar-background: 0 0% 98%;
     --sidebar-foreground: 240 5.3% 26.1%;
     --sidebar-primary: 240 5.9% 10%;
@@ -42,31 +70,57 @@ body {
     --sidebar-border: 220 13% 91%;
     --sidebar-ring: 217.2 91.2% 59.8%;
   }
+  
   .dark {
+    /* Base colors */
     --background: 224 71.4% 4.1%;
     --foreground: 210 20% 98%;
+    
+    /* Card and content elements */
     --card: 224 71.4% 4.1%;
     --card-foreground: 210 20% 98%;
     --popover: 224 71.4% 4.1%;
     --popover-foreground: 210 20% 98%;
-    --primary: 210 20% 98%;
-    --primary-foreground: 220.9 39.3% 11%;
+    
+    /* Brand colors */
+    --primary: 267 65% 65%; /* Lighter violet for dark mode */
+    --primary-foreground: 0 0% 100%;
+    --primary-hover: 267 65% 70%;
     --secondary: 215 27.9% 16.9%;
     --secondary-foreground: 210 20% 98%;
+    
+    /* UI elements */
     --muted: 215 27.9% 16.9%;
     --muted-foreground: 217.9 10.6% 64.9%;
     --accent: 215 27.9% 16.9%;
     --accent-foreground: 210 20% 98%;
-    --destructive: 0 62.8% 30.6%;
+    --destructive: 0 62.8% 50.6%;
     --destructive-foreground: 210 20% 98%;
+    --success: 142 76% 45%;
+    --success-foreground: 0 0% 100%;
+    --warning: 35 92% 50%;
+    --warning-foreground: 30 10% 15%;
+    
+    /* Borders and inputs */
     --border: 215 27.9% 16.9%;
     --input: 215 27.9% 16.9%;
-    --ring: 216 12.2% 83.9%;
+    --ring: 267 65% 65%; /* Match primary */
+    
+    /* Cart-specific colors */
+    --cart-badge: 267 65% 65%;
+    --cart-badge-text: 0 0% 100%;
+    --cart-item-hover: 267 25% 25%;
+    --cart-btn-minus: 0 62.8% 50.6%;
+    --cart-btn-plus: 142 76% 45%;
+    
+    /* Chart colors */
     --chart-1: 220 70% 50%;
     --chart-2: 160 60% 45%;
     --chart-3: 30 80% 55%;
     --chart-4: 280 65% 60%;
     --chart-5: 340 75% 55%;
+    
+    /* Sidebar */
     --sidebar-background: 240 5.9% 10%;
     --sidebar-foreground: 240 4.8% 95.9%;
     --sidebar-primary: 224.3 76.3% 48%;
@@ -83,6 +137,25 @@ body {
     @apply border-border;
   }
   body {
-    @apply bg-background text-foreground;
+    @apply bg-background text-foreground transition-colors duration-300;
+  }
+}
+
+/* Common utility classes for theme-consistent elements */
+@layer utilities {
+  .btn-primary {
+    @apply bg-primary text-primary-foreground hover:bg-primary/90 transition-colors;
+  }
+  
+  .btn-secondary {
+    @apply bg-secondary text-secondary-foreground hover:bg-secondary/80 transition-colors;
+  }
+  
+  .card-hover {
+    @apply hover:shadow-md transition-all duration-200;
+  }
+  
+  .input-focus {
+    @apply focus:ring-2 focus:ring-primary/30 focus:border-primary transition-all;
   }
 }
