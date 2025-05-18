@@ -11,6 +11,7 @@ import {
 } from '@/components/ui/toast';
 import gsap from 'gsap';
 import { useTheme } from 'next-themes';
+import { useRouter } from 'next/navigation';
 
 const AddToCartToast = ({ 
   open, 
@@ -20,6 +21,7 @@ const AddToCartToast = ({
   onViewCart
 }) => {
   const toastRef = useRef(null);
+  const router = useRouter();
   const { resolvedTheme } = useTheme();
   const isDark = resolvedTheme === 'dark';
 
@@ -38,6 +40,16 @@ const AddToCartToast = ({
       );
     }
   }, [open]);
+
+  const handleViewCart = () => {
+    // First dismiss the toast
+    if (onOpenChange) {
+      onOpenChange(false);
+    }
+    
+    // Navigate to cart page
+    router.push('/cart');
+  };
 
   if (!product) return null;
 
@@ -64,21 +76,36 @@ const AddToCartToast = ({
         </div>
       </div>
       
-      <ToastAction asChild altText="View cart">
+      <div className="mt-2 flex flex-col gap-2">
+        <ToastAction asChild altText="Quick view cart drawer">
+          <Button 
+            variant="outline" 
+            size="sm"
+            className={`w-full transition-colors ${
+              isDark 
+                ? 'border-green-900/40 text-green-300 hover:bg-green-900/30 hover:text-green-300 hover:border-green-800/70'
+                : 'border-green-200 hover:bg-green-100 hover:text-green-800'
+            }`}
+            onClick={onViewCart}
+          >
+            <ShoppingCart className="mr-2 h-4 w-4" />
+            Quick View
+          </Button>
+        </ToastAction>
+        
         <Button 
-          variant="outline" 
+          variant="secondary" 
           size="sm"
-          className={`w-full transition-colors ${
+          className={`w-full transition-colors font-medium ${
             isDark 
-              ? 'border-green-900/40 text-green-300 hover:bg-green-900/30 hover:text-green-300 hover:border-green-800/70'
-              : 'border-green-200 hover:bg-green-100 hover:text-green-800'
+              ? 'bg-green-700/40 text-green-100 hover:bg-green-700/60 hover:text-white border border-green-800/70'
+              : 'bg-green-50 text-green-700 hover:bg-green-100 hover:text-green-800 border border-green-200'
           }`}
-          onClick={onViewCart}
+          onClick={handleViewCart}
         >
-          <ShoppingCart className="mr-2 h-4 w-4" />
-          View Cart
+          Go to Cart
         </Button>
-      </ToastAction>
+      </div>
     </Toast>
   );
 };

@@ -88,8 +88,8 @@ export const CartProvider = ({ children }) => {
             onClick={() => {
               // Dismiss the toast
               dismiss();
-              // Open cart drawer
-              document.dispatchEvent(new CustomEvent('open-cart-drawer'));
+              // Navigate to cart page instead of opening drawer
+              window.location.href = '/cart';
             }}
           >
             <ShoppingCart className="mr-2 h-4 w-4" />

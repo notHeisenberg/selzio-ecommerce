@@ -19,6 +19,8 @@ import {
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Loader2 } from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
+import SocialLogin from '@/components/auth/social-login';
 
 const registerSchema = z.object({
   name: z.string().min(2, 'Name must be at least 2 characters'),
@@ -32,8 +34,10 @@ const registerSchema = z.object({
 
 export default function RegisterPage() {
   const [isLoading, setIsLoading] = useState(false);
+  const [serverError, setServerError] = useState('');
   const { register } = useAuth();
   const router = useRouter();
+  const { toast } = useToast();
   
   const form = useForm({
     resolver: zodResolver(registerSchema),
@@ -46,21 +50,73 @@ export default function RegisterPage() {
   });
 
   async function onSubmit(values) {
+    setIsLoading(true);
+    setServerError('');
+    
     try {
-      setIsLoading(true);
+      // Log the registration attempt for debugging
+      console.log('Attempting to register user:', { name: values.name, email: values.email });
+      
+      // Call the register function from our auth hook
       await register({
         name: values.name,
         email: values.email,
         password: values.password,
       });
+      
+      // Show success toast
+      toast({
+        title: "Registration successful!",
+        description: "Your account has been created. You can now log in.",
+      });
+      
       // Redirect to login page after successful registration
       router.push('/auth/login');
     } catch (error) {
       console.error('Registration error:', error);
+      
+      // Handle specific error cases
+      if (error.response) {
+        // The request was made and the server responded with an error status
+        const errorMessage = error.response.data?.error || 'Registration failed. Please try again.';
+        setServerError(errorMessage);
+        
+        // If there's a duplicate email error
+        if (errorMessage.includes('already exists')) {
+          form.setError('email', { 
+            type: 'manual', 
+            message: 'This email is already registered. Please use a different email or try logging in.' 
+          });
+        }
+      } else if (error.request) {
+        // The request was made but no response was received
+        setServerError('Network error. Please check your connection and try again.');
+      } else {
+        // Something happened in setting up the request
+        setServerError('An unexpected error occurred. Please try again later.');
+      }
+      
+      // Show error toast
+      toast({
+        variant: "destructive",
+        title: "Registration failed",
+        description: serverError || 'There was a problem creating your account.',
+      });
     } finally {
       setIsLoading(false);
     }
   }
+
+  // Handle successful social login
+  const handleSocialLoginSuccess = () => {
+    toast({
+      variant: "success",
+      title: "Login successful!",
+      description: "Welcome to Selzio!",
+    });
+    
+    // NextAuth will handle the redirect
+  };
 
   return (
     <div className="container max-w-md mx-auto py-16 px-4">
@@ -79,6 +135,26 @@ export default function RegisterPage() {
         <div className="space-y-2 text-center">
           <h1 className="text-3xl font-bold">Create an Account</h1>
           <p className="text-muted-foreground">Enter your information to create an account</p>
+        </div>
+        
+        {serverError && (
+          <div className="p-3 bg-destructive/15 border border-destructive text-destructive rounded-md text-sm">
+            {serverError}
+          </div>
+        )}
+        
+        <SocialLogin 
+          onSuccess={handleSocialLoginSuccess} 
+          redirectUrl="/"
+        />
+        
+        <div className="relative">
+          <div className="absolute inset-0 flex items-center">
+            <span className="w-full border-t"></span>
+          </div>
+          <div className="relative flex justify-center text-xs uppercase">
+            <span className="bg-background px-2 text-muted-foreground">Or continue with</span>
+          </div>
         </div>
         
         <Form {...form}>

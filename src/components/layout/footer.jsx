@@ -101,7 +101,7 @@ export function Footer() {
                   </Link>
                 </li>
                 <li>
-                  <Link href="/account" className="text-muted-foreground hover:text-foreground transition-colors flex items-center">
+                  <Link href="/account?tab=profile" className="text-muted-foreground hover:text-foreground transition-colors flex items-center">
                     <span className="h-1.5 w-1.5 rounded-full bg-primary/50 mr-2"></span>
                     My Account
                   </Link>

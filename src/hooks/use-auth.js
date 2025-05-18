@@ -1,8 +1,46 @@
 "use client";
 
 import { createContext, useContext, useState, useEffect } from 'react';
-import { useToast } from '@/hooks/use-toast';
+import axios from 'axios';
 import { useRouter } from 'next/navigation';
+import { signIn, signOut, useSession } from 'next-auth/react';
+
+// Create axios instance with default config
+const api = axios.create({
+  baseURL: '/',
+  headers: {
+    'Content-Type': 'application/json',
+  },
+});
+
+// Setup axios interceptor to add auth token to all requests
+api.interceptors.request.use(
+  (config) => {
+    const token = localStorage.getItem('auth_token');
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
+    return config;
+  },
+  (error) => Promise.reject(error)
+);
+
+// Setup axios interceptor to handle auth errors
+api.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    // Handle 401 Unauthorized responses
+    if (error.response && error.response.status === 401) {
+      // Clear auth data if we get an unauthorized response
+      localStorage.removeItem('auth_token');
+      localStorage.removeItem('user_data');
+      
+      // Redirect to login page
+      window.location.href = '/auth/login';
+    }
+    return Promise.reject(error);
+  }
+);
 
 const AuthContext = createContext();
 
@@ -10,20 +48,120 @@ export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const { toast } = useToast();
   const router = useRouter();
+  const { data: session, status } = useSession();
+  
+  // Listen for storage events (when localStorage is changed from another tab)
+  useEffect(() => {
+    const handleStorageChange = (e) => {
+      if (e.key === 'user_data') {
+        try {
+          const userData = localStorage.getItem('user_data');
+          if (userData) {
+            setUser(JSON.parse(userData));
+          }
+        } catch (error) {
+          console.error('Error handling storage change:', error);
+        }
+      }
+    };
+    
+    window.addEventListener('storage', handleStorageChange);
+    return () => window.removeEventListener('storage', handleStorageChange);
+  }, []);
+  
+  // Sync with NextAuth session
+  useEffect(() => {
+    if (status === 'authenticated' && session) {
+
+      const sessionUser = session.user;
+      const token = session.accessToken || 'oauth-token'; // Fallback for OAuth providers
+      
+      if (sessionUser) {
+        
+        // Make sure role is properly set
+        if (!sessionUser.role && sessionUser.isAdmin) {
+          sessionUser.role = 'admin';
+        }
+        
+        // Save auth data to localStorage
+        localStorage.setItem('auth_token', token);
+        localStorage.setItem('user_data', JSON.stringify(sessionUser));
+        
+        // Set default authorization header for all requests
+        api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+        
+        // Update state
+        setUser(sessionUser);
+        setLoading(false);
+        
+        // Check if we have a stored redirect destination
+        const storedRedirect = sessionStorage.getItem('auth_redirect');
+        if (storedRedirect) {
+          // Wait a bit to ensure all auth state is properly set
+          setTimeout(() => {
+            sessionStorage.removeItem('auth_redirect');
+            router.push(storedRedirect);
+          }, 500);
+        }
+      }
+    } else if (status === 'unauthenticated') {
+    }
+  }, [session, status, router]);
   
   // Check if user is already logged in on initial render
   useEffect(() => {
     const checkAuth = async () => {
       try {
-        // Check for token in localStorage
+        // First check NextAuth session
+        if (status === 'authenticated' && session) {
+          const sessionUser = session.user;
+          const token = session.accessToken;
+          
+          if (sessionUser && token) {
+            // Save auth data to localStorage
+            localStorage.setItem('auth_token', token);
+            localStorage.setItem('user_data', JSON.stringify(sessionUser));
+            
+            // Set default authorization header for all requests
+            api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+            
+            // Update state
+            setUser(sessionUser);
+            setLoading(false);
+            return;
+          }
+        }
+        
+        // Fall back to localStorage check for token
         const token = localStorage.getItem('auth_token');
         if (token) {
-          // Verify token with the server or decode it to get user info
-          const userData = JSON.parse(localStorage.getItem('user_data'));
+          // Set default authorization header for all requests
+          api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+          
+          // Get user info from localStorage
+          const userData = localStorage.getItem('user_data');
           if (userData) {
-            setUser(userData);
+            try {
+              const parsedUser = JSON.parse(userData);
+              setUser(parsedUser);
+              
+              // Verify token validity with a quick API call if needed
+              try {
+                const response = await api.get('/api/users/profile');
+                if (response.data) {
+                  // Update with latest data
+                  setUser(response.data);
+                  localStorage.setItem('user_data', JSON.stringify(response.data));
+                }
+              } catch (apiError) {
+                // If API call fails, the token might be invalid, but we'll keep the user logged in
+                // with cached data rather than logging them out immediately
+                console.warn('Could not verify token with API:', apiError);
+              }
+            } catch (parseError) {
+              console.error('Error parsing user data:', parseError);
+            }
           }
         }
       } catch (error) {
@@ -33,8 +171,10 @@ export const AuthProvider = ({ children }) => {
       }
     };
     
-    checkAuth();
-  }, []);
+    if (status !== 'loading') {
+      checkAuth();
+    }
+  }, [status, session, api.defaults.headers.common]);
   
   // Login function
   const login = async (email, password) => {
@@ -42,41 +182,75 @@ export const AuthProvider = ({ children }) => {
     setError(null);
     
     try {
-      const response = await fetch('/api/auth', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ email, password }),
+      const response = await api.post('/api/auth', { 
+        email, 
+        password 
       });
       
-      const data = await response.json();
-      
-      if (!response.ok) {
-        throw new Error(data.error || 'Login failed');
-      }
+      const data = response.data;
       
       // Save auth data to localStorage
       localStorage.setItem('auth_token', data.token);
       localStorage.setItem('user_data', JSON.stringify(data.user));
       
+      // Set default authorization header for all requests
+      api.defaults.headers.common['Authorization'] = `Bearer ${data.token}`;
+      
       // Update state
       setUser(data.user);
       
-      // Show success message
-      toast({
-        title: "Success!",
-        description: "You've been logged in successfully.",
-      });
-      
       return data;
     } catch (error) {
-      setError(error.message);
-      toast({
-        variant: "destructive",
-        title: "Login failed",
-        description: error.message,
+      const errorMessage = error.response?.data?.error || 'Login failed';
+      setError(errorMessage);
+      throw error;
+    } finally {
+      setLoading(false);
+    }
+  };
+  
+  // Social login function for Google
+  const loginWithGoogle = async (redirect = '/') => {
+    setLoading(true);
+    setError(null);
+    
+    try {
+      const result = await signIn('google', { 
+        callbackUrl: redirect,
+        redirect: true  // Changed to true so it redirects properly
       });
+      
+      if (result?.error) {
+        throw new Error(result.error);
+      }
+      
+      return result;
+    } catch (error) {
+      setError(error.message || 'Google login failed');
+      throw error;
+    } finally {
+      setLoading(false);
+    }
+  };
+  
+  // Social login function for Facebook
+  const loginWithFacebook = async (redirect = '/') => {
+    setLoading(true);
+    setError(null);
+    
+    try {
+      const result = await signIn('facebook', { 
+        callbackUrl: redirect,
+        redirect: true  // Changed to true so it redirects properly
+      });
+      
+      if (result?.error) {
+        throw new Error(result.error);
+      }
+      
+      return result;
+    } catch (error) {
+      setError(error.message || 'Facebook login failed');
       throw error;
     } finally {
       setLoading(false);
@@ -89,14 +263,14 @@ export const AuthProvider = ({ children }) => {
     localStorage.removeItem('auth_token');
     localStorage.removeItem('user_data');
     
+    // Remove authorization header
+    delete api.defaults.headers.common['Authorization'];
+    
     // Update state
     setUser(null);
     
-    // Show logout message
-    toast({
-      title: "Logged out",
-      description: "You've been logged out successfully.",
-    });
+    // Sign out from NextAuth
+    signOut({ redirect: false });
     
     // Redirect to home page
     router.push('/');
@@ -108,47 +282,64 @@ export const AuthProvider = ({ children }) => {
     setError(null);
     
     try {
-      const response = await fetch('/api/auth/register', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(userData),
-      });
-      
-      const data = await response.json();
-      
-      if (!response.ok) {
-        throw new Error(data.error || 'Registration failed');
-      }
-      
-      toast({
-        title: "Success!",
-        description: "Account created successfully. Please log in.",
-      });
-      
+      const response = await api.post('/api/auth/register', userData);
+      const data = response.data;
       return data;
     } catch (error) {
-      setError(error.message);
-      toast({
-        variant: "destructive",
-        title: "Registration failed",
-        description: error.message,
-      });
+      const errorMessage = error.response?.data?.error || 'Registration failed';
+      setError(errorMessage);
       throw error;
     } finally {
       setLoading(false);
     }
   };
 
+  // Function to explicitly refresh user data from the server
+  const refreshUserData = async () => {
+    try {
+      const response = await api.get('/api/users/profile');
+      if (response.data) {
+        setUser(response.data);
+        localStorage.setItem('user_data', JSON.stringify(response.data));
+        return true;
+      }
+    } catch (error) {
+      console.error('Error refreshing user data:', error);
+    }
+    return false;
+  };
+
   const value = {
     user,
-    loading,
+    loading: loading || status === 'loading',
     error,
     login,
+    loginWithGoogle,
+    loginWithFacebook,
     logout,
     register,
+    refreshUserData, // Add the refresh function to the context
     isAuthenticated: !!user,
+    api, // Expose API instance for use in other components
+    
+    // Helper function to store intended redirect destination
+    storeRedirectDestination: (destination) => {
+      if (typeof window !== 'undefined') {
+        console.log('Storing redirect destination:', destination);
+        sessionStorage.setItem('auth_redirect', destination);
+      }
+    },
+    
+    // Helper function to get and clear the redirect destination
+    getStoredRedirectDestination: () => {
+      if (typeof window !== 'undefined') {
+        const destination = sessionStorage.getItem('auth_redirect');
+        sessionStorage.removeItem('auth_redirect');
+        console.log('Retrieved redirect destination:', destination);
+        return destination;
+      }
+      return null;
+    }
   };
 
   return (

@@ -19,6 +19,8 @@ import {
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Loader2 } from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
+import SocialLogin from '@/components/auth/social-login';
 
 const loginSchema = z.object({
   email: z.string().email('Please enter a valid email'),
@@ -27,8 +29,10 @@ const loginSchema = z.object({
 
 export default function LoginPage() {
   const [isLoading, setIsLoading] = useState(false);
+  const [serverError, setServerError] = useState('');
   const { login } = useAuth();
   const router = useRouter();
+  const { toast } = useToast();
   
   const form = useForm({
     resolver: zodResolver(loginSchema),
@@ -39,17 +43,111 @@ export default function LoginPage() {
   });
 
   async function onSubmit(values) {
+    setIsLoading(true);
+    setServerError('');
+    
     try {
-      setIsLoading(true);
+      // Log the login attempt for debugging
+      console.log('Attempting to login:', { email: values.email });
+      
+      // Call the login function from our auth hook
       await login(values.email, values.password);
+      
+      // Show success toast
+      toast({
+        variant: "success",
+        title: "Login successful!",
+        description: "Welcome back to Selzio.",
+        action: (
+          <div className="flex items-center gap-2">
+            <svg 
+              xmlns="http://www.w3.org/2000/svg" 
+              width="20" 
+              height="20" 
+              viewBox="0 0 24 24" 
+              fill="none" 
+              stroke="currentColor" 
+              strokeWidth="2" 
+              strokeLinecap="round" 
+              strokeLinejoin="round"
+            >
+              <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+              <polyline points="22 4 12 14.01 9 11.01"></polyline>
+            </svg>
+          </div>
+        )
+      });
+      
       // Redirect to home page or dashboard after successful login
       router.push('/');
     } catch (error) {
       console.error('Login error:', error);
+      
+      // Handle specific error cases
+      if (error.response) {
+        // The request was made and the server responded with an error status
+        const errorMessage = error.response.data?.error || 'Login failed. Please try again.';
+        setServerError(errorMessage);
+        
+        // Set form errors for specific cases
+        if (errorMessage.includes('Invalid credentials')) {
+          form.setError('email', { 
+            type: 'manual', 
+            message: 'Email or password is incorrect' 
+          });
+          form.setError('password', { 
+            type: 'manual', 
+            message: 'Email or password is incorrect' 
+          });
+        }
+      } else if (error.request) {
+        // The request was made but no response was received
+        setServerError('Network error. Please check your connection and try again.');
+      } else {
+        // Something happened in setting up the request
+        setServerError('An unexpected error occurred. Please try again later.');
+      }
+
+      // Show error toast
+      toast({
+        variant: "destructive",
+        title: "Login failed",
+        description: serverError || 'There was a problem signing in to your account.',
+        action: (
+          <div className="flex items-center gap-2">
+            <svg 
+              xmlns="http://www.w3.org/2000/svg" 
+              width="20" 
+              height="20" 
+              viewBox="0 0 24 24" 
+              fill="none" 
+              stroke="currentColor" 
+              strokeWidth="2" 
+              strokeLinecap="round" 
+              strokeLinejoin="round"
+            >
+              <circle cx="12" cy="12" r="10"></circle>
+              <line x1="12" y1="8" x2="12" y2="12"></line>
+              <line x1="12" y1="16" x2="12.01" y2="16"></line>
+            </svg>
+          </div>
+        )
+      });
     } finally {
       setIsLoading(false);
     }
   }
+
+  // Handle successful social login
+  const handleSocialLoginSuccess = () => {
+    toast({
+      variant: "success",
+      title: "Login successful!",
+      description: "Welcome back to Selzio.",
+    });
+    
+    // NextAuth will handle the redirect
+  };
 
   return (
     <div className="container max-w-md mx-auto py-16 px-4">
@@ -68,6 +166,26 @@ export default function LoginPage() {
         <div className="space-y-2 text-center">
           <h1 className="text-3xl font-bold">Sign In</h1>
           <p className="text-muted-foreground">Enter your credentials to sign in to your account</p>
+        </div>
+        
+        {serverError && (
+          <div className="p-3 bg-destructive/15 border border-destructive text-destructive rounded-md text-sm">
+            {serverError}
+          </div>
+        )}
+        
+        <SocialLogin 
+          onSuccess={handleSocialLoginSuccess} 
+          redirectUrl="/"
+        />
+        
+        <div className="relative">
+          <div className="absolute inset-0 flex items-center">
+            <span className="w-full border-t"></span>
+          </div>
+          <div className="relative flex justify-center text-xs uppercase">
+            <span className="bg-background px-2 text-muted-foreground">Or continue with</span>
+          </div>
         </div>
         
         <Form {...form}>

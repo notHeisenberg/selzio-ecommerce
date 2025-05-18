@@ -2,17 +2,20 @@
 
 import { useEffect, useRef } from 'react';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
-import { X } from 'lucide-react';
+import { usePathname, useRouter } from 'next/navigation';
+import { X, LogIn, UserPlus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import gsap from 'gsap';
 import Image from 'next/image';
 import SearchBar from '@/components/search/search-bar';
 import { categories, navItems } from '@/data/products';
+import { useAuth } from '@/hooks/use-auth';
 
 const MobileMenu = ({ isOpen, onClose }) => {
   const menuRef = useRef(null);
   const pathname = usePathname();
+  const router = useRouter();
+  const { isAuthenticated } = useAuth();
   
   useEffect(() => {
     // Add event listener to handle escape key
@@ -91,6 +94,33 @@ const MobileMenu = ({ isOpen, onClose }) => {
           <div className="p-4 border-b border-border">
             <SearchBar />
           </div>
+
+          {/* Authentication Buttons - Only when not logged in */}
+          {!isAuthenticated && (
+            <div className="p-4 flex flex-col gap-2 border-b border-border">
+              <Button 
+                className="menu-item w-full justify-start"
+                variant="outline"
+                onClick={() => {
+                  router.push('/auth/login');
+                  onClose();
+                }}
+              >
+                <LogIn className="mr-2 h-4 w-4" />
+                Login
+              </Button>
+              <Button 
+                className="menu-item w-full justify-start"
+                onClick={() => {
+                  router.push('/auth/register');
+                  onClose();
+                }}
+              >
+                <UserPlus className="mr-2 h-4 w-4" />
+                Sign Up
+              </Button>
+            </div>
+          )}
 
           {/* Navigation */}
           <nav className="flex-1 overflow-y-auto p-4">

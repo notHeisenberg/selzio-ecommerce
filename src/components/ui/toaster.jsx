@@ -19,9 +19,25 @@ export function Toaster() {
         return (
           (<Toast key={id} {...props}>
             <div className="grid gap-1">
-              {title && <ToastTitle>{title}</ToastTitle>}
+              {title && (
+                <div className="flex items-center space-x-2">
+                  {props.variant === 'success' && (
+                    <div className="h-2 w-2 rounded-full bg-green-500 dark:bg-green-400"></div>
+                  )}
+                  {props.variant === 'destructive' && (
+                    <div className="h-2 w-2 rounded-full bg-red-500 dark:bg-red-400"></div>
+                  )}
+                  {props.variant === 'info' && (
+                    <div className="h-2 w-2 rounded-full bg-blue-500 dark:bg-blue-400"></div>
+                  )}
+                  {props.variant === 'warning' && (
+                    <div className="h-2 w-2 rounded-full bg-yellow-500 dark:bg-yellow-400"></div>
+                  )}
+                  <ToastTitle>{title}</ToastTitle>
+                </div>
+              )}
               {description && (
-                <ToastDescription>{description}</ToastDescription>
+                <ToastDescription className="pl-4">{description}</ToastDescription>
               )}
             </div>
             {action}

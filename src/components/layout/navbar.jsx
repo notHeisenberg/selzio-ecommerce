@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Menu, ChevronDown } from 'lucide-react';
+import { Menu, ChevronDown, LogIn } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useScrollDirection } from '@/hooks/use-scroll-direction';
 import { cn } from '@/lib/utils';
@@ -15,6 +15,7 @@ import CartDrawer from '@/components/cart/cart-drawer';
 import ThemeSwitcher from '@/components/theme/theme-switcher';
 import MobileMenu from './mobile-menu';
 import { categories, navItems } from '@/data/products';
+import { useAuth } from '@/hooks/use-auth';
 
 export function Navbar() {
   const { isVisible, scrollY } = useScrollDirection();
@@ -25,6 +26,7 @@ export function Navbar() {
   const navRef = useRef(null);
   const searchRef = useRef(null);
   const iconsRef = useRef(null);
+  const { isAuthenticated } = useAuth();
 
   useEffect(() => {
     // Logo animation
@@ -201,6 +203,7 @@ export function Navbar() {
                 size="icon" 
                 className="md:hidden text-foreground hover:text-primary hover:bg-secondary transition-colors duration-300"
                 onClick={() => setIsMobileMenuOpen(true)}
+                aria-label="Menu"
               >
                 <Menu className="h-5 w-5" />
               </Button>

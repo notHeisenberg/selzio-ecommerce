@@ -1,18 +1,17 @@
 import { NextResponse } from 'next/server';
-import { connectDB } from '@/lib/db';
-import User from '@/models/user.model';
+import { getUsersCollection } from '@/lib/mongodb';
 import bcrypt from 'bcryptjs';
-import jwt from 'jsonwebtoken';
+import { generateToken } from '@/lib/jwt';
 
 export async function POST(req) {
   try {
     const { email, password } = await req.json();
 
-    // Connect to database
-    await connectDB();
+    // Get users collection
+    const usersCollection = await getUsersCollection();
 
     // Find user
-    const user = await User.findOne({ email }).select('+password');
+    const user = await usersCollection.findOne({ email });
     if (!user) {
       return NextResponse.json(
         { error: 'Invalid credentials' },
@@ -29,18 +28,18 @@ export async function POST(req) {
       );
     }
 
-    // Generate token
-    const token = jwt.sign(
-      { id: user._id },
-      process.env.JWT_SECRET,
-      { expiresIn: '7d' }
-    );
+    // Generate token with user ID and role
+    const token = generateToken({
+      id: user._id.toString(),
+      email: user.email,
+      role: user.role || 'user'
+    });
 
     // Remove password from response
-    user.password = undefined;
+    const { password: _, ...userWithoutPassword } = user;
 
     return NextResponse.json({
-      user,
+      user: userWithoutPassword,
       token
     });
   } catch (error) {

@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
-import { connectDB } from '@/lib/db';
-import Product from '@/models/product.model';
+import { getProductsCollection } from '@/lib/mongodb';
+import { requireAuth, requireAdmin } from '@/middleware/auth';
 
 export async function GET(req) {
   try {
@@ -10,8 +10,10 @@ export async function GET(req) {
     const category = searchParams.get('category');
     const search = searchParams.get('search');
 
-    await connectDB();
+    // Get products collection
+    const productsCollection = await getProductsCollection();
 
+    // Build query
     const query = {};
     if (category) query.category = category;
     if (search) {
@@ -21,12 +23,16 @@ export async function GET(req) {
       ];
     }
 
-    const products = await Product.find(query)
+    // Find products with pagination
+    const products = await productsCollection
+      .find(query)
       .skip((page - 1) * limit)
       .limit(limit)
-      .sort({ createdAt: -1 });
+      .sort({ createdAt: -1 })
+      .toArray();
 
-    const total = await Product.countDocuments(query);
+    // Count total matching documents
+    const total = await productsCollection.countDocuments(query);
 
     return NextResponse.json({
       products,
@@ -44,11 +50,35 @@ export async function GET(req) {
 
 export async function POST(req) {
   try {
-    const body = await req.json();
-    await connectDB();
+    // Verify that the user is authenticated and is an admin
+    const user = await requireAdmin(req);
+    if (user instanceof Response) {
+      return user; // Return the error response
+    }
 
-    const product = await Product.create(body);
-    return NextResponse.json(product, { status: 201 });
+    const body = await req.json();
+    
+    // Get products collection
+    const productsCollection = await getProductsCollection();
+
+    // Add timestamps and creator info
+    const product = {
+      ...body,
+      createdBy: user.id,
+      createdAt: new Date(),
+      updatedAt: new Date()
+    };
+    
+    // Insert product
+    const result = await productsCollection.insertOne(product);
+    
+    return NextResponse.json(
+      { 
+        ...product,
+        _id: result.insertedId 
+      }, 
+      { status: 201 }
+    );
   } catch (error) {
     console.error('Product creation error:', error);
     return NextResponse.json(

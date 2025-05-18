@@ -13,26 +13,42 @@ import {
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/hooks/use-auth';
+import { useToast } from '@/hooks/use-toast';
 
 const UserMenu = () => {
   const [isOpen, setIsOpen] = useState(false);
   const router = useRouter();
   const { user, isAuthenticated, logout } = useAuth();
+  const { toast } = useToast();
 
   const handleLogout = () => {
     logout();
+    toast({
+      title: "Logged out",
+      description: "You've been logged out successfully."
+    });
   };
 
   if (!isAuthenticated) {
     return (
-      <Button 
-        variant="ghost" 
-        size="icon" 
-        className="text-foreground hover:text-primary hover:bg-secondary transition-colors duration-300"
-        onClick={() => router.push('/auth/login')}
-      >
-        <User className="h-5 w-5" />
-      </Button>
+      <div className="flex items-center gap-2">
+        <Button 
+          variant="ghost" 
+          size="sm" 
+          className="hidden md:flex text-foreground hover:text-primary hover:bg-secondary transition-colors duration-300"
+          onClick={() => router.push('/auth/login')}
+        >
+          Login
+        </Button>
+        <Button 
+          variant="default" 
+          size="sm" 
+          className="hidden md:flex"
+          onClick={() => router.push('/auth/register')}
+        >
+          Sign Up
+        </Button>
+      </div>
     );
   }
 
@@ -54,25 +70,25 @@ const UserMenu = () => {
         </div>
         <DropdownMenuSeparator className="bg-border" />
         <DropdownMenuItem asChild className="focus:bg-secondary focus:text-foreground">
-          <Link href="/account" className="cursor-pointer text-foreground">
+          <Link href="/account?tab=profile" className="cursor-pointer text-foreground">
             <User className="mr-2 h-4 w-4" />
             <span>My Account</span>
           </Link>
         </DropdownMenuItem>
         <DropdownMenuItem asChild className="focus:bg-secondary focus:text-foreground">
-          <Link href="/orders" className="cursor-pointer text-foreground">
+          <Link href="/account?tab=orders" className="cursor-pointer text-foreground">
             <Package className="mr-2 h-4 w-4" />
             <span>Orders</span>
           </Link>
         </DropdownMenuItem>
         <DropdownMenuItem asChild className="focus:bg-secondary focus:text-foreground">
-          <Link href="/wishlist" className="cursor-pointer text-foreground">
+          <Link href="/account?tab=wishlist" className="cursor-pointer text-foreground">
             <Heart className="mr-2 h-4 w-4" />
             <span>Wishlist</span>
           </Link>
         </DropdownMenuItem>
         <DropdownMenuItem asChild className="focus:bg-secondary focus:text-foreground">
-          <Link href="/settings" className="cursor-pointer text-foreground">
+          <Link href="/account?tab=settings" className="cursor-pointer text-foreground">
             <Settings className="mr-2 h-4 w-4" />
             <span>Settings</span>
           </Link>

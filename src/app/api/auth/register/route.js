@@ -1,6 +1,5 @@
 import { NextResponse } from 'next/server';
-import { connectDB } from '@/lib/db';
-import User from '@/models/user.model';
+import { getUsersCollection } from '@/lib/mongodb';
 import bcrypt from 'bcryptjs';
 
 export async function POST(req) {
@@ -15,11 +14,11 @@ export async function POST(req) {
       );
     }
 
-    // Connect to database
-    await connectDB();
+    // Get users collection
+    const usersCollection = await getUsersCollection();
 
     // Check if user already exists
-    const existingUser = await User.findOne({ email });
+    const existingUser = await usersCollection.findOne({ email });
     if (existingUser) {
       return NextResponse.json(
         { error: 'User with this email already exists' },
@@ -32,20 +31,26 @@ export async function POST(req) {
     const hashedPassword = await bcrypt.hash(password, salt);
 
     // Create new user
-    const newUser = new User({
+    const newUser = {
       name,
       email,
       password: hashedPassword,
-    });
+      role: 'user',
+      createdAt: new Date(),
+      updatedAt: new Date()
+    };
 
-    await newUser.save();
+    const result = await usersCollection.insertOne(newUser);
 
-    // Remove password from response
-    newUser.password = undefined;
+    // For security, don't return the password
+    const { password: _, ...userWithoutPassword } = newUser;
 
     return NextResponse.json({
       message: 'User registered successfully',
-      user: newUser
+      user: { 
+        ...userWithoutPassword,
+        _id: result.insertedId
+      }
     });
   } catch (error) {
     console.error('Registration error:', error);
