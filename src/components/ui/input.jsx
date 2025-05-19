@@ -3,6 +3,14 @@ import * as React from "react"
 import { cn } from "@/lib/utils"
 
 const Input = React.forwardRef(({ className, type, ...props }, ref) => {
+  // Set appropriate autocomplete attribute for password fields if not explicitly provided
+  const inputProps = {...props};
+  
+  // Add autocomplete attribute for password fields if not already set
+  if (type === "password" && !inputProps.autoComplete) {
+    inputProps.autoComplete = "current-password";
+  }
+  
   return (
     (<input
       type={type}
@@ -11,7 +19,7 @@ const Input = React.forwardRef(({ className, type, ...props }, ref) => {
         className
       )}
       ref={ref}
-      {...props} />)
+      {...inputProps} />)
   );
 })
 Input.displayName = "Input"

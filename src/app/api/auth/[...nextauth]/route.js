@@ -4,14 +4,21 @@ import FacebookProvider from "next-auth/providers/facebook";
 import CredentialsProvider from "next-auth/providers/credentials";
 import { apiBaseUrl } from "@/lib/config";
 
-// Ensure we have a valid API URL
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000/api';
+// Use the fixed API URL from config.js instead of directly using env variable
+const API_URL = apiBaseUrl;
 
 export const authOptions = {
   providers: [
     GoogleProvider({
       clientId: process.env.GOOGLE_CLIENT_ID || "",
       clientSecret: process.env.GOOGLE_CLIENT_SECRET || "",
+      authorization: {
+        params: {
+          prompt: "consent",
+          access_type: "offline",
+          response_type: "code"
+        }
+      }
     }),
     FacebookProvider({
       clientId: process.env.FACEBOOK_CLIENT_ID || "",
@@ -61,7 +68,8 @@ export const authOptions = {
         // For social login
         if (account.provider === "google" || account.provider === "facebook") {
           try {
-            // You might want to call your API to create or fetch the user
+            console.log("Attempting social login with provider:", account.provider);
+            // Call API to create or fetch the user
             const response = await fetch(`${API_URL}/auth/social`, {
               method: "POST",
               headers: { "Content-Type": "application/json" },
@@ -77,11 +85,28 @@ export const authOptions = {
             const data = await response.json();
 
             if (response.ok) {
+              console.log("Social auth successful:", data.user.email);
               token.accessToken = data.token;
               token.user = data.user;
+            } else {
+              console.error("Social auth API error:", data.error);
+              // Set token with minimal info to prevent undefined errors
+              token.accessToken = "invalid-token";
+              token.user = {
+                email: user.email,
+                name: user.name,
+                error: data.error || "Authentication failed"
+              };
             }
           } catch (error) {
             console.error("Social auth error:", error);
+            // Set fallback token to prevent crashes
+            token.accessToken = "error-token";
+            token.user = {
+              email: user.email,
+              name: user.name,
+              error: error.message || "Authentication failed"
+            };
           }
         } else {
           // For credentials login
@@ -92,8 +117,16 @@ export const authOptions = {
       return token;
     },
     async session({ session, token }) {
-      session.user = token.user || session.user;
-      session.accessToken = token.accessToken;
+      // Ensure we have valid user data in the session
+      if (token.user) {
+        session.user = token.user;
+        session.accessToken = token.accessToken;
+        
+        // Add an error flag if authentication failed
+        if (token.user.error) {
+          session.error = token.user.error;
+        }
+      }
       return session;
     },
   },
@@ -105,6 +138,7 @@ export const authOptions = {
     strategy: "jwt",
     maxAge: 30 * 24 * 60 * 60, // 30 days
   },
+  debug: process.env.NODE_ENV === 'development',
   secret: process.env.NEXTAUTH_SECRET,
 };
 

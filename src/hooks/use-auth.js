@@ -35,8 +35,12 @@ api.interceptors.response.use(
       localStorage.removeItem('auth_token');
       localStorage.removeItem('user_data');
       
-      // Redirect to login page
-      window.location.href = '/auth/login';
+      // Don't redirect automatically - this causes a redirect loop
+      // Instead, we'll let the components handle the redirect when needed
+      // window.location.href = '/auth/login';
+      
+      // Set a flag to indicate auth error happened
+      sessionStorage.setItem('auth_error', 'true');
     }
     return Promise.reject(error);
   }
@@ -155,26 +159,43 @@ export const AuthProvider = ({ children }) => {
                   localStorage.setItem('user_data', JSON.stringify(response.data));
                 }
               } catch (apiError) {
-                // If API call fails, the token might be invalid, but we'll keep the user logged in
-                // with cached data rather than logging them out immediately
-                console.warn('Could not verify token with API:', apiError);
+                // If API call fails with 401, clear the stored token and user data
+                if (apiError.response && apiError.response.status === 401) {
+                  localStorage.removeItem('auth_token');
+                  localStorage.removeItem('user_data');
+                  setUser(null);
+                } else {
+                  // For other errors, keep using cached data
+                  console.warn('Could not verify token with API:', apiError);
+                }
               }
             } catch (parseError) {
               console.error('Error parsing user data:', parseError);
+              localStorage.removeItem('user_data');
+              setUser(null);
             }
           }
         }
       } catch (error) {
         console.error('Auth initialization error:', error);
+        // Clear auth data on critical errors to prevent loops
+        localStorage.removeItem('auth_token');
+        localStorage.removeItem('user_data');
+        setUser(null);
       } finally {
         setLoading(false);
       }
     };
     
-    if (status !== 'loading') {
+    // Only run checkAuth once when component mounts or session status changes
+    // Use a flag to prevent multiple executions
+    const authChecked = sessionStorage.getItem('auth_checked');
+    
+    if (status !== 'loading' && !authChecked) {
+      sessionStorage.setItem('auth_checked', 'true');
       checkAuth();
     }
-  }, [status, session, api.defaults.headers.common]);
+  }, [status, session]);
   
   // Login function
   const login = async (email, password) => {

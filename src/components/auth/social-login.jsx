@@ -24,20 +24,18 @@ const SocialLogin = ({
     setError('');
     
     try {
-      // Changed redirect to false to prevent NextAuth from handling the redirect
-      const result = await signIn('google', { 
+      // Use redirect: true to ensure Google popup appears
+      // This is necessary because we need to go through the OAuth flow
+      window.sessionStorage.setItem('auth_redirect', redirectUrl);
+      
+      // Important: We need to use redirect: true for the OAuth popup to work correctly
+      await signIn('google', { 
         callbackUrl: redirectUrl,
-        redirect: false
+        redirect: true
       });
       
-      if (result?.error) {
-        throw new Error(result.error);
-      }
-      
-      // Call the success callback - this will let the parent component handle redirect
-      if (onSuccess && !result?.error) {
-        onSuccess();
-      }
+      // Note: The code below won't execute because the page will redirect
+      // The handling of success will happen in the NextAuth callback
     } catch (err) {
       setError(err.message || 'Google login failed. Please try again.');
       console.error('Google login error:', err);
@@ -46,7 +44,6 @@ const SocialLogin = ({
         title: "Login failed",
         description: err.message || 'Google login failed. Please try again.'
       });
-    } finally {
       setIsGoogleLoading(false);
     }
   };
@@ -56,20 +53,15 @@ const SocialLogin = ({
     setError('');
     
     try {
-      // Changed redirect to false to prevent NextAuth from handling the redirect
-      const result = await signIn('facebook', { 
+      // Use redirect: true for OAuth flow
+      window.sessionStorage.setItem('auth_redirect', redirectUrl);
+      
+      await signIn('facebook', { 
         callbackUrl: redirectUrl,
-        redirect: false
+        redirect: true
       });
       
-      if (result?.error) {
-        throw new Error(result.error);
-      }
-      
-      // Call the success callback - this will let the parent component handle redirect
-      if (onSuccess && !result?.error) {
-        onSuccess();
-      }
+      // Code below won't execute due to redirect
     } catch (err) {
       setError(err.message || 'Facebook login failed. Please try again.');
       console.error('Facebook login error:', err);
@@ -78,7 +70,6 @@ const SocialLogin = ({
         title: "Login failed",
         description: err.message || 'Facebook login failed. Please try again.'
       });
-    } finally {
       setIsFacebookLoading(false);
     }
   };
