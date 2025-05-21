@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useRef } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { X, LogIn, UserPlus } from 'lucide-react';
@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button';
 import gsap from 'gsap';
 import Image from 'next/image';
 import SearchBar from '@/components/search/search-bar';
-import { categories, navItems } from '@/data/products';
+import { getCategories, navItems } from '@/data/products';
 import { useAuth } from '@/hooks/use-auth';
 
 const MobileMenu = ({ isOpen, onClose }) => {
@@ -16,6 +16,24 @@ const MobileMenu = ({ isOpen, onClose }) => {
   const pathname = usePathname();
   const router = useRouter();
   const { isAuthenticated } = useAuth();
+  const [categories, setCategories] = useState([]);
+  
+  // Fetch categories when the menu opens
+  useEffect(() => {
+    if (isOpen) {
+      const fetchCategories = async () => {
+        try {
+          const fetchedCategories = await getCategories();
+          setCategories(fetchedCategories);
+        } catch (error) {
+          console.error('Failed to fetch categories:', error);
+          setCategories([]);
+        }
+      };
+      
+      fetchCategories();
+    }
+  }, [isOpen]);
   
   useEffect(() => {
     // Add event listener to handle escape key

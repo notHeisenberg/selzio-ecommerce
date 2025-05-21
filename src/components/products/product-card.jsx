@@ -2,11 +2,12 @@
 
 import Image from 'next/image';
 import Link from 'next/link';
-import { Star, ShoppingCart } from 'lucide-react';
+import { Star, ShoppingCart, Heart } from 'lucide-react';
 import { ArrowRight } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { useCart } from '@/hooks/use-cart';
+import { useWishlist } from '@/hooks/use-wishlist';
 import { useToast } from '@/hooks/use-toast';
 import { getProductUrl } from '@/data/products';
 import { useState, useEffect } from 'react';
@@ -15,6 +16,7 @@ import { useTheme } from 'next-themes';
 
 export function ProductCard({ product, index = 0, animationEnabled = true }) {
   const { addToCart } = useCart();
+  const { toggleWishlist, isInWishlist } = useWishlist();
   const { toast } = useToast();
   const router = useRouter();
   const productUrl = getProductUrl(product);
@@ -36,6 +38,15 @@ export function ProductCard({ product, index = 0, animationEnabled = true }) {
     addToCart(product);
     
     // The toast is now handled in the useCart hook
+  };
+  
+  // Handle wishlist toggle
+  const handleWishlistToggle = (e) => {
+    e.preventDefault(); // Prevent navigating to product page
+    e.stopPropagation(); // Prevent event bubbling
+    
+    // Toggle wishlist status
+    toggleWishlist(product);
   };
   
   // Handle card click to navigate to product page
@@ -90,15 +101,34 @@ export function ProductCard({ product, index = 0, animationEnabled = true }) {
             </div>
           )}
           <div 
-            className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transform group-hover:translate-y-0 transition-all duration-300"
+            className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transform group-hover:translate-y-0 transition-all duration-300 flex gap-2"
           >
+            {/* Wishlist button */}
             <Button
               variant="secondary"
               size="icon"
               className={`rounded-full shadow-md transition-all duration-300 hover:scale-110 hover:shadow-lg
                 ${mounted && resolvedTheme === 'dark'
                   ? 'bg-gray-700/90 hover:bg-gray-600 hover:border-gray-500'
-                  : 'bg-white/90 hover:bg-white hover:bg-violet-50 hover:border-violet-200'
+                  : 'bg-white/90 hover:bg-rose-50 hover:border-rose-200'
+                }`}
+              onClick={handleWishlistToggle}
+            >
+              <Heart className={`h-5 w-5 transition-colors duration-300
+                ${mounted && resolvedTheme === 'dark'
+                  ? isInWishlist(product.productCode) ? 'fill-red-400 text-red-400' : 'text-gray-200 hover:text-red-400'
+                  : isInWishlist(product.productCode) ? 'fill-rose-500 text-rose-500' : 'text-slate-700 hover:text-rose-500'
+                }`} />
+            </Button>
+            
+            {/* Cart button */}
+            <Button
+              variant="secondary"
+              size="icon"
+              className={`rounded-full shadow-md transition-all duration-300 hover:scale-110 hover:shadow-lg
+                ${mounted && resolvedTheme === 'dark'
+                  ? 'bg-gray-700/90 hover:bg-gray-600 hover:border-gray-500'
+                  : 'bg-white/90 hover:bg-violet-50 hover:border-violet-200'
                 }`}
               onClick={handleAddToCart}
             >
@@ -157,7 +187,7 @@ export function ProductCard({ product, index = 0, animationEnabled = true }) {
                     ? 'text-gray-100'
                     : 'text-slate-800'
                   }`}>
-                  ${product.price.toFixed(2)}
+                  {product.price.toFixed(2)} BDT
                 </span>
                 {product.discount > 0 && (
                   <span className={`text-sm line-through 
@@ -165,7 +195,7 @@ export function ProductCard({ product, index = 0, animationEnabled = true }) {
                       ? 'text-gray-500'
                       : 'text-slate-500'
                     }`}>
-                    ${(product.price * (1 + product.discount / 100)).toFixed(2)}
+                    {(product.price * (1 + product.discount / 100)).toFixed(2)} BDT
                   </span>
                 )}
               </div>

@@ -10,7 +10,8 @@ const COLLECTIONS = {
   PRODUCTS: "products",
   ORDERS: "orders",
   REVIEWS: "reviews",
-  CATEGORIES: "categories"
+  CATEGORIES: "categories",
+  WISHLIST: "wishlist"
 };
 
 // MongoDB Client options
@@ -74,6 +75,10 @@ export async function getReviewsCollection() {
 
 export async function getCategoriesCollection() {
   return getCollection(COLLECTIONS.CATEGORIES);
+}
+
+export async function getWishlistCollection() {
+  return getCollection(COLLECTIONS.WISHLIST);
 }
 
 // Export the client and clientPromise for direct access if needed

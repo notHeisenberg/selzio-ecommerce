@@ -8,7 +8,7 @@ import { useDebounce } from '@/hooks/use-debounce';
 import gsap from 'gsap';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
-import { products, getProductUrl } from '@/data/products';
+import { searchProducts, getProductUrl } from '@/data/products';
 
 const SearchBar = () => {
   const router = useRouter();
@@ -110,22 +110,13 @@ const SearchBar = () => {
     };
   }, []);
 
-  // Search function using the centralized products data
-  const searchProducts = async (query) => {
+  // Search function using the searchProducts function from products.js
+  const searchProductsFromAPI = async (query) => {
     setIsSearching(true);
     try {
-      // Simulate API call delay
-      await new Promise(resolve => setTimeout(resolve, 300));
-      
-      // Filter products using the centralized data
-      const results = products.filter(product => 
-        product.name.toLowerCase().includes(query.toLowerCase()) ||
-        product.category.toLowerCase().includes(query.toLowerCase()) ||
-        (product.subcategory && product.subcategory.toLowerCase().includes(query.toLowerCase())) ||
-        (product.tags && product.tags.some(tag => tag.includes(query.toLowerCase())))
-      );
-      
-      setSearchResults(results);
+      // Call the searchProducts function
+      const results = await searchProducts(query);
+      setSearchResults(results || []);
     } catch (error) {
       console.error('Search error:', error);
       setSearchResults([]);
@@ -136,7 +127,7 @@ const SearchBar = () => {
 
   useEffect(() => {
     if (debouncedSearch) {
-      searchProducts(debouncedSearch);
+      searchProductsFromAPI(debouncedSearch);
     } else {
       setSearchResults([]);
     }
@@ -187,7 +178,7 @@ const SearchBar = () => {
         <div className="absolute top-full left-0 right-0 mt-1 bg-card/95 backdrop-blur-sm rounded-md shadow-lg border border-border max-h-96 overflow-y-auto z-50">
           {searchResults.map((result) => (
             <div
-              key={result.id}
+              key={result.productCode}
               onMouseEnter={handleResultHover}
               onMouseLeave={handleResultLeave}
               onClick={() => handleResultClick(result)}

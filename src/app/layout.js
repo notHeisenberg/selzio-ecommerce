@@ -2,6 +2,7 @@ import { Inter } from 'next/font/google';
 import './globals.css';
 import { ThemeProvider } from 'next-themes';
 import { CartProvider } from '@/hooks/use-cart';
+import { WishlistProvider } from '@/hooks/use-wishlist';
 import { AuthProvider } from '@/hooks/use-auth';
 import { Toaster } from '@/components/ui/toaster';
 import NextAuthProvider from '@/components/auth/next-auth-provider';
@@ -23,8 +24,10 @@ export default function RootLayout({ children }) {
             <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
               <AuthProvider>
                 <CartProvider>
-                  {children}
-                  <Toaster />
+                  <WishlistProvider>
+                    {children}
+                    <Toaster />
+                  </WishlistProvider>
                 </CartProvider>
               </AuthProvider>
             </ThemeProvider>

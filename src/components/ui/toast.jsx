@@ -34,6 +34,8 @@ const toastVariants = cva(
           "dark:border-blue-600/40 dark:bg-blue-950/80 dark:text-blue-200 border-blue-200 bg-blue-50/90 text-blue-800 shadow-md backdrop-blur-sm",
         warning:
           "dark:border-yellow-600/40 dark:bg-yellow-950/80 dark:text-yellow-200 border-yellow-200 bg-yellow-50/90 text-yellow-800 shadow-md backdrop-blur-sm",
+        wishlist:
+          "wishlist group border-rose-200 dark:border-rose-800/40 bg-gradient-to-r from-rose-50 to-rose-100/90 dark:from-rose-950/70 dark:to-rose-900/50 text-rose-700 dark:text-rose-200 shadow-md backdrop-blur-sm",
       },
     },
     defaultVariants: {
@@ -79,6 +81,10 @@ const ToastAction = React.forwardRef(({ className, ...props }, ref) => {
         isDark
           ? "group-[.warning]:border-yellow-700/50 group-[.warning]:text-yellow-200 group-[.warning]:hover:bg-yellow-800/40 group-[.warning]:hover:text-yellow-100 group-[.warning]:hover:border-yellow-600/70"
           : "group-[.warning]:border-yellow-300 group-[.warning]:text-yellow-800 group-[.warning]:hover:bg-yellow-100 group-[.warning]:hover:text-yellow-900",
+        // Wishlist toast styling
+        isDark
+          ? "group-[.wishlist]:border-rose-700/50 group-[.wishlist]:text-rose-200 group-[.wishlist]:hover:bg-rose-800/40 group-[.wishlist]:hover:text-rose-100 group-[.wishlist]:hover:border-rose-600/70"
+          : "group-[.wishlist]:border-rose-300 group-[.wishlist]:text-rose-700 group-[.wishlist]:hover:bg-rose-100 group-[.wishlist]:hover:text-rose-900",
         className
       )}
       {...props} 
@@ -96,6 +102,7 @@ const ToastClose = React.forwardRef(({ className, ...props }, ref) => (
       "group-[.success]:text-green-700 group-[.success]:hover:text-green-900 dark:group-[.success]:text-green-300 dark:group-[.success]:hover:text-green-200",
       "group-[.info]:text-blue-700 group-[.info]:hover:text-blue-900 dark:group-[.info]:text-blue-300 dark:group-[.info]:hover:text-blue-200",
       "group-[.warning]:text-yellow-700 group-[.warning]:hover:text-yellow-900 dark:group-[.warning]:text-yellow-300 dark:group-[.warning]:hover:text-yellow-200",
+      "group-[.wishlist]:text-rose-500 group-[.wishlist]:hover:text-rose-700 dark:group-[.wishlist]:text-rose-300 dark:group-[.wishlist]:hover:text-rose-200",
       className
     )}
     toast-close=""

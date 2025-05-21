@@ -166,7 +166,7 @@ export default function CartPage() {
                             <div className="flex-1">
                               <h3 className="font-medium text-base sm:text-lg mb-1">{item.name}</h3>
                               <p className="text-muted-foreground text-sm mb-4">{item.description}</p>
-                              <div className="text-primary font-semibold text-lg mb-2">${item.price.toFixed(2)}</div>
+                              <div className="text-primary font-semibold text-lg mb-2">{item.price.toFixed(2)} BDT</div>
                             </div>
                             
                             <div className="flex justify-between items-center">
@@ -198,23 +198,19 @@ export default function CartPage() {
                                   <Plus className="h-3 w-3" />
                                 </Button>
                               </div>
-                              <div className="flex items-center gap-4">
-                                <div className="text-base font-semibold text-foreground">
-                                  ${(item.price * item.quantity).toFixed(2)}
-                                </div>
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  className={`h-8 w-8 rounded-full transition-all duration-200
-                                    ${mounted && resolvedTheme === 'dark'
-                                      ? 'text-red-400 hover:bg-red-900/30 hover:text-red-300'
-                                      : 'text-destructive hover:bg-destructive/10 hover:text-destructive'
-                                    }`}
-                                  onClick={() => removeItem(item.id)}
-                                >
-                                  <Trash2 className="h-4 w-4" />
-                                </Button>
-                              </div>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className={`text-sm transition-colors hover:scale-105
+                                  ${mounted && resolvedTheme === 'dark'
+                                    ? 'text-red-400 hover:bg-red-900/30 hover:text-red-300'
+                                    : 'text-destructive hover:bg-destructive/10 hover:text-destructive'
+                                  }`}
+                                onClick={() => removeItem(item.id)}
+                              >
+                                <Trash2 className="h-4 w-4 mr-1" />
+                                Remove
+                              </Button>
                             </div>
                           </div>
                         </div>
@@ -223,189 +219,165 @@ export default function CartPage() {
                   ))}
                 </div>
                 
-                {/* Continue Shopping Button */}
-                <div className="flex justify-start pt-4">
+                {/* Continue Shopping */}
+                <div className="flex justify-between">
                   <Button 
                     variant="outline" 
+                    size="sm"
+                    onClick={() => router.push('/store')}
                     className="group"
-                    asChild
                   >
-                    <Link href="/store">
-                      <ArrowLeft className="mr-2 h-4 w-4 transition-transform duration-200 group-hover:-translate-x-1" />
-                      Continue Shopping
-                    </Link>
+                    <ArrowLeft className="mr-2 h-4 w-4 transition-transform duration-200 group-hover:-translate-x-1" />
+                    Continue Shopping
                   </Button>
                 </div>
               </div>
               
               {/* Order Summary */}
               <div className="lg:col-span-1">
-                <div className="lg:sticky lg:top-20 space-y-5">
-                  <Card className={mounted && resolvedTheme === 'dark' ? 'border-gray-800' : ''}>
-                    <CardHeader>
-                      <CardTitle>Order Summary</CardTitle>
-                      <CardDescription>
-                        {totalItems} {totalItems === 1 ? 'item' : 'items'} in your cart
-                      </CardDescription>
-                    </CardHeader>
-                    <CardContent className="space-y-5">
-                      {/* Coupon Code */}
-                      {!appliedCoupon ? (
-                        <div className="space-y-3">
-                          <div className="text-sm font-medium">Have a coupon code?</div>
-                          <div className="flex gap-2">
-                            <Input 
-                              placeholder="Enter coupon code"
-                              value={couponCode}
-                              onChange={(e) => setCouponCode(e.target.value)}
-                              className="h-9"
-                            />
-                            <Button 
-                              variant="secondary" 
-                              size="sm" 
-                              className="h-9 whitespace-nowrap"
-                              onClick={handleApplyCoupon}
-                              disabled={!couponCode.trim() || isApplyingCoupon}
-                            >
-                              {isApplyingCoupon ? (
-                                <>
-                                  <RefreshCw className="h-3.5 w-3.5 mr-1.5 animate-spin" />
-                                  Applying...
-                                </>
-                              ) : 'Apply'}
-                            </Button>
-                          </div>
-                          {couponError && (
-                            <p className="text-xs text-destructive">{couponError}</p>
-                          )}
-                          <div className="text-xs text-muted-foreground">
-                            Try WELCOME10 for 10% off or FREESHIP for free shipping
-                          </div>
-                        </div>
-                      ) : (
-                        <div className="bg-primary/10 rounded-lg p-3 space-y-1.5">
-                          <div className="flex justify-between items-center">
-                            <div className="flex items-center">
-                              <Tag className="h-4 w-4 mr-2 text-primary" />
-                              <span className="font-medium text-sm">{appliedCoupon.code}</span>
-                            </div>
-                            <Button 
-                              variant="ghost" 
-                              size="xs" 
-                              className="h-7 text-xs text-muted-foreground hover:text-destructive"
-                              onClick={handleRemoveCoupon}
-                            >
-                              Remove
-                            </Button>
-                          </div>
-                          <p className="text-xs text-muted-foreground">{appliedCoupon.description}</p>
+                <Card className={mounted && resolvedTheme === 'dark' ? 'border-gray-800' : ''}>
+                  <CardHeader>
+                    <CardTitle>Order Summary</CardTitle>
+                    <CardDescription>
+                      {totalItems} {totalItems === 1 ? 'item' : 'items'} in your cart
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="space-y-2">
+                      <div className="flex justify-between text-sm">
+                        <span>Subtotal</span>
+                        <span className="font-medium">{totalPrice.toFixed(2)} BDT</span>
+                      </div>
+                      
+                      {/* Discount */}
+                      {appliedCoupon && (
+                        <div className="flex justify-between text-sm text-primary">
+                          <span className="flex items-center gap-1">
+                            <Tag className="h-3.5 w-3.5" />
+                            {appliedCoupon.type === 'percentage' 
+                              ? `Discount (${appliedCoupon.discount * 100}%)` 
+                              : 'Discount'}
+                          </span>
+                          <span>-{discountAmount.toFixed(2)} BDT</span>
                         </div>
                       )}
                       
-                      {/* Free Shipping Alert */}
-                      {!qualifiesForFreeShipping && (
-                        <Alert variant="info" className="bg-blue-500/10 text-blue-700 dark:text-blue-300 border-blue-200 dark:border-blue-900/50">
-                          <AlertTitle className="flex items-center text-sm font-medium">
-                            <ShoppingBag className="h-4 w-4 mr-2" />
-                            Free Shipping
-                          </AlertTitle>
-                          <AlertDescription className="text-xs mt-1">
-                            Add ${(freeShippingThreshold - totalPrice).toFixed(2)} more to qualify for free shipping!
-                          </AlertDescription>
-                        </Alert>
-                      )}
-                      
-                      <Separator />
-                      
-                      {/* Price Summary */}
-                      <div className="space-y-2">
-                        <div className="flex justify-between text-sm">
-                          <span>Subtotal</span>
-                          <span className="font-medium">${totalPrice.toFixed(2)}</span>
-                        </div>
-                        
-                        {appliedCoupon && appliedCoupon.type === 'percentage' && (
-                          <div className="flex justify-between text-sm text-primary">
-                            <span>Discount ({appliedCoupon.discount * 100}%)</span>
-                            <span>-${discountAmount.toFixed(2)}</span>
-                          </div>
+                      {/* Shipping info */}
+                      <div className="flex justify-between text-sm">
+                        <span>Shipping</span>
+                        {shippingCost === 0 ? (
+                          <span className="text-green-600 dark:text-green-400">Calculated at checkout</span>
+                        ) : (
+                          <span>{shippingCost.toFixed(2)} BDT</span>
                         )}
-                        
-                        {appliedCoupon && appliedCoupon.type === 'fixed' && appliedCoupon.discount !== baseShippingCost && (
-                          <div className="flex justify-between text-sm text-primary">
-                            <span>Discount</span>
-                            <span>-${discountAmount.toFixed(2)}</span>
-                          </div>
-                        )}
-                        
-                        <div className="flex justify-between text-sm">
-                          <span>Shipping</span>
-                          <span className="text-primary">Calculated at checkout</span>
-                        </div>
-                        
-                        <Separator className="my-2" />
-                        
+                      </div>
+                      
+                      <div className="pt-2 mt-2 border-t">
                         <div className="flex justify-between font-semibold">
                           <span>Total</span>
-                          <span className="text-primary">${grandTotal.toFixed(2)}</span>
+                          <span className="text-lg text-primary">{(grandTotal + shippingCost).toFixed(2)} BDT</span>
                         </div>
-                        <div className="text-xs text-muted-foreground text-center">
-                          Shipping costs will be calculated at checkout
-                        </div>
+                        
+                        {appliedCoupon && (
+                          <div className="mt-1 text-center">
+                            <span className="text-xs text-primary bg-primary/10 px-2 py-0.5 rounded-full">
+                              {appliedCoupon.code} applied
+                            </span>
+                            <button 
+                              onClick={handleRemoveCoupon}
+                              className="ml-2 text-xs text-muted-foreground hover:text-destructive"
+                            >
+                              Remove
+                            </button>
+                          </div>
+                        )}
                       </div>
-                    </CardContent>
-                    <CardFooter className="flex flex-col space-y-3">
-                      <Button 
-                        className="w-full group shadow-md hover:shadow-lg transform hover:translate-y-[-1px] transition-all duration-200"
-                        onClick={handleCheckout}
-                      >
-                        <ShoppingBag className="mr-2 h-4 w-4 group-hover:scale-110 transition-transform duration-200" />
-                        Proceed to Checkout
-                        <ArrowRight className="ml-2 h-4 w-4 opacity-70 group-hover:translate-x-1 transition-transform duration-200" />
-                      </Button>
-                      
-                      {!isAuthenticated && (
-                        <p className="text-xs text-center text-muted-foreground">
-                          You'll have the option to log in or create an account during checkout
+                    </div>
+                    
+                    {/* Free shipping alert */}
+                    {!qualifiesForFreeShipping && shippingCost > 0 && (
+                      <Alert variant="info" className="bg-primary/5 text-xs">
+                        <AlertTitle className="text-sm">Free Shipping Available</AlertTitle>
+                        <AlertDescription>
+                          Add <span className="font-medium text-primary">{(freeShippingThreshold - totalPrice).toFixed(2)} BDT</span> more to qualify for free shipping!
+                        </AlertDescription>
+                      </Alert>
+                    )}
+                    
+                    {/* Coupon code */}
+                    {!appliedCoupon && (
+                      <div className="pt-2 border-t">
+                        <p className="text-sm font-medium mb-2">Have a promo code?</p>
+                        <div className="flex gap-2">
+                          <Input 
+                            placeholder="Enter code"
+                            value={couponCode}
+                            onChange={(e) => setCouponCode(e.target.value)}
+                            className="h-9"
+                          />
+                          <Button 
+                            variant="outline" 
+                            size="sm"
+                            className="whitespace-nowrap px-3 h-9"
+                            onClick={handleApplyCoupon}
+                            disabled={!couponCode.trim() || isApplyingCoupon}
+                          >
+                            {isApplyingCoupon ? (
+                              <RefreshCw className="h-3.5 w-3.5 animate-spin" />
+                            ) : 'Apply'}
+                          </Button>
+                        </div>
+                        {couponError && (
+                          <p className="text-xs text-destructive mt-1">{couponError}</p>
+                        )}
+                        <p className="text-xs text-muted-foreground mt-1">
+                          Try "WELCOME10" for 10% off or "FREESHIP" for free shipping
                         </p>
-                      )}
-                    </CardFooter>
-                  </Card>
-                </div>
+                      </div>
+                    )}
+                  </CardContent>
+                  <CardFooter className="flex flex-col gap-2">
+                    <Button 
+                      className={`w-full group shadow-md hover:shadow-lg transform hover:translate-y-[-1px] transition-all duration-200
+                        ${mounted && resolvedTheme === 'dark'
+                          ? 'bg-blue-600 hover:bg-blue-500 text-white'
+                          : ''
+                        }`}
+                      onClick={handleCheckout}
+                    >
+                      <ShoppingBag className="mr-2 h-4 w-4 group-hover:scale-110 transition-transform duration-200" />
+                      Proceed to Checkout
+                      <ArrowRight className="ml-2 h-4 w-4 opacity-70 group-hover:translate-x-1 transition-transform duration-200" />
+                    </Button>
+                    
+                    <div className="text-center text-xs text-muted-foreground pt-2">
+                      Taxes and shipping calculated at checkout
+                    </div>
+                  </CardFooter>
+                </Card>
               </div>
             </div>
           ) : (
-            <div className="flex flex-col items-center justify-center py-12 md:py-20 max-w-lg mx-auto">
-              <div className={`w-20 h-20 rounded-full flex items-center justify-center mb-6
-                ${mounted && resolvedTheme === 'dark'
-                  ? 'bg-gray-800'
-                  : 'bg-secondary/30'
-                }`}
-              >
-                <ShoppingBag className={`h-10 w-10 
-                  ${mounted && resolvedTheme === 'dark'
-                    ? 'text-gray-400'
-                    : 'text-slate-400'
-                  }`} 
-                />
+            // Empty cart state
+            <div className="text-center py-16 max-w-md mx-auto">
+              <div className="rounded-full bg-secondary/30 p-6 w-24 h-24 mx-auto mb-6 flex items-center justify-center">
+                <ShoppingBag className="h-10 w-10 text-primary/60" />
               </div>
-              <h2 className="text-2xl font-bold text-center mb-3">Your cart is empty</h2>
-              <p className="text-muted-foreground text-center mb-8">
-                Looks like you haven't added any items to your cart yet. Browse our store to find something you'll love.
+              <h2 className="text-2xl font-semibold mb-3">Your cart is empty</h2>
+              <p className="text-muted-foreground mb-8">
+                Looks like you haven't added any items to your cart yet.
+                Start shopping to fill it with great items!
               </p>
               <Button 
-                size="lg"
-                className={`px-8 group
+                onClick={() => router.push('/store')}
+                className={`px-8 py-6 text-base group shadow-md
                   ${mounted && resolvedTheme === 'dark'
                     ? 'bg-blue-600 hover:bg-blue-500 text-white'
-                    : 'bg-primary hover:bg-primary-hover text-primary-foreground'
+                    : ''
                   }`}
-                asChild
               >
-                <Link href="/store">
-                  Start Shopping
-                  <ArrowRight className="ml-2 h-4 w-4 transition-transform duration-200 group-hover:translate-x-1" />
-                </Link>
+                Start Shopping
+                <ArrowRight className="ml-2 h-5 w-5 transition-transform duration-200 group-hover:translate-x-1" />
               </Button>
             </div>
           )}
@@ -413,19 +385,14 @@ export default function CartPage() {
       </main>
       
       <Footer />
-
-      {/* Use the shared auth dialog component */}
+      
+      {/* Auth Dialog for non-authenticated users */}
       <CheckoutAuthDialog 
         open={showAuthDialog} 
         onOpenChange={setShowAuthDialog}
         onSuccess={() => {
-          // Close the auth dialog after successful login/registration
-          setShowAuthDialog(false);
-          
-          // The auth dialog will handle the redirect timing and coupon data saving
-          // No need to do anything else here - this simplifies the callback
+          router.push('/checkout');
         }}
-        redirectUrl="/checkout"
       />
     </div>
   );

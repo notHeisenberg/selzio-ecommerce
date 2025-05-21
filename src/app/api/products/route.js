@@ -9,6 +9,7 @@ export async function GET(req) {
     const limit = parseInt(searchParams.get('limit')) || 10;
     const category = searchParams.get('category');
     const search = searchParams.get('search');
+    const topSelling = searchParams.get('topSelling');
 
     // Get products collection
     const productsCollection = await getProductsCollection();
@@ -19,9 +20,11 @@ export async function GET(req) {
     if (search) {
       query.$or = [
         { name: { $regex: search, $options: 'i' } },
-        { description: { $regex: search, $options: 'i' } }
+        { description: { $regex: search, $options: 'i' } },
+        { tags: { $in: [new RegExp(search, 'i')] } }
       ];
     }
+    if (topSelling === 'true') query.topSelling = true;
 
     // Find products with pagination
     const products = await productsCollection

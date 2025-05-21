@@ -37,7 +37,7 @@ export const CartProvider = ({ children }) => {
   const addToCart = (product, quantity = 1) => {
     setCartItems(prevItems => {
       // Check if item already exists in cart
-      const existingItemIndex = prevItems.findIndex(item => item.id === product.id);
+      const existingItemIndex = prevItems.findIndex(item => item.productCode === product.productCode);
       
       if (existingItemIndex !== -1) {
         // Update quantity if item exists
@@ -102,10 +102,10 @@ export const CartProvider = ({ children }) => {
   };
   
   // Update item quantity
-  const updateQuantity = (id, quantity) => {
+  const updateQuantity = (productCode, quantity) => {
     setCartItems(prevItems => 
       prevItems.map(item => 
-        item.id === id 
+        item.productCode === productCode 
           ? { ...item, quantity: Math.max(1, quantity) } 
           : item
       )
@@ -113,8 +113,8 @@ export const CartProvider = ({ children }) => {
   };
   
   // Remove item from cart
-  const removeItem = (id) => {
-    setCartItems(prevItems => prevItems.filter(item => item.id !== id));
+  const removeItem = (productCode) => {
+    setCartItems(prevItems => prevItems.filter(item => item.productCode !== productCode));
   };
   
   // Clear entire cart

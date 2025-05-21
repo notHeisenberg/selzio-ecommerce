@@ -14,7 +14,7 @@ import UserMenu from '@/components/user/user-menu';
 import CartDrawer from '@/components/cart/cart-drawer';
 import ThemeSwitcher from '@/components/theme/theme-switcher';
 import MobileMenu from './mobile-menu';
-import { categories, navItems } from '@/data/products';
+import { getCategories, navItems } from '@/data/products';
 import { useAuth } from '@/hooks/use-auth';
 
 export function Navbar() {
@@ -27,6 +27,22 @@ export function Navbar() {
   const searchRef = useRef(null);
   const iconsRef = useRef(null);
   const { isAuthenticated } = useAuth();
+  const [categories, setCategories] = useState([]);
+
+  // Fetch categories on component mount
+  useEffect(() => {
+    const fetchCategories = async () => {
+      try {
+        const fetchedCategories = await getCategories();
+        setCategories(fetchedCategories);
+      } catch (error) {
+        console.error('Failed to fetch categories:', error);
+        setCategories([]);
+      }
+    };
+    
+    fetchCategories();
+  }, []);
 
   useEffect(() => {
     // Logo animation

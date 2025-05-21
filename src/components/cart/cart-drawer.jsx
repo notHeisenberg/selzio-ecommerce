@@ -246,7 +246,7 @@ const CartDrawer = () => {
                             : 'text-violet-700'
                           }`}
                         >
-                          ${item.price.toFixed(2)}
+                          {item.price.toFixed(2)} BDT
                         </p>
                         <div className="flex items-center gap-2">
                           <Button
@@ -344,7 +344,7 @@ const CartDrawer = () => {
                 <div className="space-y-2 mb-4">
                   <div className="flex justify-between text-sm text-foreground">
                     <span>Subtotal</span>
-                    <span className="font-medium text-foreground">${totalPrice.toFixed(2)}</span>
+                    <span className="font-medium text-foreground">{totalPrice.toFixed(2)} BDT</span>
                   </div>
                   
                   {appliedCoupon && appliedCoupon.type === 'percentage' && (
@@ -353,7 +353,7 @@ const CartDrawer = () => {
                         <Tag className="h-4 w-4 mr-1" />
                         Discount ({appliedCoupon.discount * 100}%)
                       </span>
-                      <span>-${discountAmount.toFixed(2)}</span>
+                      <span>-{discountAmount.toFixed(2)} BDT</span>
                     </div>
                   )}
                   
@@ -363,7 +363,7 @@ const CartDrawer = () => {
                         <Tag className="h-4 w-4 mr-1" />
                         Discount
                       </span>
-                      <span>-${discountAmount.toFixed(2)}</span>
+                      <span>-{discountAmount.toFixed(2)} BDT</span>
                     </div>
                   )}
                   
@@ -379,7 +379,7 @@ const CartDrawer = () => {
                   ></div>
                   <div className="flex justify-between font-semibold">
                     <span className="text-foreground">Total</span>
-                    <span className="text-primary">${grandTotal.toFixed(2)}</span>
+                    <span className="text-primary">{grandTotal.toFixed(2)} BDT</span>
                   </div>
                   
                   {appliedCoupon && (
@@ -496,11 +496,9 @@ const CartDrawer = () => {
         open={showAuthDialog} 
         onOpenChange={setShowAuthDialog}
         onSuccess={() => {
-          // Close dialog without redirection
-          setShowAuthDialog(false);
-          // The auth dialog will handle the redirect timing and coupon data saving
+          router.push('/checkout');
+          setOpen(false);
         }}
-        redirectUrl="/checkout"
       />
     </>
   );

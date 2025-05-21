@@ -1,154 +1,14 @@
-// Comprehensive products array containing all product information
-export const products = [
-  {
-    id: 1,
-    name: 'Premium Wireless Headphones',
-    price: 199.99,
-    rating: 4.8,
-    reviews: 128,
-    image: '/products/headphones.jpg',
-    category: 'Electronics',
-    subcategory: 'Audio',
-    discount: 15,
-    description: 'Experience superior sound quality with our premium wireless headphones featuring noise-cancellation technology.',
-    topSelling: true,
-    stock: 35,
-    tags: ['wireless', 'audio', 'premium', 'noise-cancelling']
-  },
-  {
-    id: 2,
-    name: 'Designer Watch Collection',
-    price: 299.99,
-    rating: 4.9,
-    reviews: 89,
-    image: '/products/watch.jpg',
-    category: 'Fashion',
-    subcategory: 'Accessories',
-    discount: 10,
-    description: 'Elegant timepieces crafted with precision for the modern individual.',
-    topSelling: true,
-    stock: 20,
-    tags: ['watches', 'luxury', 'accessories', 'designer']
-  },
-  {
-    id: 3,
-    name: 'Smart Home Speaker',
-    price: 149.99,
-    rating: 4.7,
-    reviews: 156,
-    image: '/products/speaker.jpg',
-    category: 'Electronics',
-    subcategory: 'Smart Home',
-    discount: 20,
-    description: 'Transform your living space with voice-controlled smart speakers providing immersive audio experience.',
-    topSelling: true,
-    stock: 42,
-    tags: ['smart-home', 'speaker', 'voice-control', 'audio']
-  },
-  {
-    id: 4,
-    name: 'Luxury Perfume Set',
-    price: 179.99,
-    rating: 4.9,
-    reviews: 92,
-    image: '/products/perfume.jpg',
-    category: 'Beauty',
-    subcategory: 'Fragrances',
-    discount: 0,
-    description: 'A collection of exquisite fragrances crafted from the finest ingredients for a lasting impression.',
-    topSelling: true,
-    stock: 15,
-    tags: ['perfume', 'fragrance', 'luxury', 'gift-set']
-  },
-  {
-    id: 5,
-    name: 'Men\'s Casual Shirt',
-    price: 59.99,
-    rating: 4.5,
-    reviews: 75,
-    image: '/images/products/shirt-1.jpg',
-    category: 'Men\'s Fashion',
-    subcategory: 'Casual Wear',
-    discount: 0,
-    description: 'Comfortable and stylish casual shirt perfect for everyday wear.',
-    topSelling: false,
-    stock: 50,
-    tags: ['men', 'shirt', 'casual', 'cotton']
-  },
-  {
-    id: 6,
-    name: 'Women\'s Summer Dress',
-    price: 79.99,
-    rating: 4.6,
-    reviews: 63,
-    image: '/images/products/dress-1.jpg',
-    category: 'Women\'s Fashion',
-    subcategory: 'Dresses',
-    discount: 5,
-    description: 'Lightweight and flowy summer dress with elegant design.',
-    topSelling: false,
-    stock: 38,
-    tags: ['women', 'dress', 'summer', 'casual']
-  }
-];
+"use client"
 
-// Featured categories for homepage derived from products
-export const featuredCategories = [
-  {
-    id: 1,
-    name: 'Electronics',
-    image: '/categories/electronics.jpg',
-    count: products.filter(p => p.category === 'Electronics').length,
-    description: 'Latest gadgets and tech accessories',
-    href: '/products/electronics'
-  },
-  {
-    id: 2,
-    name: 'Fashion',
-    image: '/categories/fashion.jpg',
-    count: products.filter(p => p.category === 'Fashion' || p.category === 'Men\'s Fashion' || p.category === 'Women\'s Fashion').length,
-    description: 'Trendy clothing and accessories',
-    href: '/products/fashion'
-  },
-  {
-    id: 3,
-    name: 'Home & Living',
-    image: '/categories/home.jpg',
-    count: products.filter(p => p.category === 'Home & Living').length,
-    description: 'Make your home beautiful',
-    href: '/products/home-living'
-  },
-  {
-    id: 4,
-    name: 'Beauty',
-    image: '/categories/beauty.jpg',
-    count: products.filter(p => p.category === 'Beauty').length,
-    description: 'Premium beauty products',
-    href: '/products/beauty'
-  }
-];
+import { useState, useEffect } from 'react';
 
-// Get top selling products
-export const getTopSellingProducts = () => products.filter(product => product.topSelling);
-
-// Categories data for navigation derived from unique categories in products
-export const categories = [
-  { name: "Men's Fashion", href: "/products/mens-fashion" },
-  { name: "Women's Fashion", href: "/products/womens-fashion" },
-  { name: "Perfumes", href: "/products/perfumes" },
-  { name: "Attar & Oils", href: "/products/attar-oils" },
-  { name: "Accessories", href: "/products/accessories" },
-  { name: "Footwear", href: "/products/footwear" },
-  { name: "Electronics", href: "/products/electronics" },
-  { name: "Home & Living", href: "/products/home-living" },
-];
-
-// Navigation items
-export const navItems = [
-  { name: "Home", href: "/" },
-  { name: "Store", href: "/store" },
-  { name: "Contact", href: "/contact" },
-];
+// Cached products data
+let productsCache = [];
+let categoriesCache = [];
+let featuredCategoriesCache = [];
+let isLoading = false;
+let lastFetchTime = 0;
+const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
 
 // Helper function to create URL-friendly slugs
 export const createSlug = (text) => {
@@ -162,6 +22,199 @@ export const getProductUrl = (product) => {
   const subcategorySlug = product.subcategory ? createSlug(product.subcategory) : null;
   
   return subcategorySlug
-    ? `/products/${categorySlug}/${subcategorySlug}/${productSlug}`
-    : `/products/${categorySlug}/${productSlug}`;
+    ? `/products/${categorySlug}/${subcategorySlug}/${productSlug}?code=${product.productCode}`
+    : `/products/${categorySlug}/${productSlug}?code=${product.productCode}`;
+};
+
+// Navigation items
+export const navItems = [
+  { name: "Home", href: "/" },
+  { name: "Store", href: "/store" },
+  { name: "Contact", href: "/contact" },
+];
+
+// Initialize products - this will be called by components that need product data
+export const initializeProducts = async () => {
+  const currentTime = Date.now();
+  
+  // Return cached data if available and not expired
+  if (productsCache.length > 0 && currentTime - lastFetchTime < CACHE_DURATION) {
+    return {
+      products: productsCache,
+      categories: categoriesCache,
+      featuredCategories: featuredCategoriesCache
+    };
+  }
+
+  // Avoid multiple simultaneous fetches
+  if (isLoading) {
+    // Wait for existing fetch to complete
+    await new Promise(resolve => {
+      const checkCache = () => {
+        if (!isLoading) {
+          resolve();
+        } else {
+          setTimeout(checkCache, 100);
+        }
+      };
+      checkCache();
+    });
+    
+    return {
+      products: productsCache,
+      categories: categoriesCache,
+      featuredCategories: featuredCategoriesCache
+    };
+  }
+
+  isLoading = true;
+  
+  try {
+    // Fetch products from API
+    const response = await fetch('/api/products?limit=100');
+    
+    if (!response.ok) {
+      throw new Error(`API error: ${response.status}`);
+    }
+    
+    const data = await response.json();
+    productsCache = data.products || [];
+    
+    // Derive categories from products
+    const uniqueCategories = [...new Set(productsCache.map(p => p.category))];
+    categoriesCache = uniqueCategories.map(name => ({
+      name,
+      href: `/products/${createSlug(name)}`
+    }));
+    
+    // Create featured categories
+    featuredCategoriesCache = [
+      {
+        id: 1,
+        name: 'Electronics',
+        image: '/categories/electronics.jpg',
+        count: productsCache.filter(p => p.category === 'Electronics').length,
+        description: 'Latest gadgets and tech accessories',
+        href: '/products/electronics'
+      },
+      {
+        id: 2,
+        name: 'Fashion',
+        image: '/categories/fashion.jpg',
+        count: productsCache.filter(p => p.category === 'Fashion' || p.category === 'Men\'s Fashion' || p.category === 'Women\'s Fashion').length,
+        description: 'Trendy clothing and accessories',
+        href: '/products/fashion'
+      },
+      {
+        id: 3,
+        name: 'Home & Living',
+        image: '/categories/home.jpg',
+        count: productsCache.filter(p => p.category === 'Home & Living').length,
+        description: 'Make your home beautiful',
+        href: '/products/home-living'
+      },
+      {
+        id: 4,
+        name: 'Beauty',
+        image: '/categories/beauty.jpg',
+        count: productsCache.filter(p => p.category === 'Beauty').length,
+        description: 'Premium beauty products',
+        href: '/products/beauty'
+      }
+    ];
+    
+    lastFetchTime = Date.now();
+    return {
+      products: productsCache,
+      categories: categoriesCache,
+      featuredCategories: featuredCategoriesCache
+    };
+  } catch (error) {
+    console.error("Error fetching products:", error);
+    // Return empty arrays on error
+    return { products: [], categories: [], featuredCategories: [] };
+  } finally {
+    isLoading = false;
+  }
+};
+
+// Async function to get all products
+export const getProducts = async () => {
+  const { products } = await initializeProducts();
+  return products;
+};
+
+// Async function to get categories
+export const getCategories = async () => {
+  const { categories } = await initializeProducts();
+  return categories;
+};
+
+// Async function to get featured categories
+export const getFeaturedCategories = async () => {
+  const { featuredCategories } = await initializeProducts();
+  return featuredCategories;
+};
+
+// Get top selling products
+export const getTopSellingProducts = async (limit = 4) => {
+  try {
+    const response = await fetch(`/api/products?topSelling=true&limit=${limit}`);
+    
+    if (!response.ok) {
+      throw new Error(`API error: ${response.status}`);
+    }
+    
+    const data = await response.json();
+    return data.products;
+  } catch (error) {
+    console.error("Error fetching top selling products:", error);
+    // Fallback to cached products if API fails
+    const { products } = await initializeProducts();
+    return products.filter(p => p.topSelling).slice(0, limit);
+  }
+};
+
+// Fetch a single product by product code
+export const getProductByCode = async (productCode) => {
+  try {
+    const response = await fetch(`/api/products/${productCode}`);
+    
+    if (!response.ok) {
+      throw new Error(`API error: ${response.status}`);
+    }
+    
+    return await response.json();
+  } catch (error) {
+    console.error(`Error fetching product with code ${productCode}:`, error);
+    // Try to find in cache as fallback
+    const { products } = await initializeProducts();
+    return products.find(p => p.productCode === productCode);
+  }
+};
+
+// Search products
+export const searchProducts = async (query, limit = 10) => {
+  try {
+    const response = await fetch(`/api/products?search=${encodeURIComponent(query)}&limit=${limit}`);
+    
+    if (!response.ok) {
+      throw new Error(`API error: ${response.status}`);
+    }
+    
+    const data = await response.json();
+    return data.products;
+  } catch (error) {
+    console.error("Error searching products:", error);
+    // Fallback to local filtering
+    const { products } = await initializeProducts();
+    const lowerQuery = query.toLowerCase();
+    return products.filter(p => 
+      p.name.toLowerCase().includes(lowerQuery) || 
+      p.description.toLowerCase().includes(lowerQuery) ||
+      p.category.toLowerCase().includes(lowerQuery) ||
+      (p.subcategory && p.subcategory.toLowerCase().includes(lowerQuery)) ||
+      (p.tags && p.tags.some(tag => tag.toLowerCase().includes(lowerQuery)))
+    ).slice(0, limit);
+  }
 }; 

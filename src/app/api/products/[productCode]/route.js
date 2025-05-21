@@ -3,19 +3,35 @@ import { getProductsCollection } from '@/lib/mongodb';
 import { requireAdmin } from '@/middleware/auth';
 import { ObjectId } from 'mongodb';
 
-// GET a single product by ID
 export async function GET(req, { params }) {
   try {
-    const { id } = params;
-    
+    const { productCode } = params;
+
+    if (!productCode) {
+      return NextResponse.json(
+        { error: 'Product identifier is required' },
+        { status: 400 }
+      );
+    }
+
     // Get products collection
     const productsCollection = await getProductsCollection();
 
-    // Find product by ID
-    const product = await productsCollection.findOne({ _id: new ObjectId(id) });
+    let product;
+    
+    // First try to find by productCode
+    product = await productsCollection.findOne({ productCode });
+
+    // If not found and it could be a valid MongoDB ID, try finding by _id
+    if (!product && ObjectId.isValid(productCode)) {
+      product = await productsCollection.findOne({ _id: new ObjectId(productCode) });
+    }
 
     if (!product) {
-      return NextResponse.json({ error: 'Product not found' }, { status: 404 });
+      return NextResponse.json(
+        { error: 'Product not found' },
+        { status: 404 }
+      );
     }
 
     return NextResponse.json(product);
@@ -37,7 +53,7 @@ export async function PUT(req, { params }) {
       return user; // Return the error response
     }
 
-    const { id } = params;
+    const { productCode } = params;
     const body = await req.json();
     
     // Get products collection
@@ -50,12 +66,23 @@ export async function PUT(req, { params }) {
       updatedAt: new Date()
     };
 
-    // Update product
-    const result = await productsCollection.findOneAndUpdate(
-      { _id: new ObjectId(id) },
+    let result;
+    
+    // Try to update by productCode first
+    result = await productsCollection.findOneAndUpdate(
+      { productCode },
       { $set: updatedProduct },
       { returnDocument: 'after' }
     );
+
+    // If not found and it could be a valid MongoDB ID, try updating by _id
+    if (!result && ObjectId.isValid(productCode)) {
+      result = await productsCollection.findOneAndUpdate(
+        { _id: new ObjectId(productCode) },
+        { $set: updatedProduct },
+        { returnDocument: 'after' }
+      );
+    }
 
     if (!result) {
       return NextResponse.json({ error: 'Product not found' }, { status: 404 });
@@ -80,13 +107,20 @@ export async function DELETE(req, { params }) {
       return user; // Return the error response
     }
 
-    const { id } = params;
+    const { productCode } = params;
     
     // Get products collection
     const productsCollection = await getProductsCollection();
 
-    // Delete product
-    const result = await productsCollection.findOneAndDelete({ _id: new ObjectId(id) });
+    let result;
+    
+    // Try to delete by productCode first
+    result = await productsCollection.findOneAndDelete({ productCode });
+
+    // If not found and it could be a valid MongoDB ID, try deleting by _id
+    if (!result && ObjectId.isValid(productCode)) {
+      result = await productsCollection.findOneAndDelete({ _id: new ObjectId(productCode) });
+    }
     
     if (!result) {
       return NextResponse.json({ error: 'Product not found' }, { status: 404 });
