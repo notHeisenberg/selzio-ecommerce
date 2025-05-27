@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button';
 import gsap from 'gsap';
 import Image from 'next/image';
 import SearchBar from '@/components/search/search-bar';
-import { getCategories, navItems } from '@/data/products';
+import { getProducts, navItems, createSlug } from '@/data/products';
 import { useAuth } from '@/hooks/use-auth';
 
 const MobileMenu = ({ isOpen, onClose }) => {
@@ -18,20 +18,62 @@ const MobileMenu = ({ isOpen, onClose }) => {
   const { isAuthenticated } = useAuth();
   const [categories, setCategories] = useState([]);
   
-  // Fetch categories when the menu opens
+  // Fetch subcategories when the menu opens
   useEffect(() => {
     if (isOpen) {
-      const fetchCategories = async () => {
+      const fetchSubcategories = async () => {
         try {
-          const fetchedCategories = await getCategories();
-          setCategories(fetchedCategories);
+          // Fetch products to get all subcategories
+          const products = await getProducts();
+          
+          // Group subcategories by category
+          const subcategoriesByCategory = {};
+          
+          products.forEach(product => {
+            if (product.category) {
+              // Normalize category name
+              const categoryName = product.category.trim();
+              
+              // Ensure subcategory exists and is not empty
+              if (product.subcategory) {
+                // Normalize subcategory name
+                const subcategoryName = product.subcategory.trim();
+                
+                if (subcategoryName) {
+                  if (!subcategoriesByCategory[categoryName]) {
+                    subcategoriesByCategory[categoryName] = new Set();
+                  }
+                  subcategoriesByCategory[categoryName].add(subcategoryName);
+                }
+              }
+            }
+          });
+          
+          // Convert to the format needed for the dropdown
+          const categorizedSubcategories = Object.entries(subcategoriesByCategory).map(([category, subcategories]) => ({
+            category,
+            subcategories: Array.from(subcategories).map(subcategory => ({
+              name: subcategory,
+              href: `/products/${createSlug(category)}/${createSlug(subcategory)}`
+            }))
+          }));
+          
+          // Sort categories alphabetically
+          categorizedSubcategories.sort((a, b) => a.category.localeCompare(b.category));
+          
+          // For each category, sort subcategories alphabetically
+          categorizedSubcategories.forEach(category => {
+            category.subcategories.sort((a, b) => a.name.localeCompare(b.name));
+          });
+          
+          setCategories(categorizedSubcategories);
         } catch (error) {
-          console.error('Failed to fetch categories:', error);
+          console.error('Failed to fetch subcategories:', error);
           setCategories([]);
         }
       };
       
-      fetchCategories();
+      fetchSubcategories();
     }
   }, [isOpen]);
   
@@ -163,26 +205,33 @@ const MobileMenu = ({ isOpen, onClose }) => {
                 ))}
               </div>
 
-              {/* Categories */}
-              <div className="space-y-2">
+              {/* Subcategories by Category */}
+              <div className="space-y-4">
                 <h3 className="px-4 text-sm font-medium text-muted-foreground uppercase tracking-wider">
-                  Categories
+                  Products
                 </h3>
-                {categories.map((category) => (
-                  <Link
-                    key={category.href}
-                    href={category.href}
-                    onClick={onClose}
-                    className={`
-                      menu-item block px-4 py-2 text-base rounded-lg transition-colors duration-200
-                      ${pathname === category.href 
-                        ? 'text-primary bg-secondary' 
-                        : 'text-foreground hover:text-primary hover:bg-secondary'
-                      }
-                    `}
-                  >
-                    {category.name}
-                  </Link>
+                {categories.map((categoryGroup) => (
+                  <div key={categoryGroup.category} className="mb-2 space-y-1">
+                    <div className="px-4 py-1 text-sm font-medium text-primary bg-primary/5 rounded-lg">
+                      {categoryGroup.category}
+                    </div>
+                    {categoryGroup.subcategories.map((subcategory) => (
+                      <Link
+                        key={subcategory.href}
+                        href={subcategory.href}
+                        onClick={onClose}
+                        className={`
+                          menu-item block px-6 py-1.5 text-sm rounded-lg transition-colors duration-200
+                          ${pathname === subcategory.href 
+                            ? 'text-primary bg-secondary' 
+                            : 'text-foreground hover:text-primary hover:bg-secondary'
+                          }
+                        `}
+                      >
+                        {subcategory.name}
+                      </Link>
+                    ))}
+                  </div>
                 ))}
               </div>
             </div>

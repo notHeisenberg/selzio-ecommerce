@@ -11,6 +11,8 @@
   "dependencies": {
     "@auth/core": "0.34.2",
     "@auth/mongodb-adapter": "^2.6.0",
+    "@heroui/react": "^2.7.8",
+    "@heroui/slider": "^2.4.16",
     "@hookform/resolvers": "^3.10.0",
     "@radix-ui/react-accordion": "^1.2.2",
     "@radix-ui/react-alert-dialog": "^1.1.5",
@@ -53,7 +55,7 @@
     "dotenv": "^16.5.0",
     "embla-carousel-react": "^8.5.2",
     "formidable": "^3.5.4",
-    "framer-motion": "^12.11.0",
+    "framer-motion": "^12.12.1",
     "gsap": "^3.13.0",
     "input-otp": "^1.4.2",
     "jsonwebtoken": "^9.0.2",

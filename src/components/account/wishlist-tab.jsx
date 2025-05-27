@@ -27,6 +27,11 @@ const safeGetProductUrl = (item) => {
 const isValidImageUrl = (url) => {
   if (!url) return false;
   
+  // For arrays of URLs, check if there's at least one valid URL
+  if (Array.isArray(url)) {
+    return url.length > 0 && url.some(u => isValidImageUrl(u));
+  }
+  
   // Check if it's a valid URL format
   if (!/^(\/|https?:\/\/)/.test(url)) return false;
   
@@ -43,6 +48,17 @@ const isValidImageUrl = (url) => {
   } catch (e) {
     return false;
   }
+};
+
+// Helper to get the primary image from a product
+const getPrimaryImage = (item) => {
+  if (!item.image) return null;
+  
+  if (Array.isArray(item.image) && item.image.length > 0) {
+    return item.image[0];
+  }
+  
+  return item.image; // For backward compatibility
 };
 
 export default function WishlistTab() {
@@ -334,9 +350,9 @@ export default function WishlistTab() {
                           className="relative aspect-video cursor-pointer"
                           onClick={() => router.push(safeGetProductUrl(item))}
                         >
-                          {item.image && isValidImageUrl(item.image) ? (
+                          {(item.image && isValidImageUrl(item.image)) ? (
                             <Image
-                              src={item.image}
+                              src={getPrimaryImage(item)}
                               alt={item.name}
                               fill
                               className="object-cover hover:scale-105 transition-transform duration-300"

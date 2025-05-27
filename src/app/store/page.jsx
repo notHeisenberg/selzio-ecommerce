@@ -12,14 +12,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  Slider
-} from "@/components/ui/slider";
 import { Search, SlidersHorizontal } from "lucide-react";
 import { motion } from "framer-motion";
 import { Metadata } from "next";
 import { metadata } from "./metadata"
 import { Navbar } from "@/components/layout/navbar";
+import { PriceRangeSlider } from "@/components/ui/price-range-slider";
 
 // Cannot use metadata in client components, would need a separate
 // metadata.js file or move this to a server component if metadata is needed
@@ -27,8 +25,8 @@ import { Navbar } from "@/components/layout/navbar";
 export default function StorePage() {
   // State for all filters
   const [searchQuery, setSearchQuery] = useState("");
-  const [selectedCategory, setSelectedCategory] = useState("");
-  const [priceRange, setPriceRange] = useState([0, 500]);
+  const [selectedSubcategory, setSelectedSubcategory] = useState("");
+  const [priceRange, setPriceRange] = useState([0, 3000]);
   const [sortOption, setSortOption] = useState("featured");
   const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
   const [filteredProducts, setFilteredProducts] = useState([]);
@@ -74,9 +72,9 @@ export default function StorePage() {
       );
     }
 
-    // Apply category filter
-    if (selectedCategory) {
-      result = result.filter((product) => product.category === selectedCategory);
+    // Apply subcategory filter
+    if (selectedSubcategory) {
+      result = result.filter((product) => product.subcategory === selectedSubcategory);
     }
 
     // Apply price range filter
@@ -110,15 +108,10 @@ export default function StorePage() {
     }
 
     setFilteredProducts(result);
-  }, [searchQuery, selectedCategory, priceRange, sortOption, allProducts]);
+  }, [searchQuery, selectedSubcategory, priceRange, sortOption, allProducts]);
 
-  // Get unique categories from products
-  const uniqueCategories = [...new Set(allProducts.map((product) => product.category))];
-
-  // Get max price for range slider
-  const maxPrice = allProducts.length > 0 
-    ? Math.max(...allProducts.map((product) => product.price))
-    : 500;
+  // Get unique subcategories from products
+  const uniqueSubcategories = [...new Set(allProducts.map((product) => product.subcategory).filter(Boolean))];
 
   return (
     <>
@@ -166,25 +159,25 @@ export default function StorePage() {
           <div className="hidden lg:block w-64 shrink-0">
             <div className="sticky top-20 space-y-6">
               <div>
-                <h3 className="font-medium mb-3">Categories</h3>
+                <h3 className="font-medium mb-3">Products</h3>
                 <div className="space-y-1">
                   <Button
-                    variant={selectedCategory === "" ? "default" : "outline"}
+                    variant={selectedSubcategory === "" ? "default" : "outline"}
                     size="sm"
                     className="w-full justify-start"
-                    onClick={() => setSelectedCategory("")}
+                    onClick={() => setSelectedSubcategory("")}
                   >
-                    All Categories
+                    All Products
                   </Button>
-                  {uniqueCategories.map((category) => (
+                  {uniqueSubcategories.map((subcategory) => (
                     <Button
-                      key={category}
-                      variant={selectedCategory === category ? "default" : "outline"}
+                      key={subcategory}
+                      variant={selectedSubcategory === subcategory ? "default" : "outline"}
                       size="sm"
                       className="w-full justify-start"
-                      onClick={() => setSelectedCategory(category)}
+                      onClick={() => setSelectedSubcategory(subcategory)}
                     >
-                      {category}
+                      {subcategory}
                     </Button>
                   ))}
                 </div>
@@ -193,18 +186,11 @@ export default function StorePage() {
               <div>
                 <h3 className="font-medium mb-3">Price Range</h3>
                 <div className="px-2">
-                  <Slider
-                    defaultValue={[0, maxPrice]}
-                    max={maxPrice}
-                    step={1}
+                  <PriceRangeSlider
                     value={priceRange}
-                    onValueChange={setPriceRange}
-                    className="my-6"
+                    onChange={setPriceRange}
+                    showLabel={false}
                   />
-                  <div className="flex items-center justify-between mt-2">
-                    <span>{priceRange[0]} BDT</span>
-                    <span>{priceRange[1]} BDT</span>
-                  </div>
                 </div>
               </div>
             </div>
@@ -231,7 +217,7 @@ export default function StorePage() {
                 <SelectItem value="price-low-high">Price: Low to High</SelectItem>
                 <SelectItem value="price-high-low">Price: High to Low</SelectItem>
                 <SelectItem value="newest">Newest</SelectItem>
-                <SelectItem value="rating">Highest Rated</SelectItem>
+                <SelectItem value="rating">Top Rated</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -240,25 +226,25 @@ export default function StorePage() {
           {mobileFiltersOpen && (
             <div className="lg:hidden mb-6 p-4 border rounded-lg space-y-4">
               <div>
-                <h3 className="font-medium mb-2">Categories</h3>
+                <h3 className="font-medium mb-2">Products</h3>
                 <div className="grid grid-cols-2 gap-2">
                   <Button
-                    variant={selectedCategory === "" ? "default" : "outline"}
+                    variant={selectedSubcategory === "" ? "default" : "outline"}
                     size="sm"
                     className="justify-start"
-                    onClick={() => setSelectedCategory("")}
+                    onClick={() => setSelectedSubcategory("")}
                   >
-                    All Categories
+                    All Products
                   </Button>
-                  {uniqueCategories.map((category) => (
+                  {uniqueSubcategories.map((subcategory) => (
                     <Button
-                      key={category}
-                      variant={selectedCategory === category ? "default" : "outline"}
+                      key={subcategory}
+                      variant={selectedSubcategory === subcategory ? "default" : "outline"}
                       size="sm"
                       className="justify-start"
-                      onClick={() => setSelectedCategory(category)}
+                      onClick={() => setSelectedSubcategory(subcategory)}
                     >
-                      {category}
+                      {subcategory}
                     </Button>
                   ))}
                 </div>
@@ -267,18 +253,14 @@ export default function StorePage() {
               <div>
                 <h3 className="font-medium mb-2">Price Range</h3>
                 <div className="px-2">
-                  <Slider
-                    defaultValue={[0, maxPrice]}
-                    max={maxPrice}
-                    step={1}
+                  <PriceRangeSlider
                     value={priceRange}
-                    onValueChange={setPriceRange}
-                    className="my-4"
+                    onChange={setPriceRange}
+                    showLabel={false}
+                    size="sm"
+                    showSteps={false}
+                    showTooltip={false}
                   />
-                  <div className="flex items-center justify-between">
-                    <span>{priceRange[0]} BDT</span>
-                    <span>{priceRange[1]} BDT</span>
-                  </div>
                 </div>
               </div>
             </div>
@@ -302,7 +284,7 @@ export default function StorePage() {
                     <SelectItem value="price-low-high">Price: Low to High</SelectItem>
                     <SelectItem value="price-high-low">Price: High to Low</SelectItem>
                     <SelectItem value="newest">Newest</SelectItem>
-                    <SelectItem value="rating">Highest Rated</SelectItem>
+                    <SelectItem value="rating">Top Rated</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -352,8 +334,8 @@ export default function StorePage() {
                   className="mt-4"
                   onClick={() => {
                     setSearchQuery("");
-                    setSelectedCategory("");
-                    setPriceRange([0, maxPrice]);
+                    setSelectedSubcategory("");
+                    setPriceRange([0, 1000]);
                     setSortOption("featured");
                   }}
                 >

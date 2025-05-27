@@ -14,21 +14,21 @@ export function CategoriesSection() {
   const [featuredCategories, setFeaturedCategories] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  // Fetch featured categories
+  // Fetch featured subcategories
   useEffect(() => {
-    const fetchCategories = async () => {
+    const fetchSubcategories = async () => {
       try {
-        const categories = await getFeaturedCategories();
-        setFeaturedCategories(categories);
+        const subcategories = await getFeaturedCategories();
+        setFeaturedCategories(subcategories);
       } catch (error) {
-        console.error('Failed to fetch featured categories:', error);
+        console.error('Failed to fetch featured subcategories:', error);
         setFeaturedCategories([]);
       } finally {
         setLoading(false);
       }
     };
     
-    fetchCategories();
+    fetchSubcategories();
   }, []);
 
   // Avoid hydration mismatch
@@ -48,11 +48,11 @@ export function CategoriesSection() {
           </p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+        <div className="flex flex-wrap justify-center gap-8">
           {loading ? (
             // Loading skeletons
             Array(4).fill(0).map((_, index) => (
-              <div key={`skeleton-${index}`} className="animate-pulse">
+              <div key={`skeleton-${index}`} className="animate-pulse w-full max-w-sm md:max-w-[calc(50%-1rem)] lg:max-w-[calc(25%-1.5rem)]">
                 <div className="rounded-2xl h-64 bg-secondary/70"></div>
               </div>
             ))
@@ -65,7 +65,7 @@ export function CategoriesSection() {
                 whileInView={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.5, delay: index * 0.1 }}
                 viewport={{ once: true }}
-                className="group"
+                className="group w-full max-w-sm md:max-w-[calc(50%-1rem)] lg:max-w-[calc(25%-1.5rem)]"
               >
                 <Link href={category.href}>
                   <div className={`relative overflow-hidden rounded-2xl h-64 transition-all duration-500 

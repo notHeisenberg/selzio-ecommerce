@@ -85,12 +85,32 @@ export function ProductCard({ product, index = 0, animationEnabled = true }) {
 
         {/* Product Image */}
         <div className="relative aspect-square z-10 overflow-hidden">
-          <Image
-            src={product.image}
-            alt={product.name}
-            fill
-            className="object-cover transition-transform duration-500 group-hover:scale-110"
-          />
+          {Array.isArray(product.image) && product.image.length > 0 ? (
+            <Image
+              src={product.image[0]}
+              alt={product.name}
+              fill
+              className="object-cover transition-transform duration-500 group-hover:scale-110"
+              unoptimized={product.image[0]?.includes('image1.jpg')} // Skip optimization for test images
+              onError={(e) => {
+                console.error("Image failed to load:", product.image);
+                const parent = e.target.parentNode;
+                if (parent) {
+                  // Create replacement div
+                  const placeholderDiv = document.createElement('div');
+                  placeholderDiv.className = "w-full h-full bg-secondary/30 flex items-center justify-center";
+                  placeholderDiv.innerHTML = `<span class="text-muted-foreground">${product.name || 'Product'}</span>`;
+                  
+                  // Replace the img with the div
+                  parent.replaceChild(placeholderDiv, e.target);
+                }
+              }}
+            />
+          ) : (
+            <div className="w-full h-full bg-secondary/30 flex items-center justify-center">
+              <span className="text-muted-foreground">{product.name || 'Product'}</span>
+            </div>
+          )}
           {product.discount > 0 && (
             <div className={`absolute top-4 left-4 px-3 py-1 rounded-full text-sm font-medium shadow-sm
               ${mounted && resolvedTheme === 'dark'

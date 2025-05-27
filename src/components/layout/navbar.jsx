@@ -14,7 +14,7 @@ import UserMenu from '@/components/user/user-menu';
 import CartDrawer from '@/components/cart/cart-drawer';
 import ThemeSwitcher from '@/components/theme/theme-switcher';
 import MobileMenu from './mobile-menu';
-import { getCategories, navItems } from '@/data/products';
+import { getProducts, navItems, createSlug } from '@/data/products';
 import { useAuth } from '@/hooks/use-auth';
 
 export function Navbar() {
@@ -29,14 +29,62 @@ export function Navbar() {
   const { isAuthenticated } = useAuth();
   const [categories, setCategories] = useState([]);
 
-  // Fetch categories on component mount
+  // Fetch subcategories on component mount
   useEffect(() => {
     const fetchCategories = async () => {
       try {
-        const fetchedCategories = await getCategories();
-        setCategories(fetchedCategories);
+        // Fetch products to get all subcategories
+        const products = await getProducts();
+        
+        // Debug log to check all products
+        console.log('All products:', products);
+        
+        // Group subcategories by category
+        const subcategoriesByCategory = {};
+        
+        products.forEach(product => {
+          if (product.category) {
+            // Normalize category name
+            const categoryName = product.category.trim();
+            
+            // Ensure subcategory exists and is not empty
+            if (product.subcategory) {
+              // Normalize subcategory name
+              const subcategoryName = product.subcategory.trim();
+              
+              if (subcategoryName) {
+                if (!subcategoriesByCategory[categoryName]) {
+                  subcategoriesByCategory[categoryName] = new Set();
+                }
+                subcategoriesByCategory[categoryName].add(subcategoryName);
+              }
+            }
+          }
+        });
+        
+        // Debug log to check extracted subcategories
+        console.log('Subcategories by category:', subcategoriesByCategory);
+        
+        // Convert to the format needed for the dropdown
+        const categorizedSubcategories = Object.entries(subcategoriesByCategory).map(([category, subcategories]) => ({
+          category,
+          subcategories: Array.from(subcategories).map(subcategory => ({
+            name: subcategory,
+            href: `/products/${createSlug(category)}/${createSlug(subcategory)}`
+          }))
+        }));
+        
+        // Sort categories alphabetically
+        categorizedSubcategories.sort((a, b) => a.category.localeCompare(b.category));
+        
+        // For each category, sort subcategories alphabetically
+        categorizedSubcategories.forEach(category => {
+          category.subcategories.sort((a, b) => a.name.localeCompare(b.name));
+        });
+        
+        setCategories(categorizedSubcategories);
       } catch (error) {
-        console.error('Failed to fetch categories:', error);
+        console.error('Failed to fetch subcategories:', error);
         setCategories([]);
       }
     };
@@ -166,7 +214,7 @@ export function Navbar() {
                     pathname.startsWith('/products') && "text-foreground after:w-full"
                   )}
                 >
-                  Categories
+                  Products
                   <ChevronDown className={cn(
                     "ml-1 h-4 w-4 transition-transform duration-300",
                     isCategoryOpen && "rotate-180"
@@ -176,28 +224,37 @@ export function Navbar() {
                 {/* Dropdown Content */}
                 <div
                   className={cn(
-                    "absolute top-full left-0 w-56 bg-card border border-border rounded-md shadow-lg transition-all duration-300",
+                    "absolute top-full left-0 w-72 bg-card border border-border rounded-md shadow-lg transition-all duration-300 max-h-[80vh] overflow-y-auto",
                     "opacity-0 invisible translate-y-2",
                     isCategoryOpen && "opacity-100 visible translate-y-0"
                   )}
                 >
                   <div className="py-2">
-                    {categories.map((category) => (
-                      <Link
-                        key={category.href}
-                        href={category.href}
-                        onMouseEnter={handleNavHover}
-                        onMouseLeave={handleNavLeave}
-                        className={cn(
-                          "block px-4 py-2 text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors duration-300",
-                          "relative overflow-hidden",
-                          "before:absolute before:bottom-0 before:left-0 before:h-[2px] before:w-0 before:bg-primary before:transition-all before:duration-700 before:ease-out",
-                          "hover:before:w-full",
-                          pathname === category.href && "text-foreground bg-secondary font-medium before:w-full"
-                        )}
-                      >
-                        {category.name}
-                      </Link>
+                    {categories.map((categoryGroup) => (
+                      <div key={categoryGroup.category} className="mb-2">
+                        <div className="px-4 py-1 font-medium text-sm text-primary bg-primary/5">
+                          {categoryGroup.category}
+                        </div>
+                        <div>
+                          {categoryGroup.subcategories.map((subcategory) => (
+                            <Link
+                              key={subcategory.href}
+                              href={subcategory.href}
+                              onMouseEnter={handleNavHover}
+                              onMouseLeave={handleNavLeave}
+                              className={cn(
+                                "block px-6 py-1.5 text-sm text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors duration-300",
+                                "relative overflow-hidden",
+                                "before:absolute before:bottom-0 before:left-0 before:h-[2px] before:w-0 before:bg-primary before:transition-all before:duration-700 before:ease-out",
+                                "hover:before:w-full",
+                                pathname === subcategory.href && "text-foreground bg-secondary font-medium before:w-full"
+                              )}
+                            >
+                              {subcategory.name}
+                            </Link>
+                          ))}
+                        </div>
+                      </div>
                     ))}
                   </div>
                 </div>

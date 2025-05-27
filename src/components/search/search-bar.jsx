@@ -204,7 +204,7 @@ const SearchBar = () => {
                       </p>
                     </div>
                     <span className="text-sm font-medium text-primary ml-2">
-                      ${result.price.toFixed(2)}
+                      {result.price.toFixed(2)} BDT
                     </span>
                   </div>
                   <p className="text-xs text-muted-foreground mt-1">

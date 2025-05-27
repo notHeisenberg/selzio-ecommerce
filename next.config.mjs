@@ -9,6 +9,14 @@ const nextConfig = {
       {
         protocol: 'https',
         hostname: 'lh3.googleusercontent.com',
+      },
+      {
+        protocol: 'http',
+        hostname: 'image1.jpg',
+      },
+      {
+        protocol: 'http',
+        hostname: '**', // Allow all test hostnames during development
       }
     ],
   },

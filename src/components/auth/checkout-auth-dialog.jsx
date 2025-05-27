@@ -237,7 +237,7 @@ const CheckoutAuthDialog = ({
                   toggleCart();
                 }}
               >
-                {isCartVisible ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                {isCartVisible ? <ChevronUp key="chevron-up" className="h-4 w-4" /> : <ChevronDown key="chevron-down" className="h-4 w-4" />}
               </Button>
             </div>
             
@@ -248,7 +248,7 @@ const CheckoutAuthDialog = ({
             >
               <div className="p-4 md:p-6 space-y-4">
                 {cartItems.map((item) => (
-                  <div key={item.id} className="flex items-start gap-3">
+                  <div key={item._id} className="flex items-start gap-3">
                     <div className="relative w-14 h-14 md:w-16 md:h-16 rounded-md overflow-hidden border bg-background">
                       <Image
                         src={item.image}
@@ -402,7 +402,7 @@ const CheckoutAuthDialog = ({
                   >
                     {isLoading || processingRedirect ? (
                       <span className="flex items-center justify-center">
-                        <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <svg key="login-spinner" className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                           <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                           <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                         </svg>
@@ -410,7 +410,7 @@ const CheckoutAuthDialog = ({
                       </span>
                     ) : (
                       <span className="flex items-center justify-center">
-                        <LogIn className="mr-2 h-4 w-4 transition-transform duration-300 group-hover:scale-110" />
+                        <LogIn key="login-icon" className="mr-2 h-4 w-4 transition-transform duration-300 group-hover:scale-110" />
                         Sign In & Checkout
                       </span>
                     )}
@@ -459,7 +459,7 @@ const CheckoutAuthDialog = ({
                   >
                     {isLoading || processingRedirect ? (
                       <span className="flex items-center justify-center">
-                        <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <svg key="register-spinner" className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                           <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                           <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                         </svg>
@@ -467,7 +467,7 @@ const CheckoutAuthDialog = ({
                       </span>
                     ) : (
                       <span className="flex items-center justify-center group">
-                        <UserPlus className="mr-2 h-4 w-4 transition-transform duration-300 group-hover:scale-110" />
+                        <UserPlus key="user-plus-icon" className="mr-2 h-4 w-4 transition-transform duration-300 group-hover:scale-110" />
                         Create Account & Checkout
                       </span>
                     )}

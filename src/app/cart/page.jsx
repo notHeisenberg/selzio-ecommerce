@@ -149,7 +149,7 @@ export default function CartPage() {
                 <div className="space-y-4">
                   {cartItems.map((item) => (
                     <Card 
-                      key={item.id} 
+                      key={item._id} 
                       className={`overflow-hidden ${mounted && resolvedTheme === 'dark' ? 'border-gray-800' : ''}`}
                     >
                       <CardContent className="p-0">
@@ -179,10 +179,10 @@ export default function CartPage() {
                                       ? 'border-gray-600 hover:border-blue-500/30 hover:bg-gray-700 hover:text-blue-400'
                                       : 'border-border hover:border-primary/30 hover:bg-secondary hover:text-primary'
                                     }`}
-                                  onClick={() => updateQuantity(item.id, item.quantity - 1)}
+                                  onClick={() => updateQuantity(item.productCode, item.quantity - 1)}
                                   disabled={item.quantity <= 1}
                                 >
-                                  <Minus className="h-3 w-3" />
+                                  <Minus key={`minus-${item.id}`} className="h-3 w-3" />
                                 </Button>
                                 <span className="text-sm font-medium w-6 text-center text-foreground">{item.quantity}</span>
                                 <Button
@@ -193,9 +193,9 @@ export default function CartPage() {
                                       ? 'border-gray-600 hover:border-blue-500/30 hover:bg-gray-700 hover:text-blue-400'
                                       : 'border-border hover:border-primary/30 hover:bg-secondary hover:text-primary'
                                     }`}
-                                  onClick={() => updateQuantity(item.id, item.quantity + 1)}
+                                  onClick={() => updateQuantity(item.productCode, item.quantity + 1)}
                                 >
-                                  <Plus className="h-3 w-3" />
+                                  <Plus key={`plus-${item.id}`} className="h-3 w-3" />
                                 </Button>
                               </div>
                               <Button
@@ -206,9 +206,9 @@ export default function CartPage() {
                                     ? 'text-red-400 hover:bg-red-900/30 hover:text-red-300'
                                     : 'text-destructive hover:bg-destructive/10 hover:text-destructive'
                                   }`}
-                                onClick={() => removeItem(item.id)}
+                                onClick={() => removeItem(item.productCode)}
                               >
-                                <Trash2 className="h-4 w-4 mr-1" />
+                                <Trash2 key={`trash-${item.id}`} className="h-4 w-4 mr-1" />
                                 Remove
                               </Button>
                             </div>
@@ -227,7 +227,7 @@ export default function CartPage() {
                     onClick={() => router.push('/store')}
                     className="group"
                   >
-                    <ArrowLeft className="mr-2 h-4 w-4 transition-transform duration-200 group-hover:-translate-x-1" />
+                    <ArrowLeft key="continue-shopping-arrow" className="mr-2 h-4 w-4 transition-transform duration-200 group-hover:-translate-x-1" />
                     Continue Shopping
                   </Button>
                 </div>
@@ -323,8 +323,10 @@ export default function CartPage() {
                             disabled={!couponCode.trim() || isApplyingCoupon}
                           >
                             {isApplyingCoupon ? (
-                              <RefreshCw className="h-3.5 w-3.5 animate-spin" />
-                            ) : 'Apply'}
+                              <RefreshCw key="apply-coupon-spinner" className="h-3.5 w-3.5 animate-spin" />
+                            ) : (
+                              <span key="apply-button-text">Apply</span>
+                            )}
                           </Button>
                         </div>
                         {couponError && (
@@ -345,9 +347,9 @@ export default function CartPage() {
                         }`}
                       onClick={handleCheckout}
                     >
-                      <ShoppingBag className="mr-2 h-4 w-4 group-hover:scale-110 transition-transform duration-200" />
+                      <ShoppingBag key="checkout-bag-icon" className="mr-2 h-4 w-4 group-hover:scale-110 transition-transform duration-200" />
                       Proceed to Checkout
-                      <ArrowRight className="ml-2 h-4 w-4 opacity-70 group-hover:translate-x-1 transition-transform duration-200" />
+                      <ArrowRight key="checkout-arrow-icon" className="ml-2 h-4 w-4 opacity-70 group-hover:translate-x-1 transition-transform duration-200" />
                     </Button>
                     
                     <div className="text-center text-xs text-muted-foreground pt-2">
@@ -361,7 +363,7 @@ export default function CartPage() {
             // Empty cart state
             <div className="text-center py-16 max-w-md mx-auto">
               <div className="rounded-full bg-secondary/30 p-6 w-24 h-24 mx-auto mb-6 flex items-center justify-center">
-                <ShoppingBag className="h-10 w-10 text-primary/60" />
+                <ShoppingBag key="empty-cart-icon" className="h-10 w-10 text-primary/60" />
               </div>
               <h2 className="text-2xl font-semibold mb-3">Your cart is empty</h2>
               <p className="text-muted-foreground mb-8">
@@ -377,7 +379,7 @@ export default function CartPage() {
                   }`}
               >
                 Start Shopping
-                <ArrowRight className="ml-2 h-5 w-5 transition-transform duration-200 group-hover:translate-x-1" />
+                <ArrowRight key="start-shopping-arrow" className="ml-2 h-5 w-5 transition-transform duration-200 group-hover:translate-x-1" />
               </Button>
             </div>
           )}

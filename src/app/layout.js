@@ -7,7 +7,7 @@ import { AuthProvider } from '@/hooks/use-auth';
 import { Toaster } from '@/components/ui/toaster';
 import NextAuthProvider from '@/components/auth/next-auth-provider';
 import QueryProvider from '@/components/providers/query-provider';
-
+import { Providers } from '@/app/providers';
 const inter = Inter({ subsets: ['latin'] });
 
 export const metadata = {
@@ -25,7 +25,9 @@ export default function RootLayout({ children }) {
               <AuthProvider>
                 <CartProvider>
                   <WishlistProvider>
-                    {children}
+                    <Providers>
+                      {children}
+                    </Providers>
                     <Toaster />
                   </WishlistProvider>
                 </CartProvider>

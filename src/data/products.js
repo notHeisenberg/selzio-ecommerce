@@ -12,18 +12,23 @@ const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
 
 // Helper function to create URL-friendly slugs
 export const createSlug = (text) => {
-  return text.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+  if (!text) return '';
+  
+  // Explicitly convert spaces to hyphens first to ensure consistent behavior
+  const withHyphens = text.trim().toLowerCase().replace(/\s+/g, '-');
+  
+  // Then handle other special characters and clean up any duplicate or trailing hyphens
+  return withHyphens.replace(/[^a-z0-9-]+/g, '-').replace(/--+/g, '-').replace(/(^-|-$)/g, '');
 };
 
 // Function to generate product URL
 export const getProductUrl = (product) => {
-  const productSlug = createSlug(product.name);
   const categorySlug = createSlug(product.category);
   const subcategorySlug = product.subcategory ? createSlug(product.subcategory) : null;
   
   return subcategorySlug
-    ? `/products/${categorySlug}/${subcategorySlug}/${productSlug}?code=${product.productCode}`
-    : `/products/${categorySlug}/${productSlug}?code=${product.productCode}`;
+    ? `/products/${categorySlug}/${subcategorySlug}/${product.productCode}`
+    : `/products/${categorySlug}/${product.productCode}`;
 };
 
 // Navigation items
@@ -87,41 +92,9 @@ export const initializeProducts = async () => {
       href: `/products/${createSlug(name)}`
     }));
     
-    // Create featured categories
-    featuredCategoriesCache = [
-      {
-        id: 1,
-        name: 'Electronics',
-        image: '/categories/electronics.jpg',
-        count: productsCache.filter(p => p.category === 'Electronics').length,
-        description: 'Latest gadgets and tech accessories',
-        href: '/products/electronics'
-      },
-      {
-        id: 2,
-        name: 'Fashion',
-        image: '/categories/fashion.jpg',
-        count: productsCache.filter(p => p.category === 'Fashion' || p.category === 'Men\'s Fashion' || p.category === 'Women\'s Fashion').length,
-        description: 'Trendy clothing and accessories',
-        href: '/products/fashion'
-      },
-      {
-        id: 3,
-        name: 'Home & Living',
-        image: '/categories/home.jpg',
-        count: productsCache.filter(p => p.category === 'Home & Living').length,
-        description: 'Make your home beautiful',
-        href: '/products/home-living'
-      },
-      {
-        id: 4,
-        name: 'Beauty',
-        image: '/categories/beauty.jpg',
-        count: productsCache.filter(p => p.category === 'Beauty').length,
-        description: 'Premium beauty products',
-        href: '/products/beauty'
-      }
-    ];
+    // We'll dynamically create featured categories in getFeaturedCategories()
+    // to ensure they match actual product data
+    featuredCategoriesCache = [];
     
     lastFetchTime = Date.now();
     return {
@@ -146,14 +119,52 @@ export const getProducts = async () => {
 
 // Async function to get categories
 export const getCategories = async () => {
-  const { categories } = await initializeProducts();
-  return categories;
+  const { products } = await initializeProducts();
+  // Extract unique subcategories and create proper format
+  const uniqueSubcategories = [...new Set(products.map(p => p.subcategory).filter(Boolean))];
+  return uniqueSubcategories.map(name => ({
+    name,
+    href: `/products/${createSlug(name)}`
+  }));
 };
 
 // Async function to get featured categories
 export const getFeaturedCategories = async () => {
-  const { featuredCategories } = await initializeProducts();
-  return featuredCategories;
+  const { products } = await initializeProducts();
+  
+  // Get unique subcategories
+  const uniqueSubcategories = [...new Set(products.map(p => p.subcategory).filter(Boolean))];
+  
+  // Create featured subcategory objects with appropriate image paths
+  return uniqueSubcategories.map((subcat, index) => {
+    // Get count of products in this subcategory
+    const count = products.filter(p => p.subcategory === subcat).length;
+    
+    // Determine category from first product with this subcategory
+    const categoryProduct = products.find(p => p.subcategory === subcat);
+    const category = categoryProduct ? categoryProduct.category : '';
+    
+    // Create slug for href
+    const categorySlug = createSlug(category);
+    const subcatSlug = createSlug(subcat);
+    
+    // Default images based on index if no specific mapping is available
+    const defaultImages = [
+      '/categories/electronics.jpg',
+      '/categories/fashion.jpg',
+      '/categories/home.jpg',
+      '/categories/beauty.jpg'
+    ];
+    
+    return {
+      id: index + 1,
+      name: subcat,
+      image: defaultImages[index % defaultImages.length],
+      count: count,
+      description: `Shop our ${subcat} collection`,
+      href: `/products/${categorySlug}/${subcatSlug}`
+    };
+  });
 };
 
 // Get top selling products
@@ -178,18 +189,36 @@ export const getTopSellingProducts = async (limit = 4) => {
 // Fetch a single product by product code
 export const getProductByCode = async (productCode) => {
   try {
-    const response = await fetch(`/api/products/${productCode}`);
+    console.log('getProductByCode called with:', productCode);
+    
+    if (!productCode) {
+      console.error('No productCode provided to getProductByCode');
+      return null;
+    }
+    
+    const apiUrl = `/api/products/${productCode}`;
+    console.log('Fetching from API URL:', apiUrl);
+    
+    const response = await fetch(apiUrl);
     
     if (!response.ok) {
+      const errorText = await response.text();
+      console.error(`API error (${response.status}):`, errorText);
       throw new Error(`API error: ${response.status}`);
     }
     
-    return await response.json();
+    const data = await response.json();
+    console.log('API response data:', data);
+    
+    return data;
   } catch (error) {
     console.error(`Error fetching product with code ${productCode}:`, error);
     // Try to find in cache as fallback
+    console.log('Falling back to cache lookup');
     const { products } = await initializeProducts();
-    return products.find(p => p.productCode === productCode);
+    const cachedProduct = products.find(p => p.productCode === productCode);
+    console.log('Cached product found:', cachedProduct);
+    return cachedProduct;
   }
 };
 
@@ -216,5 +245,69 @@ export const searchProducts = async (query, limit = 10) => {
       (p.subcategory && p.subcategory.toLowerCase().includes(lowerQuery)) ||
       (p.tags && p.tags.some(tag => tag.toLowerCase().includes(lowerQuery)))
     ).slice(0, limit);
+  }
+};
+
+// Get related products
+export const getRelatedProducts = async (productCode, limit = 4) => {
+  try {
+    if (!productCode) {
+      console.error('No productCode provided to getRelatedProducts');
+      return [];
+    }
+    
+    const apiUrl = `/api/products?relatedTo=${encodeURIComponent(productCode)}&excludeProductCode=${encodeURIComponent(productCode)}&limit=${limit}`;
+    console.log('Fetching related products from API URL:', apiUrl);
+    
+    const response = await fetch(apiUrl);
+    
+    if (!response.ok) {
+      throw new Error(`API error: ${response.status}`);
+    }
+    
+    const data = await response.json();
+    return data.products;
+  } catch (error) {
+    console.error(`Error fetching related products for ${productCode}:`, error);
+    
+    // Fallback to local filtering
+    try {
+      const { products } = await initializeProducts();
+      const sourceProduct = products.find(p => p.productCode === productCode);
+      
+      if (!sourceProduct) return [];
+      
+      // Create a ranking function to prioritize related products
+      const getRelevanceScore = (product) => {
+        let score = 0;
+        
+        // Top selling products get highest priority
+        if (product.topSelling) score += 100;
+        
+        // Category match
+        if (product.category === sourceProduct.category) score += 50;
+        
+        // Subcategory match
+        if (sourceProduct.subcategory && product.subcategory === sourceProduct.subcategory) score += 30;
+        
+        // Tag matches (each matching tag adds points)
+        if (sourceProduct.tags && product.tags) {
+          const matchingTags = sourceProduct.tags.filter(tag => product.tags.includes(tag));
+          score += matchingTags.length * 10;
+        }
+        
+        return score;
+      };
+      
+      // Filter out the current product, calculate scores, sort by score, and take top N
+      return products
+        .filter(p => p.productCode !== productCode)
+        .map(p => ({ ...p, relevanceScore: getRelevanceScore(p) }))
+        .sort((a, b) => b.relevanceScore - a.relevanceScore)
+        .slice(0, limit);
+    } catch (fallbackError) {
+      console.error('Fallback related products fetching failed:', fallbackError);
+      return [];
+    }
   }
 }; 
