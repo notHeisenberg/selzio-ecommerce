@@ -47,13 +47,37 @@ export function verifyToken(token) {
  * @returns {string|null} The token or null if not found
  */
 export function extractTokenFromHeader(req) {
-  const authHeader = req.headers.get('Authorization');
-  
-  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+  try {
+    // Get authorization header
+    const authHeader = req.headers.get('Authorization') || req.headers.get('authorization');
+    
+    console.log('Auth header:', authHeader ? `Found (${authHeader.substring(0, 15)}...)` : 'Not found');
+    
+    // Check if header exists and has proper format
+    if (!authHeader) {
+      console.log('No Authorization header found');
+      return null;
+    }
+    
+    // Handle Bearer token format
+    if (authHeader.startsWith('Bearer ')) {
+      const token = authHeader.split(' ')[1];
+      console.log('Found Bearer token:', token ? `${token.substring(0, 10)}...` : 'Invalid token');
+      return token;
+    }
+    
+    // Handle direct token format (no Bearer prefix)
+    if (authHeader.length > 20) {
+      console.log('Found direct token:', `${authHeader.substring(0, 10)}...`);
+      return authHeader;
+    }
+    
+    console.log('Invalid Authorization header format');
+    return null;
+  } catch (error) {
+    console.error('Error extracting token:', error);
     return null;
   }
-  
-  return authHeader.split(' ')[1];
 }
 
 /**
@@ -66,11 +90,24 @@ export function getAuthUser(req) {
   const token = extractTokenFromHeader(req);
   
   if (!token) {
+    console.log('No token found in request');
     return null;
   }
   
-  const decoded = verifyToken(token);
-  return decoded;
+  try {
+    const decoded = verifyToken(token);
+    
+    if (!decoded) {
+      console.log('Token verification failed');
+      return null;
+    }
+    
+    console.log('Successfully authenticated user:', decoded.email || decoded.id);
+    return decoded;
+  } catch (error) {
+    console.error('Error verifying token:', error);
+    return null;
+  }
 }
 
 /**

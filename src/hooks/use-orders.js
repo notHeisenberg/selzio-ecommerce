@@ -10,11 +10,8 @@ import { useSession } from 'next-auth/react';
 export const orderStatuses = {
   pending: { label: 'Pending', color: 'bg-yellow-500' },
   processing: { label: 'Processing', color: 'bg-blue-500' },
-  shipped: { label: 'Shipped', color: 'bg-blue-500' },
   delivered: { label: 'Delivered', color: 'bg-green-500' },
-  cancelled: { label: 'Cancelled', color: 'bg-red-500' },
-  awaiting_payment_verification: { label: 'Awaiting Payment', color: 'bg-yellow-500' },
-  payment_done: { label: 'Payment Done', color: 'bg-primary' }
+  cancelled: { label: 'Cancelled', color: 'bg-red-500' }
 };
 
 export function useOrders() {
@@ -110,9 +107,7 @@ export function useOrders() {
           headers,
           withCredentials: true // This enables sending cookies with the request
         });
-        
-        console.log('Orders API response status:', response.status);
-        console.log('Orders count:', response.data?.orders?.length || 0);
+
         
         // Update pagination state
         setPagination(prev => ({

@@ -107,13 +107,6 @@ export default function WishlistTab() {
   // Add debug logging for wishlist items
   useEffect(() => {
     if (mounted) {
-      console.log("Component state:", { 
-        isLoading, 
-        forceLoaded, 
-        hasItems: wishlistItems?.length > 0,
-        totalItems,
-        error: !!error
-      });
       
       if (isLoading) {
         console.log("Wishlist is loading...");
@@ -164,39 +157,41 @@ export default function WishlistTab() {
       // Then remove from wishlist and wait for it to complete
       try {
         await removeFromWishlist(stringProductId);
+        
+        // Show success toast
+        const { dismiss } = toast({
+          title: "Removed from Wishlist",
+          description: `${product.name} has been removed from your wishlist.`,
+          variant: "wishlist",
+          action: (
+            <div className="mt-2 w-full">
+              <button 
+                className="w-full flex items-center justify-center px-3 py-2 rounded-md text-sm font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-rose-500 dark:focus:ring-rose-500 dark:focus:ring-offset-gray-800 focus:ring-offset-white
+                  dark:border-rose-800/50 dark:text-rose-300 dark:bg-rose-950/30 dark:hover:bg-rose-900/40 dark:hover:text-rose-200
+                  border border-rose-200 bg-rose-50 text-rose-700 hover:bg-rose-100 hover:text-rose-800"
+                onClick={() => {
+                  dismiss();
+                  document.dispatchEvent(new CustomEvent('open-cart-drawer'));
+                }}
+              >
+                <ShoppingCart className="h-4 w-4 mr-2" />
+                View Cart
+              </button>
+            </div>
+          ),
+        });
+        
+        // Immediately refetch to update UI
+        refetchWishlist();
       } catch (removeError) {
         console.error("Error removing item from wishlist:", removeError);
-        // Continue with the function - we've already added to cart
+        // Still show success for cart addition but warn about wishlist
+        toast({
+          title: "Added to Cart",
+          description: `${product.name} added to cart but couldn't be removed from wishlist.`,
+          variant: "default"
+        });
       }
-      
-      // Manually refetch to update the UI
-      setTimeout(() => {
-        console.log("Refetching wishlist after moving to cart...");
-        refetchWishlist();
-      }, 500); // Increased delay for better reliability
-      
-      // Show success toast
-      const { dismiss } = toast({
-        title: "Moved to Cart",
-        description: `${product.name} has been moved to your cart.`,
-        variant: "wishlist",
-        action: (
-          <div className="mt-2 w-full">
-            <button 
-              className="w-full flex items-center justify-center px-3 py-2 rounded-md text-sm font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-rose-500 dark:focus:ring-rose-500 dark:focus:ring-offset-gray-800 focus:ring-offset-white
-                dark:border-rose-800/50 dark:text-rose-300 dark:bg-rose-950/30 dark:hover:bg-rose-900/40 dark:hover:text-rose-200
-                border border-rose-200 bg-rose-50 text-rose-700 hover:bg-rose-100 hover:text-rose-800"
-              onClick={() => {
-                dismiss();
-                document.dispatchEvent(new CustomEvent('open-cart-drawer'));
-              }}
-            >
-              <ShoppingCart className="h-4 w-4 mr-2" />
-              View Cart
-            </button>
-          </div>
-        ),
-      });
     } catch (error) {
       console.error("Error moving item to cart:", error);
       let errorMessage = "Failed to move item to cart. Please try again.";
@@ -231,12 +226,15 @@ export default function WishlistTab() {
       // Remove from wishlist and wait for completion
       await removeFromWishlist(stringItemId);
       
-      // Add a small delay before refetching to ensure the database has updated
-      setTimeout(() => {
-        console.log("Refetching wishlist after removing item...");
-        refetchWishlist();
-      }, 500); // Increased delay for better reliability
+      // Immediately refetch to update UI
+      refetchWishlist();
       
+      // Show success toast
+      toast({
+        title: "Removed from Wishlist",
+        description: `${itemName || 'Item'} has been removed from your wishlist.`,
+        variant: "default"
+      });
     } catch (error) {
       console.error("Error removing item from wishlist:", error);
       let errorMessage = "Failed to remove item from wishlist. Please try again.";

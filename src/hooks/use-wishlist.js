@@ -257,7 +257,16 @@ export const WishlistProvider = ({ children }) => {
   
   // Check if product is in wishlist
   const isInWishlist = (productCode) => {
-    return wishlistItems.some(item => item.productCode === productCode);
+    if (!productCode) return false;
+    
+    // Convert productCode to string for consistent comparison
+    const stringProductCode = String(productCode);
+    
+    // Check both id and productCode fields for compatibility
+    return wishlistItems.some(item => 
+      String(item.id) === stringProductCode || 
+      String(item.productCode) === stringProductCode
+    );
   };
   
   // Add to wishlist

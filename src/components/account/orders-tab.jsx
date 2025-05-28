@@ -16,6 +16,10 @@ import React from 'react';
 import { useOrders, orderStatuses } from '@/hooks/use-orders';
 import axios from 'axios';
 import { useToast } from '@/hooks/use-toast';
+import { Textarea } from '@/components/ui/textarea';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { Label } from '@/components/ui/label';
+import { format, addHours, isAfter } from 'date-fns';
 
 export default function OrdersTab() {
   const { user } = useAuth();
@@ -61,6 +65,21 @@ export default function OrdersTab() {
   // State for admin notes
   const [adminNotes, setAdminNotes] = useState('');
   const [savingNotes, setSavingNotes] = useState(false);
+
+  // Add these new states for cancellation
+  const [cancellationDialogOpen, setCancellationDialogOpen] = useState(false);
+  const [cancellationReason, setCancellationReason] = useState('');
+  const [otherReason, setOtherReason] = useState('');
+  const [submittingCancellation, setSubmittingCancellation] = useState(false);
+
+  // Predefined cancellation reasons
+  const cancellationReasons = [
+    "Changed my mind",
+    "Found better price elsewhere",
+    "Ordered by mistake",
+    "Delivery time too long",
+    "Other (please specify)"
+  ];
 
   // Function to handle search submit
   const handleSearch = (e) => {
@@ -140,19 +159,24 @@ export default function OrdersTab() {
           try {
             setUpdatingStatus(true);
 
-            const token = localStorage.getItem('auth_token');
-
-            const response = await axios.put(`/api/orders/${selectedOrder._id}`, {
-              status: selectedStatus
-            }, {
+            const response = await fetch(`/api/orders/${selectedOrder._id}`, {
+              method: 'PUT',
               headers: {
-                'Content-Type': 'application/json',
-                ...(token && { Authorization: `Bearer ${token}` })
+                'Content-Type': 'application/json'
               },
-              withCredentials: true
+              body: JSON.stringify({
+                status: selectedStatus
+              }),
+              credentials: 'include'
             });
 
-            if (response.data && response.data.success) {
+            const data = await response.json();
+
+            if (!response.ok) {
+              throw new Error(data.error || 'Status update failed');
+            }
+
+            if (data.success) {
               toast({
                 title: 'Success',
                 description: 'Order status updated successfully',
@@ -162,14 +186,14 @@ export default function OrdersTab() {
               setStatusDialogOpen(false);
               refetch();
             } else {
-              throw new Error(response.data?.error || 'Status update failed');
+              throw new Error(data.error || 'Status update failed');
             }
           } catch (error) {
             console.error('Status update failed:', error);
 
             toast({
               title: 'Error',
-              description: `Failed to update status: ${error.response?.data?.error || error.message}`,
+              description: `Failed to update status: ${error.message}`,
               variant: 'destructive'
             });
           } finally {
@@ -229,6 +253,178 @@ export default function OrdersTab() {
     }
   };
 
+  // Add this function to check if order is within cancellation window (6 hours)
+  const isWithinCancellationWindow = (orderDate) => {
+    const orderDateTime = new Date(orderDate);
+    const cancellationDeadline = addHours(orderDateTime, 6);
+    return !isAfter(new Date(), cancellationDeadline);
+  };
+
+  // Check if an order can have a cancellation request (not cancelled or already requested)
+  const canRequestCancellation = (order) => {
+    // Order must be in pending status
+    if (order.status !== 'pending') {
+      return false;
+    }
+    
+    // Must be within time window
+    if (!isWithinCancellationWindow(order.createdAt)) {
+      return false;
+    }
+    
+    // Check if it ever had a cancellation request before
+    if (order.cancellationRequestedAt || order.cancellationResponded) {
+      return false;
+    }
+    
+    return true;
+  };
+
+  // Add this function to handle cancellation request
+  const handleCancellationRequest = async () => {
+    if (!selectedOrder) return;
+    
+    // Validate reason
+    if (!cancellationReason || (cancellationReason === "Other (please specify)" && !otherReason.trim())) {
+      toast({
+        title: "Error",
+        description: "Please provide a valid reason for cancellation",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    setSubmittingCancellation(true);
+    
+    try {
+      // Format the final reason text
+      const finalReason = cancellationReason === "Other (please specify)" 
+        ? otherReason.trim() 
+        : cancellationReason;
+        
+      // Get auth token from localStorage
+      const token = localStorage.getItem('auth_token');
+      console.log('Using auth token for cancellation request:', token ? 'Found token' : 'No token');
+      
+      // Call API to update order status to cancellation_requested with reason
+      const response = await axios.put(`/api/orders/${selectedOrder._id}`, 
+        {
+          status: "cancellation_requested",
+          cancellationReason: finalReason,
+          cancellationRequestedAt: new Date().toISOString()
+        },
+        {
+          headers: {
+            'Content-Type': 'application/json',
+            ...(token && { Authorization: `Bearer ${token}` })
+          },
+          withCredentials: true
+        }
+      );
+      
+      // Log the response for debugging
+      console.log('Server response status:', response.status);
+      console.log('Server response data:', response.data);
+      
+      if (response.data && response.data.success) {
+        toast({
+          title: "Success",
+          description: "Cancellation request submitted successfully",
+          variant: "success"
+        });
+        
+        setCancellationDialogOpen(false);
+        refetch();
+      } else {
+        throw new Error(response.data?.error || "Failed to submit cancellation request");
+      }
+    } catch (error) {
+      console.error('Error submitting cancellation request:', error);
+      toast({
+        title: "Error",
+        description: `Failed to submit cancellation request: ${error.response?.data?.error || error.message}`,
+        variant: "destructive"
+      });
+    } finally {
+      setSubmittingCancellation(false);
+    }
+  };
+
+  // Add this function to handle admin approval/rejection of cancellation
+  const handleCancellationResponse = async (approved) => {
+    if (!selectedOrder) return;
+    
+    setUpdatingStatus(true);
+    
+    try {
+      const newStatus = approved ? "cancelled" : "pending"; // Always return to pending if rejected
+      
+      console.log('Admin responding to cancellation request:', {
+        orderId: selectedOrder._id,
+        approved,
+        newStatus
+      });
+
+      // Get auth token from localStorage
+      const token = localStorage.getItem('auth_token');
+      console.log('Using auth token:', token ? 'Found token' : 'No token');
+      
+      // Use axios instead of fetch for better header handling
+      const response = await axios.put(`/api/orders/${selectedOrder._id}`, 
+        {
+          status: newStatus,
+          cancellationResponded: true,
+          cancellationApproved: approved,
+          cancellationRespondedAt: new Date().toISOString()
+        }, 
+        {
+          headers: {
+            'Content-Type': 'application/json',
+            ...(token && { Authorization: `Bearer ${token}` })
+          },
+          withCredentials: true
+        }
+      );
+      
+      // Log the response for debugging
+      console.log('Server response status:', response.status);
+      console.log('Server response data:', response.data);
+      
+      if (response.data && response.data.success) {
+        toast({
+          title: "Success",
+          description: approved 
+            ? "Order cancellation approved" 
+            : "Order cancellation rejected",
+          variant: "success"
+        });
+        
+        setDetailsDialogOpen(false);
+        refetch();
+      } else {
+        throw new Error(response.data?.error || "Failed to process cancellation request");
+      }
+    } catch (error) {
+      console.error('Error processing cancellation request:', error);
+      toast({
+        title: "Error",
+        description: `Failed to process cancellation: ${error.response?.data?.error || error.message}`,
+        variant: "destructive"
+      });
+    } finally {
+      setUpdatingStatus(false);
+    }
+  };
+
+  // Update the orderStatuses object to include cancellation_requested status
+  const extendedOrderStatuses = {
+    ...orderStatuses,
+    cancellation_requested: {
+      label: "Cancellation Requested",
+      color: "bg-orange-500"
+    }
+  };
+
   // Show loading state for initial load
   if (isLoading) {
     return (
@@ -262,7 +458,7 @@ export default function OrdersTab() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All statuses</SelectItem>
-                  {Object.entries(orderStatuses).map(([value, { label }]) => (
+                  {Object.entries(extendedOrderStatuses).map(([value, { label }]) => (
                     <SelectItem key={value} value={value}>{label}</SelectItem>
                   ))}
                 </SelectContent>
@@ -366,7 +562,7 @@ export default function OrdersTab() {
               <Package className="mx-auto h-10 w-10 text-muted-foreground mb-3" />
               <p className="text-muted-foreground">
                 {filter.status && filter.status !== 'all'
-                  ? `No orders found with status: ${orderStatuses[filter.status]?.label || filter.status}`
+                  ? `No orders found with status: ${extendedOrderStatuses[filter.status]?.label || filter.status}`
                   : filter.searchTerm
                     ? `No orders found matching: "${filter.searchTerm}"`
                     : isAdmin && filter.userId && filter.userId !== 'all'
@@ -383,11 +579,11 @@ export default function OrdersTab() {
             <div className="space-y-6">
               {orders.map((order) => (
                 <div key={order._id} className="border rounded-lg p-4 space-y-4 hover:shadow-md transition-shadow duration-200 border-border hover:border-primary/20">
-                  <div className="flex items-center justify-between">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                     <div>
                       <h3 className="font-medium text-primary">Order #{order._id.slice(-6).toUpperCase()}</h3>
                       <p className="text-sm text-muted-foreground">
-                        Placed on {new Date(order.createdAt).toLocaleDateString()}
+                        Placed on {new Date(order.createdAt).toLocaleString()}
                       </p>
                       {/* Admin sees customer info */}
                       {isAdmin && order.user && (
@@ -397,49 +593,113 @@ export default function OrdersTab() {
                         </div>
                       )}
                     </div>
-                    <div className="flex items-center gap-2">
-                      <Badge className={`${orderStatuses[order.status]?.color || 'bg-gray-500'} text-white font-medium px-3 py-1 rounded-full text-xs`}>
-                        {orderStatuses[order.status]?.label || order.status}
+                    <div className="flex flex-wrap items-center gap-2">
+                      <Badge className={`${extendedOrderStatuses[order.status]?.color || 'bg-gray-500'} text-white capitalize font-medium px-3 py-1 rounded-full text-xs`}>
+                        {extendedOrderStatuses[order.status]?.label || order.status}
                       </Badge>
-                      {(isAdmin || user?.role === 'admin') && (
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => {
-                            setSelectedOrder(order);
-                            setSelectedStatus(order.status);
-                            setStatusDialogOpen(true);
-                          }}
-                          className="hover:bg-primary/5 hover:border-primary/20 transition-colors duration-200"
-                        >
-                          Update Status
-                        </Button>
-                      )}
-                      {(order.status === 'pending' || isAdmin) && (
-                        <Button
-                          variant="destructive"
-                          size="sm"
-                          onClick={() => {
-                            setSelectedOrder(order);
-                            setDeleteDialogOpen(true);
-                          }}
-                          className="hover:bg-destructive/90 transition-colors duration-200"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      )}
+                      <div className="flex flex-wrap gap-2">
+                        {(isAdmin || user?.role === 'admin') && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => {
+                              setSelectedOrder(order);
+                              setSelectedStatus(order.status);
+                              setStatusDialogOpen(true);
+                            }}
+                            className="hover:bg-primary/5 hover:border-primary/20 transition-colors duration-200"
+                          >
+                            Update Status
+                          </Button>
+                        )}
+                        {/* Show cancel request button for users if eligible */}
+                        {!isAdmin && canRequestCancellation(order) && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => {
+                              setSelectedOrder(order);
+                              setCancellationReason('');
+                              setOtherReason('');
+                              setCancellationDialogOpen(true);
+                            }}
+                            className="hover:bg-destructive/10 hover:text-destructive hover:border-destructive/20 transition-colors duration-200"
+                          >
+                            Request Cancellation
+                          </Button>
+                        )}
+                        {/* Admin can still delete orders */}
+                        {isAdmin && (
+                          <Button
+                            variant="destructive"
+                            size="sm"
+                            onClick={() => {
+                              setSelectedOrder(order);
+                              setDeleteDialogOpen(true);
+                            }}
+                            className="hover:bg-destructive/90 transition-colors duration-200"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        )}
+                      </div>
                     </div>
                   </div>
+
+                  {/* Admin buttons for handling cancellation requests */}
+                  {isAdmin && order.status === 'cancellation_requested' && (
+                    <div className='flex justify-end gap-2 flex-wrap mt-2'>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          // Set the selected order first, then handle the response
+                          setSelectedOrder(order);
+                          // Use setTimeout to ensure state is updated before the handler runs
+                          setTimeout(() => handleCancellationResponse(true), 0);
+                        }}
+                        className="bg-green-50 border-green-200 text-green-700 hover:bg-green-300 hover:text-green-700"
+                      >
+                        Approve Cancellation
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          // Set the selected order first, then handle the response
+                          setSelectedOrder(order);
+                          // Use setTimeout to ensure state is updated before the handler runs
+                          setTimeout(() => handleCancellationResponse(false), 0);
+                        }}
+                        className="bg-red-50 border-red-200 text-red-700 hover:bg-red-300 hover:text-red-700"
+                      >
+                        Reject Cancellation
+                      </Button>
+                    </div>
+                  )}
+
+                  {/* Show cancellation reason directly */}
+                  {order.status === 'cancellation_requested' && order.cancellationReason && (
+                    <div className="mt-2 p-2 bg-orange-50 dark:bg-orange-950/30 rounded-md border border-orange-200 dark:border-orange-900/50">
+                      <div className="flex items-start gap-2">
+                        <AlertCircle className="h-4 w-4 text-orange-500 mt-0.5 flex-shrink-0" />
+                        <div>
+                          <span className="font-medium text-orange-600 dark:text-orange-400">Cancellation Reason:</span>{' '}
+                          <span className="text-orange-700 dark:text-orange-300">{order.cancellationReason}</span>
+                        </div>
+                      </div>
+                    </div>
+                  )}
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-muted/50 p-3 rounded-md">
                     <div>
                       <h4 className="text-sm font-medium mb-2 text-primary">Items</h4>
                       <div className="space-y-3">
                         {order.items.map((item) => (
-                          <div key={item.id} className="flex items-center gap-3 bg-card p-2 rounded-md shadow-sm">
+                          <div key={item._id} className="flex items-center gap-3 bg-card p-2 rounded-md shadow-sm">
                             <div className="relative w-14 h-14 rounded-md overflow-hidden border">
                               <Image
-                                src={item.image}
+                                src={item.image || null}
                                 alt={item.name}
                                 fill
                                 className="object-cover"
@@ -472,9 +732,9 @@ export default function OrdersTab() {
                           <span className="font-medium capitalize">{order?.status || 'N/A'}</span>
                         </div>
                         {order.payment?.transactionId && (
-                          <div className="flex justify-between items-center text-xs">
+                          <div className="flex flex-col xs:flex-row xs:justify-between xs:items-center text-xs">
                             <span>Transaction ID:</span>
-                            <span className="font-mono bg-muted px-2 py-1 rounded">{order.payment.transactionId}</span>
+                            <span className="font-mono bg-muted px-2 py-1 rounded mt-1 xs:mt-0 break-all">{order.payment.transactionId}</span>
                           </div>
                         )}
                       </div>
@@ -605,7 +865,7 @@ export default function OrdersTab() {
                 <SelectValue placeholder="Select status" />
               </SelectTrigger>
               <SelectContent>
-                {Object.entries(orderStatuses).map(([value, { label }]) => (
+                {Object.entries(extendedOrderStatuses).map(([value, { label }]) => (
                   <SelectItem key={value} value={value}>
                     {label}
                   </SelectItem>
@@ -639,9 +899,73 @@ export default function OrdersTab() {
         </DialogContent>
       </Dialog>
 
+      {/* Cancellation Request Dialog */}
+      <Dialog open={cancellationDialogOpen} onOpenChange={setCancellationDialogOpen}>
+        <DialogContent className="border-red-100 shadow-lg max-w-[95vw] sm:max-w-[600px] w-full">
+          <DialogHeader>
+            <DialogTitle className="text-red-600 flex items-center">
+              <AlertCircle className="h-5 w-5 mr-2" />
+              Request Order Cancellation
+            </DialogTitle>
+            <DialogDescription>
+              You can only request cancellation within 6 hours of placing an order. Please provide a reason for your cancellation request.
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="py-4 space-y-4 max-h-[60vh] overflow-y-auto">
+            <div className="space-y-2">
+              <Label className="text-base">Reason for cancellation</Label>
+              <RadioGroup value={cancellationReason} onValueChange={setCancellationReason} className="space-y-2">
+                {cancellationReasons.map(reason => (
+                  <div key={reason} className="flex items-center space-x-2">
+                    <RadioGroupItem value={reason} id={reason.replace(/\s+/g, '-').toLowerCase()} />
+                    <Label htmlFor={reason.replace(/\s+/g, '-').toLowerCase()}>{reason}</Label>
+                  </div>
+                ))}
+              </RadioGroup>
+            </div>
+            
+            {cancellationReason === "Other (please specify)" && (
+              <div className="space-y-2">
+                <Label htmlFor="other-reason">Please specify your reason</Label>
+                <Textarea 
+                  id="other-reason" 
+                  value={otherReason} 
+                  onChange={(e) => setOtherReason(e.target.value)}
+                  placeholder="Please provide details about why you want to cancel this order..."
+                  className="min-h-[100px]"
+                />
+              </div>
+            )}
+          </div>
+          
+          <DialogFooter className="flex-col space-y-2 sm:flex-row sm:space-y-0 sm:space-x-2">
+            <Button variant="outline" onClick={() => setCancellationDialogOpen(false)}
+              className="hover:bg-slate-100 transition-colors duration-200 w-full sm:w-auto">
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleCancellationRequest}
+              disabled={submittingCancellation || !cancellationReason || (cancellationReason === "Other (please specify)" && !otherReason.trim())}
+              className="bg-red-500 hover:bg-red-600 transition-all duration-200 shadow-sm hover:shadow w-full sm:w-auto"
+            >
+              {submittingCancellation ? (
+                <>
+                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
+                  Submitting...
+                </>
+              ) : (
+                'Submit Cancellation Request'
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       {/* Order Details Dialog */}
       <Dialog open={detailsDialogOpen} onOpenChange={setDetailsDialogOpen}>
-        <DialogContent className="sm:max-w-[600px] max-h-[90vh] h-auto overflow-hidden flex flex-col border-border shadow-lg">
+        <DialogContent className="sm:max-w-[600px] max-h-[90vh] h-auto overflow-hidden flex flex-col border-border shadow-lg max-w-[95vw] w-full">
           <DialogHeader className="flex-shrink-0 pb-2 border-b border-border">
             <DialogTitle className="text-primary flex items-center text-xl">
               <Package className="h-5 w-5 mr-2" />
@@ -669,8 +993,8 @@ export default function OrdersTab() {
               <div className="space-y-6 p-1">
                 {/* Status Badge */}
                 <div className="flex justify-center mb-2">
-                  <Badge className={`${orderStatuses[orderDetails.status]?.color || 'bg-gray-500'} text-white font-medium px-6 py-1.5 rounded-full text-sm`}>
-                    {orderStatuses[orderDetails.status]?.label || orderDetails.status}
+                  <Badge className={`${extendedOrderStatuses[orderDetails.status]?.color || 'bg-gray-500'} text-white font-medium px-6 py-1.5 rounded-full text-sm`}>
+                    {extendedOrderStatuses[orderDetails.status]?.label || orderDetails.status}
                   </Badge>
                 </div>
 
@@ -710,8 +1034,8 @@ export default function OrdersTab() {
                       <div key={item.id} className="flex flex-col sm:flex-row items-start gap-4 border-b border-border pb-4 hover:bg-muted/30 p-2 rounded-md transition-colors duration-200">
                         <div className="relative w-16 h-16 rounded-md overflow-hidden border border-border flex-shrink-0 mx-auto sm:mx-0 shadow-sm">
                           <Image
-                            src={item.image}
-                            alt={item.name}
+                            src={item.image || null}
+                            alt={item.name || "Product"}
                             fill
                             className="object-cover"
                           />
@@ -744,8 +1068,8 @@ export default function OrdersTab() {
                     <div className="flex justify-between items-center pb-2 border-b border-border">
                       <span className="font-medium">Status:</span>
                       <div className="flex justify-center mb-2">
-                        <Badge className={`${orderStatuses[orderDetails.status]?.color || 'bg-gray-500'} text-white font-medium px-4 py-1 rounded-md text-sm`}>
-                          {orderStatuses[orderDetails.status]?.label || orderDetails.status}
+                        <Badge className={`${extendedOrderStatuses[orderDetails.status]?.color || 'bg-gray-500'} text-white font-medium px-4 py-1 rounded-md text-sm`}>
+                          {extendedOrderStatuses[orderDetails.status]?.label || orderDetails.status}
                         </Badge>
                       </div>
                     </div>
@@ -760,7 +1084,7 @@ export default function OrdersTab() {
                         <p className="font-medium mb-2">Payment Screenshot:</p>
                         <div className="relative w-full h-48 rounded-lg overflow-hidden border border-border shadow-sm">
                           <Image
-                            src={orderDetails.payment?.paymentScreenshot}
+                            src={orderDetails.payment?.paymentScreenshot || null}
                             alt="Payment Screenshot"
                             fill
                             className="object-contain"
@@ -920,6 +1244,65 @@ export default function OrdersTab() {
                           ) : 'Save Notes'}
                         </Button>
                       </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Add cancellation request info section when applicable */}
+                {orderDetails.status === 'cancellation_requested' && (
+                  <div className="bg-orange-50 border border-orange-200 rounded-lg p-4 shadow-sm dark:bg-orange-950/30 dark:border-orange-900/50 dark:text-orange-100">
+                    <h3 className="text-lg font-semibold mb-2 text-orange-700 flex items-center dark:text-orange-300">
+                      <AlertCircle className="h-4 w-4 mr-2" />
+                      Cancellation Request
+                    </h3>
+                    <div className="space-y-2 text-sm">
+                      <p><span className="font-medium dark:text-orange-300">Requested on:</span> {new Date(orderDetails.cancellationRequestedAt).toLocaleString()}</p>
+                      <p><span className="font-medium dark:text-orange-300">Reason:</span> {orderDetails.cancellationReason}</p>
+                      {isAdmin && (
+                        <div className="pt-3 flex gap-2 justify-end">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => {
+                              // We can use selectedOrder here directly since it's already set
+                              handleCancellationResponse(true);
+                            }}
+                            className="bg-green-50 border-green-200 text-green-700 hover:bg-green-100 dark:bg-green-900/30 dark:border-green-800 dark:text-green-300 dark:hover:bg-green-800/50"
+                          >
+                            Approve Cancellation
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => {
+                              // We can use selectedOrder here directly since it's already set
+                              handleCancellationResponse(false);
+                            }}
+                            className="bg-red-50 border-red-200 text-red-700 hover:bg-red-100 dark:bg-red-900/30 dark:border-red-800 dark:text-red-300 dark:hover:bg-red-800/50"
+                          >
+                            Reject Cancellation
+                          </Button>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {/* Show cancellation history if the order was cancelled */}
+                {orderDetails.status === 'cancelled' && orderDetails.cancellationReason && (
+                  <div className="bg-red-50 border border-red-200 rounded-lg p-4 shadow-sm dark:bg-red-950/30 dark:border-red-900/50 dark:text-red-100">
+                    <h3 className="text-lg font-semibold mb-2 text-red-700 flex items-center dark:text-red-300">
+                      <AlertCircle className="h-4 w-4 mr-2" />
+                      Order Cancelled
+                    </h3>
+                    <div className="space-y-2 text-sm">
+                      <p><span className="font-medium dark:text-red-300">Reason:</span> {orderDetails.cancellationReason}</p>
+                      {orderDetails.cancellationRequestedAt && (
+                        <p><span className="font-medium dark:text-red-300">Requested on:</span> {new Date(orderDetails.cancellationRequestedAt).toLocaleString()}</p>
+                      )}
+                      {orderDetails.cancellationRespondedAt && (
+                        <p><span className="font-medium dark:text-red-300">Processed on:</span> {new Date(orderDetails.cancellationRespondedAt).toLocaleString()}</p>
+                      )}
                     </div>
                   </div>
                 )}

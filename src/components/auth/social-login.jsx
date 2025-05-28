@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from 'react';
-import { FaFacebook } from 'react-icons/fa';
 import { useAuth } from '@/hooks/use-auth';
 import { Button } from '@/components/ui/button';
 import Image from 'next/image';
@@ -15,7 +14,6 @@ const SocialLogin = ({
   compact = false 
 }) => {
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
-  const [isFacebookLoading, setIsFacebookLoading] = useState(false);
   const [error, setError] = useState('');
   const { toast } = useToast();
 
@@ -48,32 +46,6 @@ const SocialLogin = ({
     }
   };
 
-  const handleFacebookLogin = async () => {
-    setIsFacebookLoading(true);
-    setError('');
-    
-    try {
-      // Use redirect: true for OAuth flow
-      window.sessionStorage.setItem('auth_redirect', redirectUrl);
-      
-      await signIn('facebook', { 
-        callbackUrl: redirectUrl,
-        redirect: true
-      });
-      
-      // Code below won't execute due to redirect
-    } catch (err) {
-      setError(err.message || 'Facebook login failed. Please try again.');
-      console.error('Facebook login error:', err);
-      toast({
-        variant: "destructive",
-        title: "Login failed",
-        description: err.message || 'Facebook login failed. Please try again.'
-      });
-      setIsFacebookLoading(false);
-    }
-  };
-
   return (
     <div className={`flex flex-col space-y-3 ${className}`}>
       {error && <div className="text-sm text-red-500">{error}</div>}
@@ -98,25 +70,6 @@ const SocialLogin = ({
               />
             </div>
             {compact ? 'Google' : 'Continue with Google'}
-          </>
-        )}
-      </Button>
-      
-      <Button
-        type="button"
-        variant="outline"
-        className="relative"
-        disabled={isFacebookLoading}
-        onClick={handleFacebookLogin}
-      >
-        {isFacebookLoading ? (
-          <div className="w-5 h-5 border-2 border-gray-300 border-t-primary rounded-full animate-spin"></div>
-        ) : (
-          <>
-            <div className="absolute left-3 text-blue-600">
-              <FaFacebook size={20} />
-            </div>
-            {compact ? 'Facebook' : 'Continue with Facebook'}
           </>
         )}
       </Button>

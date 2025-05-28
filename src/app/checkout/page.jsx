@@ -12,7 +12,7 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { ShoppingBag, CreditCard, Truck, Shield, ArrowLeft, Check, ChevronDown, ChevronUp, Tag } from 'lucide-react';
+import { ShoppingBag, Truck, Shield, ArrowLeft, Check, ChevronDown, ChevronUp, Tag, Wallet } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Separator } from '@/components/ui/separator';
 import { useCart } from '@/hooks/use-cart';
@@ -48,7 +48,6 @@ const shippingMethods = [
 
 // Fake payment methods data
 const paymentMethods = [
-  { id: 'card', name: 'Credit/Debit Card', icon: <CreditCard className="h-5 w-5" /> },
   { id: 'bkash', name: 'bKash', icon: <Image src="/payment/bkash.svg" width={24} height={24} alt="bKash" /> },
   { id: 'nagad', name: 'Nagad', icon: <Image src="/payment/nagad.svg" width={24} height={24} alt="Nagad" /> },
   { id: 'cod', name: 'Cash on Delivery', icon: <Image src="/payment/cash-on-delivery.svg" width={24} height={24} alt="Cash on Delivery" /> }
@@ -63,14 +62,8 @@ export default function CheckoutPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [activeStep, setActiveStep] = useState('shipping');
   const [shippingMethod, setShippingMethod] = useState('dhaka');
-  const [paymentMethod, setPaymentMethod] = useState('card');
+  const [paymentMethod, setPaymentMethod] = useState('bkash');
   const [showOrderSummary, setShowOrderSummary] = useState(false);
-  const [cardDetails, setCardDetails] = useState({
-    cardNumber: '',
-    cardName: '',
-    expiryDate: '',
-    cvv: '',
-  });
   const [appliedCoupon, setAppliedCoupon] = useState(null);
   const [mfsDetails, setMfsDetails] = useState({
     transactionId: '',
@@ -103,7 +96,6 @@ export default function CheckoutPage() {
         try {
           const parsedCoupon = JSON.parse(couponData);
           setAppliedCoupon(parsedCoupon);
-          console.log('Loaded coupon from session storage:', parsedCoupon);
         } catch (error) {
           console.error('Error parsing coupon data:', error);
           sessionStorage.removeItem('appliedCoupon');
@@ -144,7 +136,6 @@ export default function CheckoutPage() {
             setValue(field, value);
           });
 
-          console.log('Loaded saved shipping information');
         } catch (error) {
           console.error('Error parsing saved shipping data:', error);
           // Fall back to basic user info if saved data is corrupted
@@ -174,7 +165,6 @@ export default function CheckoutPage() {
     // Add a delay to ensure auth state is fully established
     const authCheckTimer = setTimeout(() => {
       if (!authLoading && !isAuthenticated) {
-        console.log('Not authenticated, redirecting to login');
         router.push('/auth/login?redirect=/checkout');
       }
     }, 1500); // Longer delay to ensure auth state is fully loaded
@@ -187,7 +177,6 @@ export default function CheckoutPage() {
     // Add a delay to ensure cart is fully loaded
     const cartCheckTimer = setTimeout(() => {
       if (!authLoading && cartItems.length === 0) {
-        console.log('Cart is empty, redirecting to cart page');
         router.push('/cart');
       }
     }, 1500); // Longer delay to ensure cart is fully loaded
@@ -206,7 +195,6 @@ export default function CheckoutPage() {
 
   // Handle form submissions
   const onSubmitShipping = (data) => {
-    console.log('Shipping data:', data);
 
     // Save shipping info to localStorage if the checkbox is checked
     if (data.saveInfo && isAuthenticated && user) {
@@ -225,7 +213,6 @@ export default function CheckoutPage() {
         };
 
         localStorage.setItem(`shipping_info_${user.email}`, JSON.stringify(shippingDataToSave));
-        console.log('Shipping information saved for future use');
       } catch (error) {
         console.error('Error saving shipping information:', error);
         // Continue with the order even if saving fails
@@ -254,12 +241,6 @@ export default function CheckoutPage() {
         throw new Error('File size must be less than 5MB');
       }
 
-      console.log('Preparing to upload file:', {
-        name: file.name,
-        type: file.type,
-        size: file.size
-      });
-
       // Create form data for uploading
       const formData = new FormData();
       formData.append('file', file);
@@ -279,8 +260,6 @@ export default function CheckoutPage() {
         throw new Error(response.data.error || 'Failed to upload image');
       }
 
-      console.log('Cloudinary upload successful:', response.data);
-      
       // Return the secure URL
       return response.data.data.secure_url;
     } catch (error) {
@@ -295,12 +274,31 @@ export default function CheckoutPage() {
   // Function to create order in database
   const createOrder = async (orderData) => {
     try {
+      // Ensure we have the latest auth token from localStorage before making the API call
+      const authToken = localStorage.getItem('auth_token');
+      if (authToken) {
+        api.defaults.headers.common['Authorization'] = `Bearer ${authToken}`;
+      }
+      
       const response = await api.post('/api/orders', orderData);
-      console.log('Order created successfully:', response.data);
       return response.data;
     } catch (error) {
       console.error('Error creating order:', error);
-      throw new Error('Failed to create order');
+      // Check if this is an auth error (401)
+      if (error.response && error.response.status === 401) {
+        toast({
+          title: 'Authentication Error',
+          description: 'Your session has expired. Please login again.',
+          variant: 'destructive'
+        });
+        // Clear auth_checked to ensure re-authentication on next page load
+        sessionStorage.removeItem('auth_checked');
+        // Redirect to login
+        setTimeout(() => {
+          router.push('/auth/login?redirect=/checkout');
+        }, 1500);
+      }
+      throw new Error(error.response?.data?.error || 'Failed to create order');
     }
   };
 
@@ -325,15 +323,6 @@ export default function CheckoutPage() {
         });
         return;
       }
-    } else if (paymentMethod === 'card') {
-      if (!cardDetails.cardNumber || !cardDetails.cardName || !cardDetails.expiryDate || !cardDetails.cvv) {
-        toast({
-          title: 'Card Details Required',
-          description: 'Please fill in all card details.',
-          variant: 'destructive'
-        });
-        return;
-      }
     } else if (paymentMethod === 'cod') {
       // No additional validation for COD
     }
@@ -341,6 +330,16 @@ export default function CheckoutPage() {
     setIsSubmitting(true);
     
     try {
+      // Refresh authentication state before submitting
+      const authToken = localStorage.getItem('auth_token');
+      if (!authToken) {
+        throw new Error('Authentication required. Please log in again.');
+      }
+      
+      if (typeof api?.defaults?.headers?.common !== 'undefined') {
+        api.defaults.headers.common['Authorization'] = `Bearer ${authToken}`;
+      }
+      
       // Get shipping info from React Hook Form
       const shippingInfo = getValues();
       
@@ -353,15 +352,6 @@ export default function CheckoutPage() {
       
       // Prepare payment details based on method
       const paymentDetails = 
-        paymentMethod === 'card' ? {
-          method: 'card',
-          cardDetails: {
-            cardholderName: cardDetails.cardName,
-            lastFourDigits: cardDetails.cardNumber.slice(-4),
-            expiryDate: cardDetails.expiryDate,
-          },
-          paymentStatus: 'paid'
-        } : 
         (paymentMethod === 'bkash' || paymentMethod === 'nagad') ? {
           method: paymentMethod,
           transactionId: mfsDetails.transactionId,
@@ -377,7 +367,7 @@ export default function CheckoutPage() {
       // Determine order status based on payment method
       const orderStatus = 
         (paymentMethod === 'bkash' || paymentMethod === 'nagad') ? 'awaiting_payment_verification' : 
-        paymentMethod === 'cod' ? 'processing' : 'paid';
+        paymentMethod === 'cod' ? 'pending' : 'paid';
       
       // Create order data object
       const orderData = {
@@ -397,11 +387,8 @@ export default function CheckoutPage() {
         status: orderStatus
       };
       
-      console.log('Creating order with data:', orderData);
-      
       // Create order in database
       const createdOrder = await createOrder(orderData);
-      console.log('Order created successfully:', createdOrder);
       
       // Show success toast for order processing
       toast({
@@ -412,10 +399,6 @@ export default function CheckoutPage() {
         variant: 'success'
       });
       
-      // Clear cart and coupon, store payment method, then redirect to success page
-      clearCart();
-      sessionStorage.removeItem('appliedCoupon');
-      
       // Store payment method for success page to display appropriate message
       sessionStorage.setItem('payment_method', paymentMethod);
       
@@ -424,12 +407,41 @@ export default function CheckoutPage() {
         sessionStorage.setItem('last_order_id', createdOrder._id);
       }
       
-      // Short timeout to let the toast be visible before redirect
+      // Remove coupon from session storage
+      sessionStorage.removeItem('appliedCoupon');
+      
+      // Force navigation to success page with a delay to ensure all processes complete
       setTimeout(() => {
-        router.push('/checkout/success');
-      }, 1500);
+        // Clear cart right before navigation to prevent any race conditions
+        clearCart();
+        
+        // Use window.location.href for a hard navigation to avoid any router interference
+        window.location.href = '/checkout/success';
+      }, 2000);
     } catch (error) {
       console.error('Order submission error:', error);
+      
+      // Handle authentication errors specifically
+      if (error.message?.includes('Authentication required') || 
+          (error.response?.status === 401) ||
+          error.message?.includes('Unauthorized')) {
+        
+        toast({
+          title: 'Authentication Error',
+          description: 'Your session has expired. Please log in again to complete your order.',
+          variant: 'destructive'
+        });
+        
+        // Clear auth state to force re-login
+        sessionStorage.removeItem('auth_checked');
+        
+        // Redirect to login with return URL
+        setTimeout(() => {
+          router.push('/auth/login?redirect=/checkout');
+        }, 1500);
+        
+        return;
+      }
       
       toast({
         title: 'Order Submission Failed',
@@ -455,12 +467,7 @@ export default function CheckoutPage() {
 
   // Debug auth state and cart
   useEffect(() => {
-    console.log('Checkout page - Auth state:', {
-      isAuthenticated,
-      authLoading,
-      hasUser: !!user,
-      cartItemCount: cartItems.length
-    });
+
 
     // Also check for redirect URL in session storage
     if (typeof window !== 'undefined') {
@@ -631,7 +638,7 @@ export default function CheckoutPage() {
                     onClick={() => setActiveStep('payment')}
                     disabled={activeStep !== 'payment' || isSubmitting}
                   >
-                    <CreditCard className="mr-2 h-4 w-4" />
+                    <Wallet className="mr-2 h-4 w-4" />
                     Payment
                   </TabsTrigger>
                 </TabsList>
@@ -889,56 +896,6 @@ export default function CheckoutPage() {
                           </div>
                         ))}
                       </RadioGroup>
-
-                      {/* Credit Card Form - Only shown when card payment is selected */}
-                      {paymentMethod === 'card' && (
-                        <div className="mt-6 space-y-4 p-4 border rounded-lg bg-card/50">
-                          <h4 className="font-medium mb-3">Card Details</h4>
-                          <div className="space-y-3">
-                            <div className="space-y-2">
-                              <Label htmlFor="cardNumber">Card Number</Label>
-                              <Input
-                                id="cardNumber"
-                                placeholder="1234 5678 9012 3456"
-                                value={cardDetails.cardNumber}
-                                onChange={(e) => setCardDetails({ ...cardDetails, cardNumber: e.target.value })}
-                              />
-                            </div>
-
-                            <div className="space-y-2">
-                              <Label htmlFor="cardName">Name on Card</Label>
-                              <Input
-                                id="cardName"
-                                placeholder="John Doe"
-                                value={cardDetails.cardName}
-                                onChange={(e) => setCardDetails({ ...cardDetails, cardName: e.target.value })}
-                              />
-                            </div>
-
-                            <div className="grid grid-cols-2 gap-4">
-                              <div className="space-y-2">
-                                <Label htmlFor="expiryDate">Expiry Date</Label>
-                                <Input
-                                  id="expiryDate"
-                                  placeholder="MM/YY"
-                                  value={cardDetails.expiryDate}
-                                  onChange={(e) => setCardDetails({ ...cardDetails, expiryDate: e.target.value })}
-                                />
-                              </div>
-
-                              <div className="space-y-2">
-                                <Label htmlFor="cvv">CVV</Label>
-                                <Input
-                                  id="cvv"
-                                  placeholder="123"
-                                  value={cardDetails.cvv}
-                                  onChange={(e) => setCardDetails({ ...cardDetails, cvv: e.target.value })}
-                                />
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                      )}
 
                       {/* MFS Payment Form (bKash/Nagad) */}
                       {(paymentMethod === 'bkash' || paymentMethod === 'nagad') && (
@@ -1204,12 +1161,6 @@ export default function CheckoutPage() {
                     {/* Payment Methods Icons */}
                     <div className="flex justify-center mt-2">
                       <div className="flex items-center gap-1.5">
-                        <div className="w-8 h-5 bg-card/80 border rounded flex items-center justify-center">
-                          <Image src="/payment/visa.svg" width={16} height={10} alt="Visa" />
-                        </div>
-                        <div className="w-8 h-5 bg-card/80 border rounded flex items-center justify-center">
-                          <Image src="/payment/mastercard.svg" width={16} height={10} alt="Mastercard" />
-                        </div>
                         <div className="w-8 h-5 bg-card/80 border rounded flex items-center justify-center">
                           <Image src="/payment/bkash.svg" width={16} height={10} alt="bKash" />
                         </div>

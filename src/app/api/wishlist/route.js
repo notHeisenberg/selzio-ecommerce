@@ -101,6 +101,7 @@ export async function GET(request) {
     // Map wishlist items to response format
     const wishlist = userWishlist.items.map(item => ({
       id: item.productId,
+      productCode: item.productId,
       name: item.name || "Unknown Product",
       price: item.price || 0,
       image: item.image || '',

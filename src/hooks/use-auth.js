@@ -187,12 +187,9 @@ export const AuthProvider = ({ children }) => {
       }
     };
     
-    // Only run checkAuth once when component mounts or session status changes
-    // Use a flag to prevent multiple executions
-    const authChecked = sessionStorage.getItem('auth_checked');
-    
-    if (status !== 'loading' && !authChecked) {
-      sessionStorage.setItem('auth_checked', 'true');
+    // Always run checkAuth when status changes instead of using sessionStorage flag
+    // This ensures authentication state is properly restored after page reload
+    if (status !== 'loading') {
       checkAuth();
     }
   }, [status, session]);

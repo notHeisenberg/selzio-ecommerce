@@ -16,18 +16,85 @@ import { useTheme } from 'next-themes';
 
 export function ProductCard({ product, index = 0, animationEnabled = true }) {
   const { addToCart } = useCart();
-  const { toggleWishlist, isInWishlist } = useWishlist();
+  const { toggleWishlist, isInWishlist, addToWishlist, removeFromWishlist, refetchWishlist, wishlistItems } = useWishlist();
   const { toast } = useToast();
   const router = useRouter();
   const productUrl = getProductUrl(product);
   const [isHovered, setIsHovered] = useState(false);
   const { resolvedTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
+  const [isWishlisted, setIsWishlisted] = useState(false);
+  
+  // Get product ID consistently
+  const getProductId = () => {
+    return product?.productCode || product?.id || product?._id;
+  };
   
   // Avoid hydration mismatch
   useEffect(() => {
     setMounted(true);
   }, []);
+
+  // Check wishlist status with refreshed data
+  const checkWishlistStatus = async () => {
+    try {
+      if (!mounted || !product) return;
+      
+      const productId = getProductId();
+      if (!productId) return;
+      
+      // Refetch wishlist data to get latest state
+      await refetchWishlist();
+      
+      // Check if product is in wishlist by using the consistent ID from the product
+      // Convert IDs to strings for consistent comparison
+      const inWishlist = wishlistItems.some(item => 
+        String(item.id) === String(productId) || 
+        String(item.productCode) === String(productId)
+      );
+      
+      console.log(`[WISHLIST CHECK] Product ${productId} (${product.name}) in wishlist: ${inWishlist}`);
+      
+      // Update local state
+      setIsWishlisted(inWishlist);
+    } catch (error) {
+      console.error("Error checking wishlist status:", error);
+    }
+  };
+  
+  // Initial check when component mounts
+  useEffect(() => {
+    if (mounted) {
+      checkWishlistStatus();
+    }
+  }, [mounted, product?.id, product?.productCode]);
+  
+  // Re-check wishlist status when wishlistItems changes
+  useEffect(() => {
+    if (mounted) {
+      const productId = getProductId();
+      if (productId) {
+        // Use direct comparison with wishlistItems instead of isInWishlist function
+        // since the function might be using a different ID format
+        const inWishlist = wishlistItems.some(item => 
+          String(item.id) === String(productId) || 
+          String(item.productCode) === String(productId)
+        );
+        setIsWishlisted(inWishlist);
+      }
+    }
+  }, [wishlistItems, mounted]);
+  
+  // Periodic refresh of wishlist status (every 5 seconds)
+  useEffect(() => {
+    if (!mounted) return;
+    
+    const intervalId = setInterval(() => {
+      checkWishlistStatus();
+    }, 5000);
+    
+    return () => clearInterval(intervalId);
+  }, [mounted]);
   
   // Handle add to cart click
   const handleAddToCart = (e) => {
@@ -41,12 +108,58 @@ export function ProductCard({ product, index = 0, animationEnabled = true }) {
   };
   
   // Handle wishlist toggle
-  const handleWishlistToggle = (e) => {
+  const handleWishlistToggle = async (e) => {
     e.preventDefault(); // Prevent navigating to product page
     e.stopPropagation(); // Prevent event bubbling
     
-    // Toggle wishlist status
-    toggleWishlist(product);
+    const productId = getProductId();
+    
+    if (!productId) {
+      console.error("Cannot toggle wishlist: Missing product ID", product);
+      toast({
+        title: "Error",
+        description: "Could not update wishlist. Please try again.",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    // Check wishlist status directly with our consistent comparison
+    const productInWishlist = wishlistItems.some(item => 
+      String(item.id) === String(productId) || 
+      String(item.productCode) === String(productId)
+    );
+    
+    console.log(`Toggling wishlist for product ${productId} (${product.name}), current state: ${productInWishlist}`);
+    
+    // Optimistically update local state for immediate feedback
+    const newWishlistState = !productInWishlist;
+    setIsWishlisted(newWishlistState);
+    
+    try {
+      if (newWishlistState) {
+        // Add to wishlist - toast is already handled in the useWishlist hook
+        await addToWishlist(product);
+      } else {
+        // Remove from wishlist - toast is already handled in the useWishlist hook
+        await removeFromWishlist(productId);
+      }
+      
+      // Immediately refresh wishlist data
+      await checkWishlistStatus();
+    } catch (error) {
+      // If error, revert optimistic update
+      console.error("Error toggling wishlist:", error);
+      setIsWishlisted(!newWishlistState);
+      toast({
+        title: "Error",
+        description: "Failed to update wishlist. Please try again.",
+        variant: "destructive"
+      });
+      
+      // Still try to refresh wishlist data
+      await checkWishlistStatus();
+    }
   };
   
   // Handle card click to navigate to product page
@@ -129,15 +242,15 @@ export function ProductCard({ product, index = 0, animationEnabled = true }) {
               size="icon"
               className={`rounded-full shadow-md transition-all duration-300 hover:scale-110 hover:shadow-lg
                 ${mounted && resolvedTheme === 'dark'
-                  ? 'bg-gray-700/90 hover:bg-gray-600 hover:border-gray-500'
-                  : 'bg-white/90 hover:bg-rose-50 hover:border-rose-200'
+                  ? isWishlisted ? 'bg-red-900/70 hover:bg-red-800 border-red-700/30' : 'bg-gray-700/90 hover:bg-gray-600 hover:border-gray-500'
+                  : isWishlisted ? 'bg-rose-50 border-rose-200 hover:bg-rose-100' : 'bg-white/90 hover:bg-rose-50 hover:border-rose-200'
                 }`}
               onClick={handleWishlistToggle}
             >
               <Heart className={`h-5 w-5 transition-colors duration-300
                 ${mounted && resolvedTheme === 'dark'
-                  ? isInWishlist(product.productCode) ? 'fill-red-400 text-red-400' : 'text-gray-200 hover:text-red-400'
-                  : isInWishlist(product.productCode) ? 'fill-rose-500 text-rose-500' : 'text-slate-700 hover:text-rose-500'
+                  ? isWishlisted ? 'fill-red-400 text-red-400' : 'text-gray-200 hover:text-red-400'
+                  : isWishlisted ? 'fill-rose-500 text-rose-500' : 'text-slate-700 hover:text-rose-500'
                 }`} />
             </Button>
             

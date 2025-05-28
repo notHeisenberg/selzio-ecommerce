@@ -35,7 +35,7 @@ const CheckoutAuthDialog = ({
 
   const router = useRouter();
   const { cartItems, totalItems, totalPrice } = useCart();
-  const { isAuthenticated, user } = useAuth();
+  const { isAuthenticated, user, login, register, api } = useAuth();
 
   const loginForm = useForm({
     defaultValues: {
@@ -77,6 +77,9 @@ const CheckoutAuthDialog = ({
         sessionStorage.setItem('appliedCoupon', JSON.stringify(appliedCoupon));
       }
       
+      // Clear auth_checked flag to ensure auth is properly rechecked after redirect
+      sessionStorage.removeItem('auth_checked');
+      
       // Set a timeout to ensure auth state is fully processed
       const redirectTimer = setTimeout(() => {
         console.log('Executing redirect now...');
@@ -88,7 +91,7 @@ const CheckoutAuthDialog = ({
           if (onOpenChange) onOpenChange(false);
           router.push(redirectUrl);
         }
-      }, 1000); // Even longer delay to ensure auth state is fully updated
+      }, 1500); // Longer delay to ensure auth state is fully updated
       
       return () => clearTimeout(redirectTimer);
     }
@@ -144,6 +147,14 @@ const CheckoutAuthDialog = ({
     // Also store the checkout redirect URL for social auth flows
     sessionStorage.setItem('auth_redirect', redirectUrl);
     
+    // Force refresh the authentication token for API requests
+    if (typeof window !== 'undefined') {
+      const token = localStorage.getItem('auth_token');
+      if (token) {
+        api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+      }
+    }
+    
     // Set flag to monitor auth state for redirect
     setProcessingRedirect(true);
     
@@ -158,12 +169,11 @@ const CheckoutAuthDialog = ({
     setAuthError('');
     
     try {
-      // Call the login function from your auth provider
-      // This would typically come from your auth context
-      // await login(data.email, data.password);
+      // Call the login function from auth hook
+      await login(data.email, data.password);
       
-      // For this component, we'll simulate successful login
-      // In a real implementation, you would make the actual login call
+      // Clear auth_checked flag to ensure auth is properly rechecked after redirect
+      sessionStorage.removeItem('auth_checked');
       
       // Prepare for redirect after auth state updates
       prepareForRedirect();
@@ -186,13 +196,14 @@ const CheckoutAuthDialog = ({
     setAuthError('');
     
     try {
-      // Call the register function from your auth provider
-      // await registerUser(data);
-      // After registration, log them in
-      // await login(data.email, data.password);
+      // Call the register function from auth hook
+      await register(data);
       
-      // For this component, we'll simulate successful registration
-      // In a real implementation, you would make the actual registration call
+      // After registration, log them in
+      await login(data.email, data.password);
+      
+      // Clear auth_checked flag to ensure auth is properly rechecked after redirect
+      sessionStorage.removeItem('auth_checked');
       
       // Prepare for redirect after auth state updates
       prepareForRedirect();

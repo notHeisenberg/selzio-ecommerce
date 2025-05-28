@@ -57,7 +57,10 @@ export default function CheckoutSuccessPage() {
             </div>
           </div>
           
-          <h1 className="text-3xl font-bold mb-2">Order Successful!</h1>
+          <h1 className="text-3xl font-bold mb-2">Congratulations! Your Order is Successful!</h1>
+          <div className="bg-primary/10 text-primary font-medium py-2 px-4 rounded-lg mb-4">
+            We're excited to fulfill your order! You can track your purchase anytime in your Orders tab.
+          </div>
           <p className="text-muted-foreground mb-8">
             {paymentMethod === 'bkash' || paymentMethod === 'nagad' 
               ? 'Thank you for your purchase. Your order has been placed and is awaiting payment verification.'
@@ -75,9 +78,10 @@ export default function CheckoutSuccessPage() {
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="bg-muted/50 rounded-lg p-4 text-left">
-                <h3 className="font-medium mb-1">What happens next?</h3>
+                <h3 className="font-medium mb-1">View Your Order Details</h3>
                 <p className="text-sm text-muted-foreground">
-                  We're preparing your order for shipment. You'll receive an email once your order has been shipped.
+                  You can view all details about your order, including status updates, in your account's Orders tab.
+                  Visit your Orders tab to track delivery progress and manage your purchase.
                 </p>
               </div>
               
@@ -130,14 +134,14 @@ export default function CheckoutSuccessPage() {
               </div>
             </CardContent>
             <CardFooter className="flex flex-col sm:flex-row gap-4">
-              <Button variant="outline" className="w-full sm:w-auto" asChild>
+              <Button className="w-full sm:w-auto bg-primary hover:bg-primary/90" asChild>
                 <Link href="/account?tab=orders">
-                  View Orders
+                  View Your Orders
                   <Package className="ml-2 h-4 w-4" />
                 </Link>
               </Button>
-              <Button className="w-full sm:w-auto" asChild>
-                <Link href="/">
+              <Button variant="outline" className="w-full sm:w-auto" asChild>
+                <Link href="/store">
                   Continue Shopping
                   <ArrowRight className="ml-2 h-4 w-4" />
                 </Link>

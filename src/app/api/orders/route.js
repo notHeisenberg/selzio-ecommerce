@@ -162,7 +162,7 @@ export async function GET(req) {
         searchConditions.push({ orderNumber: { $regex: searchTerm, $options: 'i' } });
         
         // Search by status
-        const statuses = ['pending', 'processing', 'shipped', 'delivered', 'cancelled', 'awaiting_payment_verification', 'payment_done'];
+        const statuses = ['pending', 'processing', 'delivered', 'cancelled'];
         const matchingStatuses = statuses.filter(s => s.toLowerCase().includes(searchTerm.toLowerCase()));
         if (matchingStatuses.length > 0) {
           searchConditions.push({ status: { $in: matchingStatuses } });
@@ -335,16 +335,34 @@ export async function GET(req) {
 
 export async function POST(req) {
   try {
+    // Try to get session from NextAuth first
     const session = await getServerSession(authOptions);
-    if (!session) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    
+    // Try JWT token from header as backup authentication method
+    const jwtUser = getAuthUser(req);
+    
+    // No authentication at all
+    if (!session && !jwtUser) {
+      console.error('Unauthorized access to orders POST API - no session or JWT token');
+      return NextResponse.json({ error: 'Authentication required to create an order' }, { status: 401 });
+    }
+    
+    // Choose the authenticated user (prefer session, fallback to JWT)
+    const user = session?.user || jwtUser;
+    
+    if (!user) {
+      console.error('Unauthorized access to orders POST API - authenticated but no user data');
+      return NextResponse.json({ error: 'Valid user information required' }, { status: 401 });
     }
 
+    // Add debugging for auth
+    console.log('Orders API authenticated via:', session ? 'NextAuth session' : 'JWT token', 'User ID:', user.id);
+    
     const orderData = await req.json();
     const ordersCollection = await getOrdersCollection();
 
     // Get user ID - store it consistently as a string to match existing orders
-    const userId = session.user.id.toString();
+    const userId = user.id.toString();
     
     // Log the user ID we're using for the order
     console.log('Creating order for user:', userId);
@@ -352,7 +370,7 @@ export async function POST(req) {
     const order = {
       ...orderData,
       user: userId,
-      status: 'pending',
+      status: orderData.status || 'pending',
       createdAt: new Date(),
       updatedAt: new Date()
     };
@@ -363,7 +381,7 @@ export async function POST(req) {
     return NextResponse.json({ order });
   } catch (error) {
     console.error('Error creating order:', error);
-    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
+    return NextResponse.json({ error: 'Internal Server Error', message: error.message }, { status: 500 });
   }
 }
 
@@ -477,6 +495,91 @@ export async function PUT(req) {
     });
   } catch (error) {
     console.error('🔴 Unhandled error in PUT handler:', error);
+    return NextResponse.json({ 
+      error: 'Internal Server Error', 
+      message: error.message 
+    }, { status: 500 });
+  }
+}
+
+// Handle deleting orders (admin only)
+export async function DELETE(req) {
+  try {
+    console.log('🗑️ DELETE request received on /api/orders endpoint');
+    
+    // Get the order ID from the URL parameters
+    const url = new URL(req.url);
+    const orderId = url.searchParams.get('orderId');
+    
+    if (!orderId) {
+      console.error('🔴 Missing orderId in request');
+      return NextResponse.json({ error: 'Order ID is required' }, { status: 400 });
+    }
+    
+    // Verify ObjectId is valid
+    if (!ObjectId.isValid(orderId)) {
+      console.error('🔴 Invalid ObjectId:', orderId);
+      return NextResponse.json({ error: 'Invalid order ID format' }, { status: 400 });
+    }
+    
+    // Try to get session from NextAuth first
+    const session = await getServerSession(authOptions);
+    
+    // Try JWT token from header as backup authentication method
+    const jwtUser = getAuthUser(req);
+    
+    // No authentication at all
+    if (!session && !jwtUser) {
+      console.error('🔴 Unauthorized access to orders DELETE API - no session or JWT token');
+      return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
+    }
+    
+    // Choose the authenticated user (prefer session, fallback to JWT)
+    const user = session?.user || jwtUser;
+    
+    if (!user) {
+      console.error('🔴 Unauthorized access to orders DELETE API - authenticated but no user data');
+      return NextResponse.json({ error: 'User information required' }, { status: 401 });
+    }
+    
+    // Only admins can delete orders
+    const isAdmin = user.role === 'admin' || user.isAdmin === true || user.admin === true;
+    console.log('🗑️ User attempting to delete:', { userId: user.id, isAdmin });
+    
+    if (!isAdmin) {
+      console.error('🔴 Non-admin user attempting to delete order');
+      return NextResponse.json({ error: 'Only administrators can delete orders' }, { status: 403 });
+    }
+    
+    const ordersCollection = await getOrdersCollection();
+    
+    // First find the order to verify it exists
+    const existingOrder = await ordersCollection.findOne({ _id: new ObjectId(orderId) });
+    
+    if (!existingOrder) {
+      console.error('🔴 Order not found with ID:', orderId);
+      return NextResponse.json({ error: 'Order not found' }, { status: 404 });
+    }
+    
+    // Delete the order
+    const result = await ordersCollection.deleteOne({ _id: new ObjectId(orderId) });
+    
+    if (result.deletedCount === 1) {
+      console.log('✅ Order deleted successfully:', orderId);
+      return NextResponse.json({ 
+        success: true, 
+        message: 'Order deleted successfully',
+        orderId
+      });
+    } else {
+      console.error('🔴 Failed to delete order:', orderId);
+      return NextResponse.json({ 
+        error: 'Failed to delete order', 
+        orderId 
+      }, { status: 500 });
+    }
+  } catch (error) {
+    console.error('🔴 Unhandled error in DELETE handler:', error);
     return NextResponse.json({ 
       error: 'Internal Server Error', 
       message: error.message 
