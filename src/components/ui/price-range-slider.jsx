@@ -128,42 +128,7 @@ export function PriceRangeSlider({
         tooltipValueFormatOptions={{style: "decimal"}}
         aria-label="Price Range Slider"
       />
-      
-      <div className="flex justify-between mt-3">
-        <div className="flex items-center gap-2">
-          <span className="text-sm text-muted-foreground font-medium w-10">Min:</span>
-          <div className="relative">
-            <Input
-              type="text"
-              value={minInputValue}
-              onChange={(e) => handleInputChange('min', e.target.value)}
-              onBlur={handleInputBlur}
-              onKeyDown={handleInputKeyDown}
-              className="w-24 text-sm pr-10"
-            />
-            <span className="absolute right-3 top-1/2 transform -translate-y-1/2 text-xs text-muted-foreground">
-              BDT
-            </span>
-          </div>
-        </div>
-        
-        <div className="flex items-center gap-2">
-          <span className="text-sm text-muted-foreground font-medium w-10">Max:</span>
-          <div className="relative">
-            <Input
-              type="text"
-              value={maxInputValue}
-              onChange={(e) => handleInputChange('max', e.target.value)}
-              onBlur={handleInputBlur}
-              onKeyDown={handleInputKeyDown}
-              className="w-24 text-sm pr-10"
-            />
-            <span className="absolute right-3 top-1/2 transform -translate-y-1/2 text-xs text-muted-foreground">
-              BDT
-            </span>
-          </div>
-        </div>
-      </div>
+
     </div>
   );
 } 

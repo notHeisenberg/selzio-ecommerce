@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { ProductCard } from '@/components/products/product-card';
 import { getTopSellingProducts } from '@/data/products';
 import { Skeleton } from '@/components/ui/skeleton';
+import { ArrowRight } from 'lucide-react';
 
 export function TopSellingSection() {
   const [topSellingProducts, setTopSellingProducts] = useState([]);
@@ -42,13 +43,10 @@ export function TopSellingSection() {
   return (
     <section className="py-20 bg-secondary/30 overflow-hidden">
       <div className="container mx-auto px-4">
-        <div className="text-center max-w-2xl mx-auto mb-16">
-          <h2 className="text-4xl font-bold mb-4 bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent dark:from-white dark:to-gray-400">
+        <div className="text-start mx-auto">
+          <h2 className="text-xl font-medium mb-7 bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent dark:from-white dark:to-gray-400">
             Top Selling Products
           </h2>
-          <p className="text-muted-foreground">
-            Discover our most popular and highly-rated products
-          </p>
         </div>
 
         {error && (
@@ -66,7 +64,7 @@ export function TopSellingSection() {
           ) : (
             // Show products when loaded
             topSellingProducts.map((product, index) => (
-              <ProductCard 
+              <ProductCard
                 key={product.productCode}
                 product={product}
                 index={index}
@@ -76,11 +74,12 @@ export function TopSellingSection() {
         </div>
 
         <div className="text-center mt-12">
-          <Link href="/store">
-            <Button variant="outline" className="px-8 transition-all duration-300 hover:shadow-md">
+          <Button asChild className="bg-transparent text-gray-800 dark:text-white hover:bg-slate-800/10 dark:hover:bg-gray-800/10 border border-gray-800 dark:border-white rounded-none py-6 px-16">
+            <Link href="/store">
               View All Products
-            </Button>
-          </Link>
+              <ArrowRight className="ml-2 h-5 w-5" />
+            </Link>
+          </Button>
         </div>
       </div>
     </section>

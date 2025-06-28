@@ -1,11 +1,13 @@
 "use client"
 
 import { useParams } from 'next/navigation';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, Folder } from 'lucide-react';
+import { ArrowLeft, Folder, Search } from 'lucide-react';
 import { PageHeader } from '@/components/layout/page-header';
 import { generateBreadcrumbs } from '@/components/layout/breadcrumbs';
+import { FiltersBar } from '@/components/filters';
 
 export default function CategoryPage() {
   const params = useParams();
@@ -60,6 +62,19 @@ export default function CategoryPage() {
     { label: displayCategory, href: `/products/${category}` }
   ];
 
+  // Mobile-optimized search bar - visible for smaller screens
+  const [searchQuery, setSearchQuery] = useState('');
+  const [stockFilter, setStockFilter] = useState('all');
+  const [priceRange, setPriceRange] = useState([0, 1000]);
+  const [sortOption, setSortOption] = useState('relevance');
+
+  const handleResetAllFilters = () => {
+    setSearchQuery('');
+    setStockFilter('all');
+    setPriceRange([0, 1000]);
+    setSortOption('relevance');
+  };
+
   return (
     <>
       <PageHeader breadcrumbItems={breadcrumbItems} />
@@ -70,6 +85,24 @@ export default function CategoryPage() {
         <p className="text-muted-foreground mb-8">
           Browse subcategories in our {displayCategory} collection.
         </p>
+
+        {/* Mobile-optimized search bar - visible for smaller screens */}
+        <div className="mb-6">
+          <FiltersBar
+            searchQuery={searchQuery}
+            onSearchChange={setSearchQuery}
+            stockFilter={stockFilter}
+            onStockFilterChange={setStockFilter}
+            priceRange={priceRange}
+            onPriceRangeChange={setPriceRange}
+            sortOption={sortOption}
+            onSortOptionChange={setSortOption}
+            onResetAllFilters={handleResetAllFilters}
+            categories={[]}
+            selectedCategory="all"
+            onCategorySelect={() => {}}
+          />
+        </div>
 
         {subcategories.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">

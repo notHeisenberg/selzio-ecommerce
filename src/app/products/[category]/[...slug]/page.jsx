@@ -10,22 +10,8 @@ import { PageHeader } from '@/components/layout/page-header';
 import { generateBreadcrumbs } from '@/components/layout/breadcrumbs';
 import { getProductByCode, getProducts } from '@/data/products';
 import { ProductCard } from '@/components/products/product-card';
-import { Input } from '@/components/ui/input';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
-import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-  SheetTrigger,
-} from '@/components/ui/sheet';
-import { PriceRangeSlider } from '@/components/ui/price-range-slider';
+import { motion } from 'framer-motion';
+import { FiltersBar } from '@/components/filters';
 
 export default function ProductCatchAllPage() {
   const params = useParams();
@@ -46,6 +32,7 @@ export default function ProductCatchAllPage() {
   const [minPriceInput, setMinPriceInput] = useState("0");
   const [maxPriceInput, setMaxPriceInput] = useState("5000");
   const [sortOption, setSortOption] = useState("featured");
+  const [stockFilter, setStockFilter] = useState("all");
   const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
   
   // Format category for display (capitalize first letter)
@@ -288,6 +275,13 @@ export default function ProductCatchAllPage() {
       );
     }
 
+    // Apply stock filter
+    if (stockFilter !== "all") {
+      result = result.filter(
+        (product) => stockFilter === "in-stock" ? product.stock > 0 : product.stock === 0
+      );
+    }
+
     // Apply price range filter
     result = result.filter(
       (product) => product.price >= priceRange[0] && product.price <= priceRange[1]
@@ -318,7 +312,7 @@ export default function ProductCatchAllPage() {
     }
 
     setFilteredProducts(result);
-  }, [searchQuery, priceRange, sortOption, isSubcategoryPage, allProducts, category, subcategory]);
+  }, [searchQuery, priceRange, sortOption, stockFilter, isSubcategoryPage, allProducts, category, subcategory]);
   
   // Get max price for range slider
   const maxPrice = allProducts.length > 0 
@@ -328,59 +322,10 @@ export default function ProductCatchAllPage() {
   // Generate breadcrumb items based on the current path and product data
   const breadcrumbItems = generateBreadcrumbs(params, pathname, product?.name);
   
-  // Custom handler for price input changes - allow any max value
-  const handlePriceInputChange = (type, value) => {
-    // Remove non-numeric characters
-    const numericValue = value.replace(/[^0-9]/g, '');
+  // Reset all filters
+  const resetAllFilters = () => {
+    setSearchQuery("");
     
-    if (type === 'min') {
-      setMinPriceInput(numericValue);
-      // Only update slider if input is valid
-      if (numericValue !== '') {
-        const newMin = parseInt(numericValue, 10);
-        // Enforce minimum limit of 0
-        if (!isNaN(newMin) && newMin >= 0) {
-          setPriceRange([newMin, priceRange[1]]);
-        }
-      }
-    } else {
-      setMaxPriceInput(numericValue);
-      // Only update slider if input is valid
-      if (numericValue !== '') {
-        const newMax = parseInt(numericValue, 10);
-        // Allow any maximum value as long as it's >= min
-        if (!isNaN(newMax) && newMax >= priceRange[0]) {
-          setPriceRange([priceRange[0], newMax]);
-        }
-      }
-    }
-  };
-
-  // Apply price inputs when user presses Enter
-  const handlePriceInputKeyDown = (e) => {
-    if (e.key === 'Enter') {
-      const min = parseInt(minPriceInput, 10) || 0;
-      // No max limit - use whatever user entered or a high default
-      const max = parseInt(maxPriceInput, 10) || 50000;
-      
-      // Enforce min >= 0 and min <= max
-      const validMin = Math.max(0, min);
-      if (validMin <= max) {
-        setPriceRange([validMin, max]);
-      } else {
-        // If max < min, set max = min
-        setPriceRange([validMin, validMin]);
-        setMaxPriceInput(validMin.toString());
-      }
-      // Always ensure min is at least 0
-      if (min < 0) {
-        setMinPriceInput('0');
-      }
-    }
-  };
-
-  // Reset price range to defaults
-  const resetPriceRange = () => {
     const defaultMax = allProducts.length > 0 
       ? Math.max(...allProducts.map(product => product.price))
       : 5000;
@@ -388,11 +333,8 @@ export default function ProductCatchAllPage() {
     setPriceRange([0, defaultMax]);
     setMinPriceInput("0");
     setMaxPriceInput(defaultMax.toString());
-  };
-  
-  // Format price with currency symbol and commas
-  const formatPrice = (price) => {
-    return `${price.toLocaleString('en-US')} BDT`;
+    setSortOption("featured");
+    setStockFilter("all");
   };
   
   // Update input fields when slider changes
@@ -400,6 +342,24 @@ export default function ProductCatchAllPage() {
     setMinPriceInput(priceRange[0].toString());
     setMaxPriceInput(priceRange[1].toString());
   }, [priceRange]);
+  
+  // Animation variants for filter components
+  const filterComponentVariants = {
+    initial: { 
+      boxShadow: "0 0 0 rgba(0,0,0,0)",
+      borderColor: "rgba(229, 231, 235, 1)"
+    },
+    hover: { 
+      boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)",
+      borderColor: "rgba(209, 213, 219, 1)",
+      transition: { duration: 0.2 }
+    },
+    focus: {
+      boxShadow: "0 0 0 2px rgba(99, 102, 241, 0.2)",
+      borderColor: "rgba(99, 102, 241, 0.5)",
+      transition: { duration: 0.2 }
+    }
+  };
   
   // Product detail view
   if (isProductWithSubcategory || isLikelyProductCode) {
@@ -426,91 +386,27 @@ export default function ProductCatchAllPage() {
                 Browse {displaySubcategory} in {displayCategory} ({filteredProducts.length} products)
               </p>
             </div>
-            
-            {/* Search bar */}
-            <div className="w-full md:w-auto mt-4 md:mt-0 relative">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input
-                  placeholder="Search in this subcategory..."
-                  className="pl-10 w-full md:w-[300px]"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                />
-              </div>
-            </div>
           </div>
 
-          {/* Filters and Sort Controls */}
-          <div className="flex flex-wrap justify-between items-center mb-6 gap-4">
-            {/* Mobile Filters */}
-            <Sheet open={mobileFiltersOpen} onOpenChange={setMobileFiltersOpen}>
-              <SheetTrigger asChild>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="lg:hidden"
-                  onClick={() => setMobileFiltersOpen(true)}
-                >
-                  <Filter className="h-4 w-4 mr-2" />
-                  Filters
-                </Button>
-              </SheetTrigger>
-              <SheetContent side="left" className="w-[300px] sm:w-[400px]">
-                <SheetHeader>
-                  <SheetTitle>Filters</SheetTitle>
-                </SheetHeader>
-                <div className="py-4">
-                  <div className="mb-6">
-                    <h3 className="text-sm font-medium mb-2">Price Range</h3>
-                    <div className="px-2">
-                      <PriceRangeSlider
-                        value={priceRange}
-                        onChange={setPriceRange}
-                        showLabel={false}
-                      />
-                    </div>
-                  </div>
-                </div>
-              </SheetContent>
-            </Sheet>
-
-            {/* Desktop Price Filter */}
-            <div className="hidden lg:flex items-center gap-4">
-              <div className="flex items-center gap-2">
-                <span className="text-sm font-medium whitespace-nowrap">Price:</span>
-                <div className="w-[180px]">
-                  <PriceRangeSlider
-                    value={priceRange}
-                    onChange={setPriceRange}
-                    showLabel={false}
-                    size="sm"
-                    showSteps={false} 
-                    showTooltip={false}
-                  />
-                </div>
-              </div>
-            </div>
-
-            {/* Sort Control */}
-            <div>
-              <Select 
-                value={sortOption} 
-                onValueChange={setSortOption}
-              >
-                <SelectTrigger className="w-[180px]">
-                  <SelectValue placeholder="Sort by" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="featured">Featured</SelectItem>
-                  <SelectItem value="price-low-high">Price: Low to High</SelectItem>
-                  <SelectItem value="price-high-low">Price: High to Low</SelectItem>
-                  <SelectItem value="rating">Top Rated</SelectItem>
-                  <SelectItem value="newest">Newest</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
+          {/* Use the FiltersBar component instead of ProductFilters */}
+          <FiltersBar
+            searchQuery={searchQuery}
+            onSearchChange={setSearchQuery}
+            stockFilter={stockFilter}
+            onStockFilterChange={setStockFilter}
+            priceRange={priceRange}
+            onPriceRangeChange={setPriceRange}
+            sortOption={sortOption}
+            onSortOptionChange={setSortOption}
+            onResetAllFilters={resetAllFilters}
+            minPrice={0}
+            maxPrice={maxPrice}
+            priceStep={50}
+            className="mb-6"
+            categories={[]}
+            selectedCategory="all"
+            onCategorySelect={() => {}}
+          />
 
           {/* Product Grid */}
           {loading ? (
@@ -528,7 +424,14 @@ export default function ProductCatchAllPage() {
           ) : filteredProducts.length > 0 ? (
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
               {filteredProducts.map((product, index) => (
-                <ProductCard key={product.productCode} product={product} index={index} />
+                <motion.div
+                  key={product.productCode || index}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.3, delay: index * 0.05 }}
+                >
+                  <ProductCard key={product.productCode} product={product} index={index} />
+                </motion.div>
               ))}
             </div>
           ) : (
@@ -542,10 +445,7 @@ export default function ProductCatchAllPage() {
                   ? `No products match "${searchQuery}" in this subcategory.` 
                   : `No products found in the ${displaySubcategory} subcategory.`}
               </p>
-              <Button onClick={() => {
-                setSearchQuery("");
-                setPriceRange([0, maxPrice]);
-              }}>
+              <Button onClick={resetAllFilters}>
                 Reset Filters
               </Button>
             </div>

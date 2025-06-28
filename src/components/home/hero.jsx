@@ -17,7 +17,7 @@ export function Hero() {
   }, []);
 
   return (
-    <div className="relative h-[600px] w-full overflow-hidden">
+    <div className="relative h-[750px] w-full overflow-hidden">
       {/* Background Image with Overlay */}
       <div className="absolute inset-0">
         <Image
@@ -35,41 +35,35 @@ export function Hero() {
       </div>
 
       {/* Content */}
-      <div className="relative h-full container mx-auto px-4 flex items-center">
-        <div className="max-w-2xl">
-          <h1 className={`text-5xl font-bold mb-4 ${
-            mounted && resolvedTheme === 'dark' 
-              ? 'text-white' 
-              : 'text-gray-800'
-          }`}>
-            Discover Your Style
-          </h1>
-          <p className={`text-xl mb-8 ${
-            mounted && resolvedTheme === 'dark' 
-              ? 'text-gray-300' 
-              : 'text-gray-600'
-          }`}>
-            Explore our curated collection of premium fashion and lifestyle products.
-          </p>
-          <div className="flex gap-4">
+      <div className="relative h-full container mx-auto px-4 flex items-end pb-10 justify-center">
+        <div className="text-center">
+          <div className="flex gap-6 justify-center">
             {mounted && resolvedTheme === 'dark' ? (
               <>
-                <Button size="lg" className="bg-white text-black hover:bg-gray-200">
-                  Shop Now
-                  <ArrowRight className="ml-2 h-4 w-4" />
+                <Button asChild className="bg-transparent border border-white text-white hover:bg-white/10 rounded-none py-6 px-16 ">
+                  <Link href="/store">
+                    Shop Now
+                    <ArrowRight className="ml-2 h-5 w-5" />
+                  </Link>
                 </Button>
-                <Button size="lg" variant="outline" className="border-white text-white hover:bg-white/20">
-                  Learn More
+                <Button asChild className="text-white hover:bg-white/20 rounded-none py-6 px-16" variant="outline">
+                  <Link href="/store">
+                    Collections
+                  </Link>
                 </Button>
               </>
             ) : (
               <>
-                <Button size="lg" className="bg-gray-800 hover:bg-gray-700">
-                  Shop Now
-                  <ArrowRight className="ml-2 h-4 w-4" />
+                <Button asChild className="bg-transparent text-gray-800 hover:bg-gray-800/10 border border-gray-800 rounded-none py-6 px-16">
+                  <Link href="/store">
+                    Shop Now
+                    <ArrowRight className="ml-2 h-5 w-5" />
+                  </Link>
                 </Button>
-                <Button size="lg" variant="outline" className="border-gray-800 text-gray-800 hover:bg-gray-800 hover:text-white">
-                  Learn More
+                <Button asChild className="text-gray-800 hover:bg-gray-800 hover:text-white rounded-none py-6 px-16" variant="outline">
+                  <Link href="/store">
+                    Collections
+                  </Link>
                 </Button>
               </>
             )}

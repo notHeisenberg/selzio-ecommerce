@@ -4,20 +4,11 @@ import { useState, useEffect } from "react";
 import { getProducts, getCategories } from "@/data/products";
 import { ProductCard } from "@/components/products/product-card";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { Search, SlidersHorizontal } from "lucide-react";
 import { motion } from "framer-motion";
 import { Metadata } from "next";
 import { metadata } from "./metadata"
 import { Navbar } from "@/components/layout/navbar";
-import { PriceRangeSlider } from "@/components/ui/price-range-slider";
+import { FiltersBar, CategoryFilter } from "@/components/filters";
 
 // Cannot use metadata in client components, would need a separate
 // metadata.js file or move this to a server component if metadata is needed
@@ -25,14 +16,16 @@ import { PriceRangeSlider } from "@/components/ui/price-range-slider";
 export default function StorePage() {
   // State for all filters
   const [searchQuery, setSearchQuery] = useState("");
-  const [selectedSubcategory, setSelectedSubcategory] = useState("");
+  const [selectedSubcategory, setSelectedSubcategory] = useState("all");
   const [priceRange, setPriceRange] = useState([0, 3000]);
+  const [stockFilter, setStockFilter] = useState("all");
   const [sortOption, setSortOption] = useState("featured");
-  const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
   const [filteredProducts, setFilteredProducts] = useState([]);
   const [allProducts, setAllProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [minPrice, setMinPrice] = useState(0);
+  const [maxPrice, setMaxPrice] = useState(3000);
 
   // Load products from MongoDB via products.js
   useEffect(() => {
@@ -73,8 +66,15 @@ export default function StorePage() {
     }
 
     // Apply subcategory filter
-    if (selectedSubcategory) {
+    if (selectedSubcategory && selectedSubcategory !== "all") {
       result = result.filter((product) => product.subcategory === selectedSubcategory);
+    }
+    
+    // Apply stock filter
+    if (stockFilter !== "all") {
+      result = result.filter(
+        (product) => stockFilter === "in-stock" ? product.stock > 0 : product.stock === 0
+      );
     }
 
     // Apply price range filter
@@ -108,193 +108,91 @@ export default function StorePage() {
     }
 
     setFilteredProducts(result);
-  }, [searchQuery, selectedSubcategory, priceRange, sortOption, allProducts]);
+  }, [searchQuery, selectedSubcategory, priceRange, stockFilter, sortOption, allProducts]);
 
   // Get unique subcategories from products
   const uniqueSubcategories = [...new Set(allProducts.map((product) => product.subcategory).filter(Boolean))];
 
+  // Reset all filters
+  const handleResetAllFilters = () => {
+    setSearchQuery("");
+    setSelectedSubcategory("all");
+    setPriceRange([0, 3000]);
+    setStockFilter("all");
+    setSortOption("featured");
+  };
+
   return (
     <>
-    <Navbar />
-      {/* Store-specific header banner - Moved from layout.js */}
-      <div className="bg-gradient-to-r from-slate-900 to-slate-800 py-8 px-4">
-        <div className="container mx-auto">
-          <div className="max-w-xl">
-            <h1 className="text-3xl md:text-4xl font-bold text-white mb-3">
-              Discover Our Collection
-            </h1>
-            <p className="text-slate-300 text-lg mb-6">
-              Find premium products with top quality and amazing designs.
-              Free shipping on orders over 2000 BDT.
-            </p>
-          </div>
-        </div>
-      </div>
-      
+      <Navbar />
       <div className="container mx-auto px-4 py-8">
-        <div className="flex flex-col md:flex-row justify-between items-center mb-8">
-          <div>
-            <h1 className="text-3xl font-bold mb-2">Store</h1>
-            <p className="text-muted-foreground">
-              Browse our collection of {allProducts.length} products
-            </p>
-          </div>
-          
-          {/* Search bar */}
-          <div className="w-full md:w-auto mt-4 md:mt-0 relative">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Search products..."
-                className="pl-10 w-full md:w-[300px]"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-              />
-            </div>
-          </div>
-        </div>
+        {/* Page title */}
+        <h1 className="text-3xl font-bold mb-6">Store</h1>
 
+        {/* Combined filters bar */}
+        <FiltersBar
+          searchQuery={searchQuery}
+          onSearchChange={(e) => setSearchQuery(e.target.value)}
+          stockFilter={stockFilter}
+          onStockFilterChange={setStockFilter}
+          priceRange={priceRange}
+          onPriceRangeChange={setPriceRange}
+          sortOption={sortOption}
+          onSortOptionChange={setSortOption}
+          onResetAllFilters={handleResetAllFilters}
+          minPrice={minPrice}
+          maxPrice={maxPrice}
+          priceStep={50}
+          categories={uniqueSubcategories}
+          selectedCategory={selectedSubcategory}
+          onCategorySelect={setSelectedSubcategory}
+          className="mb-6"
+        />
+        
         <div className="flex flex-col lg:flex-row gap-8">
-          {/* Filter sidebar - Desktop */}
+          {/* Sidebar for subcategories - Desktop only */}
           <div className="hidden lg:block w-64 shrink-0">
             <div className="sticky top-20 space-y-6">
-              <div>
-                <h3 className="font-medium mb-3">Products</h3>
-                <div className="space-y-1">
-                  <Button
-                    variant={selectedSubcategory === "" ? "default" : "outline"}
-                    size="sm"
-                    className="w-full justify-start"
-                    onClick={() => setSelectedSubcategory("")}
-                  >
-                    All Products
-                  </Button>
-                  {uniqueSubcategories.map((subcategory) => (
-                    <Button
-                      key={subcategory}
-                      variant={selectedSubcategory === subcategory ? "default" : "outline"}
-                      size="sm"
-                      className="w-full justify-start"
-                      onClick={() => setSelectedSubcategory(subcategory)}
-                    >
-                      {subcategory}
-                    </Button>
-                  ))}
-                </div>
-              </div>
-
-              <div>
-                <h3 className="font-medium mb-3">Price Range</h3>
-                <div className="px-2">
-                  <PriceRangeSlider
-                    value={priceRange}
-                    onChange={setPriceRange}
-                    showLabel={false}
-                  />
-                </div>
+              <div className="p-4">
+                <h3 className="font-medium mb-3 text-lg">Products</h3>
+                <CategoryFilter
+                  categories={uniqueSubcategories}
+                  selectedCategory={selectedSubcategory}
+                  onSelectCategory={setSelectedSubcategory}
+                  showAllOption={true}
+                  allCategoryLabel="All Products"
+                />
               </div>
             </div>
           </div>
-
-          {/* Mobile filters button */}
-          <div className="lg:hidden w-full mb-4 flex justify-between items-center">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setMobileFiltersOpen(!mobileFiltersOpen)}
-              className="flex items-center gap-2"
-            >
-              <SlidersHorizontal className="h-4 w-4" />
-              Filters
-            </Button>
-
-            <Select value={sortOption} onValueChange={setSortOption}>
-              <SelectTrigger className="w-[180px]">
-                <SelectValue placeholder="Sort by" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="featured">Featured</SelectItem>
-                <SelectItem value="price-low-high">Price: Low to High</SelectItem>
-                <SelectItem value="price-high-low">Price: High to Low</SelectItem>
-                <SelectItem value="newest">Newest</SelectItem>
-                <SelectItem value="rating">Top Rated</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
-          {/* Mobile filters panel */}
-          {mobileFiltersOpen && (
-            <div className="lg:hidden mb-6 p-4 border rounded-lg space-y-4">
-              <div>
-                <h3 className="font-medium mb-2">Products</h3>
-                <div className="grid grid-cols-2 gap-2">
-                  <Button
-                    variant={selectedSubcategory === "" ? "default" : "outline"}
-                    size="sm"
-                    className="justify-start"
-                    onClick={() => setSelectedSubcategory("")}
-                  >
-                    All Products
-                  </Button>
-                  {uniqueSubcategories.map((subcategory) => (
-                    <Button
-                      key={subcategory}
-                      variant={selectedSubcategory === subcategory ? "default" : "outline"}
-                      size="sm"
-                      className="justify-start"
-                      onClick={() => setSelectedSubcategory(subcategory)}
-                    >
-                      {subcategory}
-                    </Button>
-                  ))}
-                </div>
-              </div>
-
-              <div>
-                <h3 className="font-medium mb-2">Price Range</h3>
-                <div className="px-2">
-                  <PriceRangeSlider
-                    value={priceRange}
-                    onChange={setPriceRange}
-                    showLabel={false}
-                    size="sm"
-                    showSteps={false}
-                    showTooltip={false}
-                  />
-                </div>
-              </div>
-            </div>
-          )}
 
           {/* Products Grid */}
           <div className="flex-1">
-            <div className="flex justify-between items-center mb-6">
-              <p className="text-muted-foreground">
-                Showing {filteredProducts.length} results
+            <div className="sticky top-16 z-10 flex flex-wrap justify-between items-center mb-4 py-2 px-1 border-b">
+              <p className="text-sm text-muted-foreground">
+                Showing <span className="font-medium text-foreground">{filteredProducts.length}</span> results
               </p>
               
-              {/* Desktop sort dropdown */}
-              <div className="hidden lg:block">
-                <Select value={sortOption} onValueChange={setSortOption}>
-                  <SelectTrigger className="w-[180px]">
-                    <SelectValue placeholder="Sort by" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="featured">Featured</SelectItem>
-                    <SelectItem value="price-low-high">Price: Low to High</SelectItem>
-                    <SelectItem value="price-high-low">Price: High to Low</SelectItem>
-                    <SelectItem value="newest">Newest</SelectItem>
-                    <SelectItem value="rating">Top Rated</SelectItem>
-                  </SelectContent>
-                </Select>
+              <div className="flex gap-2 flex-wrap">
+                {searchQuery && (
+                  <span className="text-xs px-1">
+                    Search: <span className="font-medium">{searchQuery}</span>
+                  </span>
+                )}
+                
+                {selectedSubcategory !== "all" && (
+                  <span className="text-xs px-1">
+                    Category: <span className="font-medium">{selectedSubcategory}</span>
+                  </span>
+                )}
               </div>
             </div>
 
             {loading ? (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-6 lg:grid-cols-3">
                 {Array(6).fill(0).map((_, index) => (
                   <div key={`skeleton-${index}`} className="animate-pulse">
-                    <div className="bg-secondary/70 rounded-2xl h-[300px]"></div>
+                    <div className="bg-secondary/70 h-[250px] sm:h-[300px] rounded-md"></div>
                   </div>
                 ))}
               </div>
@@ -311,13 +209,14 @@ export default function StorePage() {
                 </Button>
               </div>
             ) : filteredProducts.length > 0 ? (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-6 lg:grid-cols-3">
                 {filteredProducts.map((product, index) => (
                   <motion.div
-                    key={product.productCode}
+                    key={product.productCode || index}
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ duration: 0.3, delay: index * 0.05 }}
+                    className="w-full"
                   >
                     <ProductCard product={product} index={index} />
                   </motion.div>
@@ -332,12 +231,7 @@ export default function StorePage() {
                 <Button 
                   variant="outline" 
                   className="mt-4"
-                  onClick={() => {
-                    setSearchQuery("");
-                    setSelectedSubcategory("");
-                    setPriceRange([0, 1000]);
-                    setSortOption("featured");
-                  }}
+                  onClick={handleResetAllFilters}
                 >
                   Reset filters
                 </Button>
