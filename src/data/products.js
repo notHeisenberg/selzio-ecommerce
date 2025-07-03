@@ -151,9 +151,6 @@ export const getFeaturedCategories = async () => {
     // Default images based on index if no specific mapping is available
     const defaultImages = [
       '/images/categories/Old_money_all.png',
-      '/images/categories/New_money_all.png',
-      '/images/categories/Old_money_all.png',
-      '/images/categories/New_money_all.png'
     ];
     
     return {
