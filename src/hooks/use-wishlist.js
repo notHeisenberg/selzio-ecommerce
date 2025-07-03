@@ -30,17 +30,51 @@ export const WishlistProvider = ({ children }) => {
     return () => clearTimeout(timer);
   }, [isLoading]);
   
+  // Listen for auth error events
+  useEffect(() => {
+    const handleAuthError = (event) => {
+      // Clear wishlist items on auth error
+      setWishlistItems([]);
+      
+      // Show toast notification
+      toast({
+        title: "Authentication Error",
+        description: event.detail.message || "Please log in again to view your wishlist.",
+        variant: "destructive"
+      });
+    };
+    
+    window.addEventListener('auth:error', handleAuthError);
+    
+    return () => {
+      window.removeEventListener('auth:error', handleAuthError);
+    };
+  }, [toast]);
+  
   // Function to get auth token from session or localStorage
   const getAuthToken = () => {
-    return session?.accessToken || localStorage.getItem('auth_token');
+    // Try to get token from session first
+    const sessionToken = session?.accessToken;
+    if (sessionToken) return sessionToken;
+    
+    // Then try localStorage
+    const localToken = localStorage.getItem('auth_token');
+    
+    // If token exists in localStorage but not in session, it might be stale
+    // We'll still return it and let the API call handle any auth errors
+    return localToken;
   };
   
   // Function to create headers with auth token
   const createHeaders = () => {
     const token = getAuthToken();
+    if (!token) {
+      console.warn('No auth token available for wishlist request');
+      return { 'Content-Type': 'application/json' };
+    }
     return {
       'Content-Type': 'application/json',
-      ...(token && { Authorization: `Bearer ${token}` })
+      'Authorization': `Bearer ${token}`
     };
   };
   
@@ -54,24 +88,63 @@ export const WishlistProvider = ({ children }) => {
       }
       
       try {
+        // Check if we have a valid token before making the request
+        const token = getAuthToken();
+        if (!token) {
+          console.error('No auth token available for wishlist request');
+          toast({
+            title: "Authentication Error",
+            description: "Please log in again to view your wishlist.",
+            variant: "destructive"
+          });
+          return [];
+        }
+        
         // For authenticated users, fetch from API
-
         const response = await axios.get('/api/wishlist', {
           headers: createHeaders(),
           withCredentials: true,
-          timeout: 5000 // 5 second timeout
+          timeout: 8000 // Increased timeout to 8 seconds
         });
         
         return response.data.wishlist || [];
       } catch (error) {
         console.error('Failed to fetch wishlist from API:', error);
+        
+        // Handle authentication errors
+        if (error.response && error.response.status === 401) {
+          // Try to refresh the token or session
+          console.log('Authentication error fetching wishlist, attempting to refresh session');
+          
+          // Clear stale token
+          localStorage.removeItem('auth_token');
+          
+          // Show toast to user
+          toast({
+            title: "Authentication Error",
+            description: "Please log in again to view your wishlist.",
+            variant: "destructive"
+          });
+          
+          // Set a flag to indicate auth needs refresh
+          sessionStorage.setItem('auth_needs_refresh', 'true');
+        }
+        
         // Make sure we exit loading state on error
         setIsLoading(false);
         return [];
       }
     },
     enabled: isAuthenticated && !!user, // Only enable if user is authenticated
-    staleTime: 60 * 1000, // Consider data fresh for 1 minute
+    staleTime: 30 * 1000, // Consider data fresh for 30 seconds
+    retry: (failureCount, error) => {
+      // Don't retry on authentication errors
+      if (error.response && error.response.status === 401) {
+        return false;
+      }
+      // Retry other errors up to 2 times
+      return failureCount < 2;
+    },
     onSuccess: (data) => {
       setWishlistItems(data || []);
       setIsLoading(false);
@@ -113,6 +186,17 @@ export const WishlistProvider = ({ children }) => {
         throw new Error("Authentication required");
       }
       
+      // Check if we have a valid token before making the request
+      const token = getAuthToken();
+      if (!token) {
+        toast({
+          title: "Authentication Error",
+          description: "Please log in again to add items to your wishlist.",
+          variant: "destructive"
+        });
+        throw new Error("Authentication required");
+      }
+      
       // Extract essential product data to save with the wishlist
       const productData = {
         name: product.name,
@@ -126,19 +210,37 @@ export const WishlistProvider = ({ children }) => {
         productCode: product.productCode
       };
       
-      // For authenticated users, call API
-      const response = await axios.post('/api/wishlist', 
-        { 
-          productId: product.productCode, // Use productCode as the ID
-          productData
-        },
-        { 
-          headers: createHeaders(),
-          withCredentials: true
+      try {
+        // For authenticated users, call API
+        const response = await axios.post('/api/wishlist', 
+          { 
+            productId: product.productCode, // Use productCode as the ID
+            productData
+          },
+          { 
+            headers: createHeaders(),
+            withCredentials: true
+          }
+        );
+        
+        return response.data;
+      } catch (error) {
+        // Handle authentication errors
+        if (error.response && error.response.status === 401) {
+          // Clear stale token
+          localStorage.removeItem('auth_token');
+          
+          // Set a flag to indicate auth needs refresh
+          sessionStorage.setItem('auth_needs_refresh', 'true');
+          
+          toast({
+            title: "Authentication Error",
+            description: "Please log in again to add items to your wishlist.",
+            variant: "destructive"
+          });
         }
-      );
-      
-      return response.data;
+        throw error;
+      }
     },
     onSuccess: (data, variables) => {
       // If the API call was successful, update local state if product not already in list
@@ -179,6 +281,16 @@ export const WishlistProvider = ({ children }) => {
         throw new Error("Authentication required");
       }
 
+      // Check if we have a valid token before making the request
+      const token = getAuthToken();
+      if (!token) {
+        toast({
+          title: "Authentication Error",
+          description: "Please log in again to manage your wishlist.",
+          variant: "destructive"
+        });
+        throw new Error("Authentication required");
+      }
       
       try {
         // Convert productCode to string to ensure consistency
@@ -193,6 +305,21 @@ export const WishlistProvider = ({ children }) => {
         
         return { productCode: stringProductCode, response: response.data };
       } catch (error) {
+        // Handle authentication errors
+        if (error.response && error.response.status === 401) {
+          // Clear stale token
+          localStorage.removeItem('auth_token');
+          
+          // Set a flag to indicate auth needs refresh
+          sessionStorage.setItem('auth_needs_refresh', 'true');
+          
+          toast({
+            title: "Authentication Error",
+            description: "Please log in again to manage your wishlist.",
+            variant: "destructive"
+          });
+        }
+        
         // Detailed error logging
         if (error.response) {
           // Server responded with a status code outside the 2xx range
@@ -418,64 +545,107 @@ export const WishlistProvider = ({ children }) => {
   
   // Clear entire wishlist
   const clearWishlist = async () => {
-    // Check if user is authenticated
     if (!isAuthenticated || !user) {
       toast({
         title: "Authentication Required",
         description: "Please log in to manage your wishlist.",
-        variant: "destructive",
-        action: (
-          <div className="mt-2 w-full">
-            <button 
-              className="w-full flex items-center justify-center px-3 py-2 rounded-md text-sm font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 dark:focus:ring-blue-500 dark:focus:ring-offset-gray-800 focus:ring-offset-white
-                dark:border-blue-800/50 dark:text-blue-300 dark:bg-blue-950/30 dark:hover:bg-blue-900/40 dark:hover:text-blue-200
-                border border-blue-200 bg-blue-100 text-blue-700 hover:bg-blue-100 hover:text-blue-800"
-              onClick={() => {
-                // Navigate to login page
-                window.location.href = '/auth/login?callbackUrl=' + encodeURIComponent(window.location.pathname);
-              }}
-            >
-              Login
-            </button>
-          </div>
-        ),
+        variant: "destructive"
       });
-      return false;
+      return;
+    }
+    
+    // Check if we have a valid token before making the request
+    const token = getAuthToken();
+    if (!token) {
+      toast({
+        title: "Authentication Error",
+        description: "Please log in again to manage your wishlist.",
+        variant: "destructive"
+      });
+      return;
     }
     
     try {
+      // Optimistic update
+      const previousWishlist = [...wishlistItems];
+      setWishlistItems([]);
+      
       // Call API to clear wishlist
       await axios.delete('/api/wishlist/clear', {
         headers: createHeaders(),
         withCredentials: true
       });
       
-      // Clear local state
-      setWishlistItems([]);
-      
-      // Invalidate and refetch wishlist
-      queryClient.invalidateQueries({ queryKey: ['wishlist'] });
-      
       // Show success message
       toast({
-        title: "Wishlist Cleared",
-        description: "All items have been removed from your wishlist.",
-        variant: "default"
+        title: 'Wishlist Cleared',
+        description: 'All items have been removed from your wishlist.',
+        variant: 'default'
       });
       
-      return true;
+      // Invalidate queries to ensure data is fresh
+      queryClient.invalidateQueries({ queryKey: ['wishlist'] });
     } catch (error) {
       console.error('Failed to clear wishlist:', error);
       
+      // Handle authentication errors
+      if (error.response && error.response.status === 401) {
+        // Clear stale token
+        localStorage.removeItem('auth_token');
+        
+        // Set a flag to indicate auth needs refresh
+        sessionStorage.setItem('auth_needs_refresh', 'true');
+        
+        toast({
+          title: "Authentication Error",
+          description: "Please log in again to manage your wishlist.",
+          variant: "destructive"
+        });
+        return;
+      }
+      
+      // For other errors, show generic message
       toast({
         title: 'Error',
-        description: 'Failed to clear wishlist.',
+        description: 'Failed to clear your wishlist. Please try again.',
         variant: 'destructive'
       });
-      
-      return false;
     }
   };
+  
+  // Monitor authentication status and refresh wishlist when auth changes
+  useEffect(() => {
+    // If user becomes authenticated, refresh the wishlist
+    if (isAuthenticated && user) {
+      refetchWishlist();
+    }
+  }, [isAuthenticated, user, refetchWishlist]);
+  
+  // Monitor session changes to refresh token
+  useEffect(() => {
+    if (session?.accessToken) {
+      // If session has a token but localStorage doesn't, update localStorage
+      const localToken = localStorage.getItem('auth_token');
+      if (!localToken && session.accessToken) {
+        localStorage.setItem('auth_token', session.accessToken);
+        // Refresh wishlist with new token
+        refetchWishlist();
+      }
+    }
+  }, [session, refetchWishlist]);
+  
+  // Check for auth refresh flag
+  useEffect(() => {
+    const needsRefresh = sessionStorage.getItem('auth_needs_refresh');
+    if (needsRefresh === 'true' && isAuthenticated && user) {
+      // Clear the flag
+      sessionStorage.removeItem('auth_needs_refresh');
+      // Refresh wishlist
+      setTimeout(() => {
+        refetchWishlist();
+      }, 1000); // Small delay to ensure token is refreshed
+    }
+  }, [isAuthenticated, user, refetchWishlist]);
   
   const value = {
     wishlistItems,

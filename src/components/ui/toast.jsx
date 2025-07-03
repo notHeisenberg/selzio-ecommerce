@@ -28,6 +28,8 @@ const toastVariants = cva(
         default: "border bg-background text-foreground shadow-md backdrop-blur-sm",
         destructive:
           "destructive group border-destructive bg-destructive text-destructive-foreground shadow-md backdrop-blur-sm",
+        monochrome:
+          "monochrome group border-2 border-black dark:border-white bg-white dark:bg-black text-black dark:text-white shadow-lg backdrop-blur-sm data-[state=open]:animate-shake",
         success:
           "dark:border-green-600/40 dark:bg-green-950/80 dark:text-green-200 border-green-200 bg-green-50/90 text-green-800 shadow-md backdrop-blur-sm",
         info:
@@ -69,6 +71,8 @@ const ToastAction = React.forwardRef(({ className, ...props }, ref) => {
           : "border-gray-200 hover:border-gray-300",
         // Destructive toast styling
         "group-[.destructive]:border-muted/40 group-[.destructive]:hover:border-destructive/30 group-[.destructive]:hover:bg-destructive group-[.destructive]:hover:text-destructive-foreground group-[.destructive]:focus:ring-destructive",
+        // Monochrome toast styling
+        "group-[.monochrome]:border-black dark:group-[.monochrome]:border-white group-[.monochrome]:text-black dark:group-[.monochrome]:text-white group-[.monochrome]:hover:bg-black/10 dark:group-[.monochrome]:hover:bg-white/20 group-[.monochrome]:hover:border-black dark:group-[.monochrome]:hover:border-white group-[.monochrome]:transition-all group-[.monochrome]:duration-300",
         // Success toast styling
         isDark
           ? "group-[.success]:border-green-700/50 group-[.success]:text-green-200 group-[.success]:hover:bg-green-800/40 group-[.success]:hover:text-green-100 group-[.success]:hover:border-green-600/70"
@@ -99,6 +103,7 @@ const ToastClose = React.forwardRef(({ className, ...props }, ref) => (
     className={cn(
       "absolute right-1 top-1 rounded-md p-1 text-foreground/50 opacity-0 transition-opacity hover:text-foreground focus:opacity-100 focus:outline-none focus:ring-1 group-hover:opacity-100",
       "group-[.destructive]:text-red-300 group-[.destructive]:hover:text-red-50 group-[.destructive]:focus:ring-red-400 group-[.destructive]:focus:ring-offset-red-600",
+      "group-[.monochrome]:text-black/70 group-[.monochrome]:hover:text-black dark:group-[.monochrome]:text-white/70 dark:group-[.monochrome]:hover:text-white group-[.monochrome]:focus:ring-black dark:group-[.monochrome]:focus:ring-white",
       "group-[.success]:text-green-700 group-[.success]:hover:text-green-900 dark:group-[.success]:text-green-300 dark:group-[.success]:hover:text-green-200",
       "group-[.info]:text-blue-700 group-[.info]:hover:text-blue-900 dark:group-[.info]:text-blue-300 dark:group-[.info]:hover:text-blue-200",
       "group-[.warning]:text-yellow-700 group-[.warning]:hover:text-yellow-900 dark:group-[.warning]:text-yellow-300 dark:group-[.warning]:hover:text-yellow-200",

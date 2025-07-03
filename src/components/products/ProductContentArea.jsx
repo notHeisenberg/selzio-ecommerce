@@ -51,22 +51,36 @@ export default function ProductContentArea({
 
     // Add to cart with selected size
     const addToCartWithSize = () => {
+        // Only add the selected size to the product, preserving all other information
+        // Do not modify or remove any existing data
         const productWithSize = {
             ...product,
             selectedSize,
             price: currentPrice
         };
-        handleAddToCart(productWithSize);
+        
+        // Call the handleAddToCart function with the customized product
+        handleAddToCart(productWithSize, quantity);
+        
+        // Show a success message using toast
+        toast({
+            title: "Added to Cart",
+            description: `${product.name} (Size: ${selectedSize || 'Standard'}) has been added to your cart.`
+        });
     };
 
     // Buy now with selected size
     const buyNowWithSize = () => {
+        // Only add the selected size to the product, preserving all other information
+        // Do not modify or remove any existing data
         const productWithSize = {
             ...product,
             selectedSize,
             price: currentPrice
         };
-        handleBuyNow(productWithSize);
+        
+        // Call the handleBuyNow function with the customized product
+        handleBuyNow(productWithSize, quantity);
     };
 
     return (

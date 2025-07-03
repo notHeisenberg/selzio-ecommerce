@@ -35,9 +35,7 @@ export function Navbar() {
       try {
         // Fetch products to get all subcategories
         const products = await getProducts();
-        
-        // Debug log to check all products
-        console.log('All products:', products);
+
         
         // Group subcategories by category
         const subcategoriesByCategory = {};
@@ -62,8 +60,6 @@ export function Navbar() {
           }
         });
         
-        // Debug log to check extracted subcategories
-        console.log('Subcategories by category:', subcategoriesByCategory);
         
         // Convert to the format needed for the dropdown
         const categorizedSubcategories = Object.entries(subcategoriesByCategory).map(([category, subcategories]) => ({
@@ -172,7 +168,13 @@ export function Navbar() {
               className="flex items-center"
             >
               <div className="relative h-8 w-8 md:h-10 md:w-10 mr-2">
-                <Image src="/logo.png" alt="Selzio Logo" fill className="object-contain" />
+                <Image 
+                  src="/images/logo.png" 
+                  alt="Selzio Logo" 
+                  fill 
+                  sizes="(max-width: 768px) 32px, 40px" 
+                  className="object-contain" 
+                />
               </div>
               <span className="text-lg md:text-xl font-bold text-foreground dark:text-white">
                 SELZ<span className="text-primary">I</span>O

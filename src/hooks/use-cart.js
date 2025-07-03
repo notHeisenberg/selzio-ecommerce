@@ -10,6 +10,7 @@ const CartContext = createContext();
 export const CartProvider = ({ children }) => {
   const [cartItems, setCartItems] = useState([]);
   const [lastAddedItem, setLastAddedItem] = useState(null);
+  const [isInitialized, setIsInitialized] = useState(false);
   const { toast } = useToast();
   
   // Load cart from localStorage on initial render
@@ -19,25 +20,117 @@ export const CartProvider = ({ children }) => {
       if (savedCart) {
         setCartItems(JSON.parse(savedCart));
       }
+      // Mark initialization as complete
+      setIsInitialized(true);
     } catch (error) {
       console.error('Failed to load cart from localStorage:', error);
+      setIsInitialized(true); // Still mark as initialized even on error
     }
   }, []);
   
   // Save cart to localStorage whenever it changes
   useEffect(() => {
-    try {
-      localStorage.setItem('cart', JSON.stringify(cartItems));
-    } catch (error) {
-      console.error('Failed to save cart to localStorage:', error);
+    // Only save to localStorage if we've initialized
+    if (isInitialized) {
+      try {
+        localStorage.setItem('cart', JSON.stringify(cartItems));
+      } catch (error) {
+        console.error('Failed to save cart to localStorage:', error);
+      }
     }
-  }, [cartItems]);
+  }, [cartItems, isInitialized]);
+  
+  // Validate product data
+  const validateProduct = (product) => {
+    // Ensure required fields exist
+    if (!product) return null;
+    if (!product.productCode) return null;
+    if (!product.name) return null;
+    if (typeof product.price !== 'number' || isNaN(product.price)) return null;
+    
+    // Handle image field - may be an array or a string
+    let imageUrl = '';
+    if (product.image) {
+      if (Array.isArray(product.image) && product.image.length > 0) {
+        // Loop through images to find the first valid one
+        for (let i = 0; i < product.image.length; i++) {
+          if (typeof product.image[i] === 'string' && product.image[i].trim() !== '') {
+            imageUrl = product.image[i];
+            break;
+          }
+        }
+        
+        // If no valid image found in array, use empty string
+        if (imageUrl === '') {
+          console.log('No valid image found in product.image array');
+        }
+      } else if (typeof product.image === 'string' && product.image.trim() !== '') {
+        // If image is a string, use it directly if it's not empty
+        imageUrl = product.image;
+      }
+    }
+    
+    // Create a sanitized version of the product with default values for missing fields
+    // but preserve all other product information
+    const sanitizedProduct = {
+      ...product,  // Keep all original product data
+      productCode: product.productCode,
+      name: product.name || 'Unnamed Product',
+      price: product.price || 0,
+      image: imageUrl,
+      selectedSize: product.selectedSize || null,
+      discount: product.discount || 0,
+      quantity: 1,
+      // Ensure these fields are included if they exist
+      description: product.description || null,
+      shortDescription: product.shortDescription || null,
+      category: product.category || null,
+      subcategory: product.subcategory || null,
+      additionalInfo: product.additionalInfo || null
+    };
+    
+    // Handle sizes array specially
+    if (product.sizes && Array.isArray(product.sizes)) {
+      // Instead of storing the full sizes array, just store stock info for the selected size if available
+      if (product.selectedSize) {
+        const selectedSizeInfo = product.sizes.find(s => s.name === product.selectedSize);
+        if (selectedSizeInfo) {
+          sanitizedProduct.sizeStock = selectedSizeInfo.stock;
+        }
+      }
+      
+      // Don't store the full sizes array in the cart to avoid duplicating data
+      delete sanitizedProduct.sizes;
+    }
+
+    return sanitizedProduct;
+  };
   
   // Add item to cart
   const addToCart = (product, quantity = 1) => {
+    // Validate product data
+    const validatedProduct = validateProduct(product);
+    if (!validatedProduct) {
+      console.error('Invalid product data:', product);
+      toast({
+        title: "Error",
+        description: "Could not add item to cart due to invalid product data.",
+        variant: "destructive"
+      });
+      return false;
+    }
+    
     setCartItems(prevItems => {
-      // Check if item already exists in cart
-      const existingItemIndex = prevItems.findIndex(item => item.productCode === product.productCode);
+      // Generate a unique identifier for this product + size combination
+      const selectedSize = validatedProduct.selectedSize || null;
+      const itemId = `${validatedProduct.productCode}${selectedSize ? `-${selectedSize}` : ''}`;
+      
+      // Check if item already exists in cart with the same size
+      const existingItemIndex = prevItems.findIndex(item => {
+        const itemSize = item.selectedSize || null;
+        const existingItemId = `${item.productCode}${itemSize ? `-${itemSize}` : ''}`;
+        return existingItemId === itemId;
+      });
       
       if (existingItemIndex !== -1) {
         // Update quantity if item exists
@@ -56,7 +149,7 @@ export const CartProvider = ({ children }) => {
         return updatedItems;
       } else {
         // Add new item to cart
-        const newItem = { ...product, quantity };
+        const newItem = { ...validatedProduct, quantity };
         
         // Store last added item information
         setLastAddedItem({
@@ -69,7 +162,7 @@ export const CartProvider = ({ children }) => {
     });
     
     // Show toast notification
-    showAddedToCartToast(product, quantity);
+    showAddedToCartToast(validatedProduct, quantity);
     
     return true; // Return success flag
   };
@@ -78,7 +171,7 @@ export const CartProvider = ({ children }) => {
   const showAddedToCartToast = (product, quantity) => {
     const { dismiss } = toast({
       title: "Item Added to Cart",
-      description: `${quantity > 1 ? `${quantity} × ` : ''}${product.name}`,
+      description: `${quantity > 1 ? `${quantity} × ` : ''}${product.name}${product.selectedSize ? ` - Size: ${product.selectedSize}` : ''}`,
       action: (
         <div className="mt-2 w-full">
           <Button 
@@ -102,19 +195,36 @@ export const CartProvider = ({ children }) => {
   };
   
   // Update item quantity
-  const updateQuantity = (productCode, quantity) => {
+  const updateQuantity = (productCode, quantity, selectedSize = null) => {
     setCartItems(prevItems => 
-      prevItems.map(item => 
-        item.productCode === productCode 
-          ? { ...item, quantity: Math.max(1, quantity) } 
-          : item
-      )
+      prevItems.map(item => {
+        // Match by product code and size (if provided)
+        const itemSize = item.selectedSize || null;
+        const currentSize = selectedSize || null;
+        
+        if (item.productCode === productCode && itemSize === currentSize) {
+          return { ...item, quantity: Math.max(1, quantity) };
+        }
+        return item;
+      })
     );
   };
   
   // Remove item from cart
-  const removeItem = (productCode) => {
-    setCartItems(prevItems => prevItems.filter(item => item.productCode !== productCode));
+  const removeItem = (productCode, selectedSize = null) => {
+    setCartItems(prevItems => {
+      if (selectedSize) {
+        // Remove specific item with size
+        return prevItems.filter(item => {
+          const itemSize = item.selectedSize || null;
+          const currentSize = selectedSize || null;
+          return !(item.productCode === productCode && itemSize === currentSize);
+        });
+      } else {
+        // Remove all items with the product code (backwards compatibility)
+        return prevItems.filter(item => item.productCode !== productCode);
+      }
+    });
   };
   
   // Clear entire cart
@@ -136,7 +246,8 @@ export const CartProvider = ({ children }) => {
     clearCart,
     totalItems,
     totalPrice,
-    lastAddedItem
+    lastAddedItem,
+    isInitialized
   };
   
   return <CartContext.Provider value={value}>{children}</CartContext.Provider>;

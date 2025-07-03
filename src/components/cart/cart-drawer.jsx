@@ -8,6 +8,7 @@ import { useRouter } from 'next/navigation';
 import { useCart } from '@/hooks/use-cart';
 import { useAuth } from '@/hooks/use-auth';
 import { useTheme } from 'next-themes';
+import { motion, AnimatePresence } from 'framer-motion';
 import CheckoutAuthDialog from '@/components/auth/checkout-auth-dialog';
 import {
   Drawer,
@@ -27,16 +28,22 @@ const CartDrawer = () => {
   const [couponError, setCouponError] = useState('');
   const [isApplyingCoupon, setIsApplyingCoupon] = useState(false);
   const [showCouponInput, setShowCouponInput] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
 
   const router = useRouter();
-  const { cartItems, updateQuantity, removeItem, totalItems, totalPrice } = useCart();
+  const { cartItems, updateQuantity, removeItem, totalItems, totalPrice, isInitialized } = useCart();
   const { isAuthenticated } = useAuth();
   const [mounted, setMounted] = useState(false);
   const { resolvedTheme } = useTheme();
 
-  // Avoid hydration mismatch
+  // Avoid hydration mismatch and ensure data is loaded
   useEffect(() => {
-    setMounted(true);
+    const timer = setTimeout(() => {
+      setMounted(true);
+      setIsLoading(false);
+    }, 300);
+    
+    return () => clearTimeout(timer);
   }, []);
 
   // Listen for custom event to open the cart drawer
@@ -139,6 +146,34 @@ const CartDrawer = () => {
     }
   };
 
+  // Animation variants
+  const cartItemVariants = {
+    hidden: { opacity: 0, x: 20 },
+    visible: { 
+      opacity: 1, 
+      x: 0,
+      transition: { type: "spring", stiffness: 300, damping: 24 }
+    },
+    exit: { 
+      opacity: 0, 
+      x: -20, 
+      transition: { duration: 0.2 } 
+    }
+  };
+
+  const staggerContainer = {
+    hidden: { opacity: 0 },
+    visible: {
+      opacity: 1,
+      transition: {
+        staggerChildren: 0.07
+      }
+    }
+  };
+
+  // Update the isLoading check to also depend on cart initialization
+  const showLoading = isLoading || !isInitialized;
+
   return (
     <>
       <Drawer
@@ -147,18 +182,28 @@ const CartDrawer = () => {
         direction={{ base: "bottom", md: "right" }}
       >
         <DrawerTrigger asChild>
-          <Button
-            variant="ghost"
-            size="icon"
-            className="text-foreground hover:bg-secondary transition-colors duration-300 relative"
-          >
-            <ShoppingCart className="h-5 w-5" />
-            {totalItems > 0 && (
-              <span className="absolute -top-1 -right-1 bg-primary text-primary-foreground text-xs rounded-full h-5 w-5 flex items-center justify-center">
-                {totalItems}
-              </span>
-            )}
-          </Button>
+          <motion.div whileTap={{ scale: 0.95 }}>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="text-foreground hover:bg-secondary transition-colors duration-300 relative"
+            >
+              <ShoppingCart className="h-5 w-5" />
+              <AnimatePresence>
+                {totalItems > 0 && (
+                  <motion.span 
+                    key="cart-count"
+                    initial={{ scale: 0 }}
+                    animate={{ scale: 1 }}
+                    exit={{ scale: 0 }}
+                    className="absolute -top-1 -right-1 bg-primary text-primary-foreground text-xs rounded-full h-5 w-5 flex items-center justify-center"
+                  >
+                    {totalItems}
+                  </motion.span>
+                )}
+              </AnimatePresence>
+            </Button>
+          </motion.div>
         </DrawerTrigger>
 
         <DrawerContent
@@ -186,20 +231,26 @@ const CartDrawer = () => {
                       ? 'text-gray-400'
                       : 'text-slate-500'
                     }`}>
-                    {totalItems} {totalItems === 1 ? 'item' : 'items'}
+                    {showLoading ? (
+                      <span className="inline-block h-4 w-12 bg-gray-200 dark:bg-gray-700 rounded animate-pulse"></span>
+                    ) : (
+                      `${totalItems} ${totalItems === 1 ? 'item' : 'items'}`
+                    )}
                   </span>
                   <DrawerClose asChild>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className={`h-8 w-8 rounded-full transition-all duration-200 transform hover:scale-105
-                        ${mounted && resolvedTheme === 'dark'
-                          ? 'hover:bg-gray-700 hover:text-blue-300'
-                          : 'hover:bg-violet-100 hover:text-violet-700'
-                        }`}
-                    >
-                      <X className="h-4 w-4" />
-                    </Button>
+                    <motion.div whileTap={{ scale: 0.9 }}>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className={`h-8 w-8 rounded-full transition-all duration-200 transform hover:scale-105
+                          ${mounted && resolvedTheme === 'dark'
+                            ? 'hover:bg-gray-700 hover:text-blue-300'
+                            : 'hover:bg-violet-100 hover:text-violet-700'
+                          }`}
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
+                    </motion.div>
                   </DrawerClose>
                 </div>
               </div>
@@ -207,99 +258,210 @@ const CartDrawer = () => {
 
             {/* Drawer Content */}
             <div className="flex-1 overflow-y-auto p-5">
-              {cartItems.length > 0 ? (
+              {showLoading ? (
+                // Loading skeleton
                 <div className="space-y-4">
-                  {cartItems.map((item) => (
-                    <div
-                      key={item._id}
-                      className={`flex gap-4 pb-4 last:border-0 border-b
-                        ${mounted && resolvedTheme === 'dark'
-                          ? 'border-gray-700/50'
-                          : 'border-slate-200'
-                        }`}
+                  {[1, 2].map((i) => (
+                    <div 
+                      key={`loading-${i}`}
+                      className="flex gap-4 pb-4 border-b border-gray-200 dark:border-gray-700/50"
                     >
-                      <div className={`relative w-20 h-20 rounded-lg overflow-hidden flex-shrink-0 
-                        ${mounted && resolvedTheme === 'dark'
-                          ? 'bg-gray-700 border border-gray-600 shadow-md'
-                          : 'bg-white border border-slate-200 shadow-sm'
-                        }`}
-                      >
-                        <Image
-                          src={item.image}
-                          alt={item.name}
-                          fill
-                          className="object-cover"
-                        />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <h4 className={`text-sm font-medium truncate mb-1
-                          ${mounted && resolvedTheme === 'dark'
-                            ? 'text-gray-200'
-                            : 'text-slate-800'
-                          }`}
-                        >
-                          {item.name}
-                        </h4>
-                        <p className={`text-base font-semibold mb-2
-                          ${mounted && resolvedTheme === 'dark'
-                            ? 'text-blue-400'
-                            : 'text-violet-700'
-                          }`}
-                        >
-                          {item.price.toFixed(2)} BDT
-                        </p>
-                        <div className="flex items-center gap-2">
-                          <Button
-                            variant="outline"
-                            size="icon"
-                            className={`h-7 w-7 rounded-full shadow-sm transition-all duration-200
-                              ${mounted && resolvedTheme === 'dark'
-                                ? 'border-gray-600 hover:scale-110 hover:border-blue-500/30 hover:bg-gray-700 hover:text-blue-400'
-                                : 'border-border hover:scale-110 hover:border-primary/30 hover:bg-secondary hover:text-primary'
-                              }`}
-                            onClick={() => updateQuantity(item.productCode, item.quantity - 1)}
-                            disabled={item.quantity <= 1}
-                          >
-                            <Minus className="h-3 w-3" />
-                          </Button>
-                          <span className="text-sm font-medium w-6 text-center text-foreground">{item.quantity}</span>
-                          <Button
-                            variant="outline"
-                            size="icon"
-                            className={`h-7 w-7 rounded-full shadow-sm transition-all duration-200
-                              ${mounted && resolvedTheme === 'dark'
-                                ? 'border-gray-600 hover:scale-110 hover:border-blue-500/30 hover:bg-gray-700 hover:text-blue-400'
-                                : 'border-border hover:scale-110 hover:border-primary/30 hover:bg-secondary hover:text-primary'
-                              }`}
-                            onClick={() => updateQuantity(item.productCode, item.quantity + 1)}
-                          >
-                            <Plus className="h-3 w-3" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className={`h-7 w-7 rounded-full hover:scale-110 transition-all duration-200 ml-auto
-                              ${mounted && resolvedTheme === 'dark'
-                                ? 'text-red-400 hover:bg-red-900/30 hover:text-red-300'
-                                : 'text-destructive hover:bg-destructive/10 hover:text-destructive'
-                              }`}
-                            onClick={() => removeItem(item.productCode)}
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
+                      <div className="w-20 h-20 bg-gray-200 dark:bg-gray-700 rounded-lg animate-pulse"></div>
+                      <div className="flex-1 space-y-2">
+                        <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-3/4 animate-pulse"></div>
+                        <div className="h-3 bg-gray-200 dark:bg-gray-700 rounded w-1/2 animate-pulse"></div>
+                        <div className="h-5 bg-gray-200 dark:bg-gray-700 rounded w-1/3 animate-pulse"></div>
                       </div>
                     </div>
                   ))}
                 </div>
-              ) : (
-                <div className={`text-center py-12 
-                  ${mounted && resolvedTheme === 'dark'
-                    ? 'bg-gray-800/30 rounded-lg border border-gray-700/30'
-                    : 'bg-slate-50 rounded-lg'
-                  }`}
+              ) : cartItems.length > 0 ? (
+                <motion.div 
+                  variants={staggerContainer}
+                  initial="hidden"
+                  animate="visible"
+                  className="space-y-4"
                 >
-                  <div className="flex justify-center mb-4">
+                  <AnimatePresence>
+                    {cartItems.map((item) => (
+                      <motion.div
+                        key={`${item.productCode}-${item.selectedSize || 'default'}`}
+                        variants={cartItemVariants}
+                        initial="hidden"
+                        animate="visible"
+                        exit="exit"
+                        layout
+                        className={`flex gap-4 pb-4 last:border-0 border-b
+                          ${mounted && resolvedTheme === 'dark'
+                            ? 'border-gray-700/50'
+                            : 'border-slate-200'
+                          }`}
+                      >
+                        <motion.div 
+                          whileHover={{ scale: 1.05 }}
+                          transition={{ type: "spring", stiffness: 400, damping: 10 }}
+                          className={`relative w-20 h-20 rounded-lg overflow-hidden flex-shrink-0 
+                            ${mounted && resolvedTheme === 'dark'
+                              ? 'bg-gray-700 border border-gray-600 shadow-md'
+                              : 'bg-white border border-slate-200 shadow-sm'
+                            }`}
+                        >
+                          {typeof item.image === 'string' && item.image !== '' ? (
+                            <Image
+                              src={item.image}
+                              alt={item.name || 'Product'}
+                              fill
+                              className="object-cover"
+                              onError={(e) => {
+                                // If image fails to load, show fallback UI
+                                e.target.style.display = 'none';
+                                e.target.parentNode.classList.add('flex', 'items-center', 'justify-center');
+                                const fallback = document.createElement('div');
+                                fallback.className = 'text-2xl font-semibold text-muted-foreground';
+                                fallback.innerText = item.name?.substring(0, 1) || 'P';
+                                e.target.parentNode.appendChild(fallback);
+                              }}
+                            />
+                          ) : (
+                            <div className="w-full h-full flex items-center justify-center bg-secondary/20">
+                              <span className="text-2xl font-semibold text-muted-foreground">
+                                {item.name?.substring(0, 1) || 'P'}
+                              </span>
+                            </div>
+                          )}
+                        </motion.div>
+                        <div className="flex-1 min-w-0">
+                          <h4 className={`text-sm font-medium truncate mb-1
+                            ${mounted && resolvedTheme === 'dark'
+                              ? 'text-gray-200'
+                              : 'text-slate-800'
+                            }`}
+                          >
+                            {item.name}
+                          </h4>
+                          <p className={`text-base font-semibold mb-2
+                            ${mounted && resolvedTheme === 'dark'
+                              ? 'text-blue-400'
+                              : 'text-violet-700'
+                            }`}
+                          >
+                            {item.price.toFixed(2)} BDT
+                          </p>
+                          
+                          {/* Display size if available */}
+                          {item.selectedSize && (
+                            <p className="text-xs text-muted-foreground mb-2">
+                              Size: <span className="font-medium">({item.selectedSize})</span>
+                              {item.sizeStock !== undefined && (
+                                <span className="ml-1 text-xs">
+                                  {item.sizeStock > 0 
+                                    ? `(${item.sizeStock} in stock)` 
+                                    : '(Low stock)'}
+                                </span>
+                              )}
+                            </p>
+                          )}
+                          
+                          {/* Display short description or regular description if available */}
+                          {(item.shortDescription || item.description) && (
+                            <p className="text-xs text-muted-foreground mb-2 line-clamp-2">
+                              {item.shortDescription 
+                                ? (typeof item.shortDescription === 'string' && item.shortDescription.startsWith('<') 
+                                  ? item.shortDescription.replace(/<[^>]*>/g, '') 
+                                  : item.shortDescription)
+                                : (typeof item.description === 'string' && item.description.startsWith('<') 
+                                  ? item.description.replace(/<[^>]*>/g, '') 
+                                  : item.description)}
+                            </p>
+                          )}
+                          
+                          <div className="flex items-center gap-2">
+                            <motion.div 
+                              whileHover={{ scale: 1.1 }} 
+                              whileTap={{ scale: 0.9 }}
+                              className="shadow-sm"
+                            >
+                              <Button
+                                variant="outline"
+                                size="icon"
+                                className={`h-7 w-7 rounded-md shadow-sm transition-all duration-200
+                                  ${mounted && resolvedTheme === 'dark'
+                                    ? 'border-gray-600 hover:bg-gray-700 hover:text-blue-400'
+                                    : 'border-border hover:bg-secondary hover:text-primary'
+                                  }`}
+                                onClick={() => updateQuantity(item.productCode, item.quantity - 1, item.selectedSize)}
+                                disabled={item.quantity <= 1}
+                              >
+                                <Minus className="h-3 w-3" />
+                              </Button>
+                            </motion.div>
+                            <motion.span 
+                              key={`qty-${item.productCode}-${item.selectedSize}-${item.quantity}`}
+                              initial={{ scale: 1.2 }}
+                              animate={{ scale: 1 }}
+                              className="text-sm font-medium w-6 text-center text-foreground"
+                            >
+                              {item.quantity}
+                            </motion.span>
+                            <motion.div 
+                              whileHover={{ scale: 1.1 }} 
+                              whileTap={{ scale: 0.9 }}
+                              className="shadow-sm"
+                            >
+                              <Button
+                                variant="outline"
+                                size="icon"
+                                className={`h-7 w-7 rounded-md shadow-sm transition-all duration-200
+                                  ${mounted && resolvedTheme === 'dark'
+                                    ? 'border-gray-600 hover:bg-gray-700 hover:text-blue-400'
+                                    : 'border-border hover:bg-secondary hover:text-primary'
+                                  }`}
+                                onClick={() => updateQuantity(item.productCode, item.quantity + 1, item.selectedSize)}
+                              >
+                                <Plus className="h-3 w-3" />
+                              </Button>
+                            </motion.div>
+                            <motion.div 
+                              whileHover={{ scale: 1.1 }}
+                              whileTap={{ scale: 0.9 }}
+                              className="ml-auto"
+                            >
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className={`h-7 w-7 rounded-md hover:scale-110 transition-all duration-200
+                                  ${mounted && resolvedTheme === 'dark'
+                                    ? 'text-red-400 hover:bg-red-900/30 hover:text-red-300'
+                                    : 'text-destructive hover:bg-destructive/10 hover:text-destructive'
+                                  }`}
+                                onClick={() => removeItem(item.productCode, item.selectedSize)}
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </motion.div>
+                          </div>
+                        </div>
+                      </motion.div>
+                    ))}
+                  </AnimatePresence>
+                </motion.div>
+              ) : (
+                <motion.div 
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ duration: 0.3 }}
+                  className={`text-center py-12 
+                    ${mounted && resolvedTheme === 'dark'
+                      ? 'bg-gray-800/30 rounded-lg border border-gray-700/30'
+                      : 'bg-slate-50 rounded-lg'
+                    }`}
+                >
+                  <motion.div 
+                    initial={{ scale: 0.8, opacity: 0 }}
+                    animate={{ scale: 1, opacity: 1 }}
+                    transition={{ delay: 0.1, type: "spring" }}
+                    className="flex justify-center mb-4"
+                  >
                     <div className={`rounded-full p-3 
                       ${mounted && resolvedTheme === 'dark'
                         ? 'bg-gray-700'
@@ -313,30 +475,55 @@ const CartDrawer = () => {
                         }`}
                       />
                     </div>
-                  </div>
-                  <h4 className="text-lg font-semibold text-foreground mb-2">Your cart is empty</h4>
-                  <p className="text-muted-foreground mb-6">Looks like you haven't added any items to your cart yet.</p>
-                  <Button
-                    onClick={() => {
-                      router.push('/store');
-                      setOpen(false);
-                    }}
-                    className={`px-5 group
-                      ${mounted && resolvedTheme === 'dark'
-                        ? 'bg-blue-600 hover:bg-blue-500 text-white'
-                        : 'bg-violet-600 hover:bg-violet-700 text-white'
-                      }`}
+                  </motion.div>
+                  <motion.h4 
+                    initial={{ y: 10, opacity: 0 }}
+                    animate={{ y: 0, opacity: 1 }}
+                    transition={{ delay: 0.15 }}
+                    className="text-lg font-semibold text-foreground mb-2"
                   >
-                    Start Shopping
-                    <ArrowRight key="start-shopping-arrow" className="ml-2 h-4 w-4 transition-transform duration-200 group-hover:translate-x-1" />
-                  </Button>
-                </div>
+                    Your cart is empty
+                  </motion.h4>
+                  <motion.p 
+                    initial={{ y: 10, opacity: 0 }}
+                    animate={{ y: 0, opacity: 1 }}
+                    transition={{ delay: 0.2 }}
+                    className="text-muted-foreground mb-6"
+                  >
+                    Looks like you haven't added any items to your cart yet.
+                  </motion.p>
+                  <motion.div
+                    initial={{ y: 10, opacity: 0 }}
+                    animate={{ y: 0, opacity: 1 }}
+                    transition={{ delay: 0.25 }}
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                  >
+                    <Button
+                      onClick={() => {
+                        router.push('/store');
+                        setOpen(false);
+                      }}
+                      className={`px-5 group
+                        ${mounted && resolvedTheme === 'dark'
+                          ? 'bg-blue-600 hover:bg-blue-500 text-white'
+                          : 'bg-violet-600 hover:bg-violet-700 text-white'
+                        }`}
+                    >
+                      Start Shopping
+                      <ArrowRight key="start-shopping-arrow" className="ml-2 h-4 w-4 transition-transform duration-200 group-hover:translate-x-1" />
+                    </Button>
+                  </motion.div>
+                </motion.div>
               )}
             </div>
 
-            {cartItems.length > 0 && (
-              <div
-                key={cartItems._id}
+            {cartItems.length > 0 && !showLoading && (
+              <motion.div
+                initial={{ y: 20, opacity: 0 }}
+                animate={{ y: 0, opacity: 1 }}
+                transition={{ duration: 0.3, type: "spring" }}
+                key="cart-summary"
                 className={`border-t border-border p-5 sticky bottom-0 mt-auto
                 ${mounted && resolvedTheme === 'dark'
                     ? 'bg-gray-800/90 backdrop-blur-sm shadow-[0_-2px_15px_rgba(0,0,0,0.15)] border-gray-700/50'
@@ -346,28 +533,49 @@ const CartDrawer = () => {
                 <div className="space-y-2 mb-4">
                   <div className="flex justify-between text-sm text-foreground">
                     <span>Subtotal</span>
-                    <span className="font-medium text-foreground">{totalPrice.toFixed(2)} BDT</span>
+                    <motion.span
+                      key={`subtotal-${totalPrice}`}
+                      initial={{ opacity: 0.6 }}
+                      animate={{ opacity: 1 }}
+                      className="font-medium text-foreground"
+                    >
+                      {totalPrice.toFixed(2)} BDT
+                    </motion.span>
                   </div>
 
-                  {appliedCoupon && appliedCoupon.type === 'percentage' && (
-                    <div className="flex justify-between text-sm text-primary">
-                      <span className="flex items-center">
-                        <Tag className="h-4 w-4 mr-1" />
-                        Discount ({appliedCoupon.discount * 100}%)
-                      </span>
-                      <span>-{discountAmount.toFixed(2)} BDT</span>
-                    </div>
-                  )}
+                  <AnimatePresence>
+                    {appliedCoupon && appliedCoupon.type === 'percentage' && (
+                      <motion.div 
+                        initial={{ opacity: 0, y: -10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, height: 0 }}
+                        className="flex justify-between text-sm text-primary"
+                      >
+                        <span className="flex items-center">
+                          <Tag className="h-4 w-4 mr-1" />
+                          Discount ({appliedCoupon.discount * 100}%)
+                        </span>
+                        <span>-{discountAmount.toFixed(2)} BDT</span>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
 
-                  {appliedCoupon && appliedCoupon.type === 'fixed' && (
-                    <div className="flex justify-between text-sm text-primary">
-                      <span className="flex items-center">
-                        <Tag className="h-4 w-4 mr-1" />
-                        Discount
-                      </span>
-                      <span>-{discountAmount.toFixed(2)} BDT</span>
-                    </div>
-                  )}
+                  <AnimatePresence>
+                    {appliedCoupon && appliedCoupon.type === 'fixed' && (
+                      <motion.div 
+                        initial={{ opacity: 0, y: -10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, height: 0 }}
+                        className="flex justify-between text-sm text-primary"
+                      >
+                        <span className="flex items-center">
+                          <Tag className="h-4 w-4 mr-1" />
+                          Discount
+                        </span>
+                        <span>-{discountAmount.toFixed(2)} BDT</span>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
 
                   <div className="flex justify-between text-sm text-muted-foreground">
                     <span>Shipping</span>
@@ -381,115 +589,160 @@ const CartDrawer = () => {
                   ></div>
                   <div className="flex justify-between font-semibold">
                     <span className="text-foreground">Total</span>
-                    <span className="text-primary">{grandTotal.toFixed(2)} BDT</span>
+                    <motion.span 
+                      key={`total-${grandTotal}`}
+                      initial={{ scale: 1.05 }}
+                      animate={{ scale: 1 }}
+                      className="text-primary"
+                    >
+                      {grandTotal.toFixed(2)} BDT
+                    </motion.span>
                   </div>
 
-                  {appliedCoupon && (
-                    <div className="text-xs text-center">
-                      <span className="text-primary bg-primary/10 px-2 py-0.5 rounded-full">
-                        {appliedCoupon.code} applied
-                      </span>
-                      <button
-                        onClick={handleRemoveCoupon}
-                        className="ml-2 text-xs text-muted-foreground hover:text-destructive"
+                  <AnimatePresence>
+                    {appliedCoupon && (
+                      <motion.div 
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        className="text-xs text-center"
                       >
-                        Remove
-                      </button>
-                    </div>
-                  )}
-
-                  {!appliedCoupon && (
-                    <div className="text-xs text-center mt-1">
-                      {!showCouponInput ? (
+                        <span className="text-primary bg-primary/10 px-2 py-0.5 rounded-full">
+                          {appliedCoupon.code} applied
+                        </span>
                         <button
-                          onClick={() => setShowCouponInput(true)}
-                          className="text-xs text-primary hover:text-primary/80 underline"
+                          onClick={handleRemoveCoupon}
+                          className="ml-2 text-xs text-muted-foreground hover:text-destructive"
                         >
-                          Have a coupon code?
+                          Remove
                         </button>
-                      ) : (
-                        <div className="flex flex-col space-y-2 mt-2 px-1">
-                          <div className="flex gap-1">
-                            <Input
-                              placeholder="Enter code"
-                              value={couponCode}
-                              onChange={(e) => setCouponCode(e.target.value)}
-                              className="h-7 text-xs"
-                            />
-                            <Button
-                              variant="secondary"
-                              size="sm"
-                              className="h-7 text-xs whitespace-nowrap px-2"
-                              onClick={handleApplyCoupon}
-                              disabled={!couponCode.trim() || isApplyingCoupon}
-                            >
-                              {isApplyingCoupon ? (
-                                <RefreshCw key="apply-coupon-spinner" className="h-3 w-3 animate-spin" />
-                              ) : (
-                                <span key="apply-button-text">Apply</span>
-                              )}
-                            </Button>
-                          </div>
-                          {couponError && (
-                            <p className="text-xs text-destructive">{couponError}</p>
-                          )}
-                          <p className="text-xs text-muted-foreground">
-                            Try WELCOME10 for 10% off
-                          </p>
-                          <button
-                            onClick={() => setShowCouponInput(false)}
-                            className="text-xs text-muted-foreground hover:text-foreground"
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+
+                  <AnimatePresence>
+                    {!appliedCoupon && (
+                      <motion.div 
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        className="text-xs text-center mt-1"
+                      >
+                        {!showCouponInput ? (
+                          <motion.button
+                            whileHover={{ scale: 1.05 }}
+                            whileTap={{ scale: 0.95 }}
+                            onClick={() => setShowCouponInput(true)}
+                            className="text-xs text-primary hover:text-primary/80 underline"
                           >
-                            Cancel
-                          </button>
-                        </div>
-                      )}
-                    </div>
-                  )}
+                            Have a coupon code?
+                          </motion.button>
+                        ) : (
+                          <motion.div 
+                            initial={{ height: 0, opacity: 0 }}
+                            animate={{ height: "auto", opacity: 1 }}
+                            exit={{ height: 0, opacity: 0 }}
+                            className="flex flex-col space-y-2 mt-2 px-1"
+                          >
+                            <div className="flex gap-1">
+                              <Input
+                                placeholder="Enter code"
+                                value={couponCode}
+                                onChange={(e) => setCouponCode(e.target.value)}
+                                className="h-7 text-xs"
+                              />
+                              <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
+                                <Button
+                                  variant="secondary"
+                                  size="sm"
+                                  className="h-7 text-xs whitespace-nowrap px-2"
+                                  onClick={handleApplyCoupon}
+                                  disabled={!couponCode.trim() || isApplyingCoupon}
+                                >
+                                  {isApplyingCoupon ? (
+                                    <RefreshCw key="apply-coupon-spinner" className="h-3 w-3 animate-spin" />
+                                  ) : (
+                                    <span key="apply-button-text">Apply</span>
+                                  )}
+                                </Button>
+                              </motion.div>
+                            </div>
+                            {couponError && (
+                              <motion.p 
+                                initial={{ opacity: 0 }}
+                                animate={{ opacity: 1 }}
+                                className="text-xs text-destructive"
+                              >
+                                {couponError}
+                              </motion.p>
+                            )}
+                            <p className="text-xs text-muted-foreground">
+                              Try WELCOME10 for 10% off
+                            </p>
+                            <button
+                              onClick={() => setShowCouponInput(false)}
+                              className="text-xs text-muted-foreground hover:text-foreground"
+                            >
+                              Cancel
+                            </button>
+                          </motion.div>
+                        )}
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
                 </div>
-                <Button
-                  className={`w-full group shadow-md hover:shadow-lg transform hover:translate-y-[-1px] transition-all duration-200
-                    ${mounted && resolvedTheme === 'dark'
-                      ? 'bg-blue-600 hover:bg-blue-500 text-white'
-                      : 'bg-primary hover:bg-primary-hover text-primary-foreground'
-                    }`}
-                  onClick={handleCheckout}
+                <motion.div 
+                  whileHover={{ scale: 1.02 }} 
+                  whileTap={{ scale: 0.98 }}
                 >
-                  <ShoppingBag key="checkout-bag-icon" className="mr-2 h-4 w-4 group-hover:scale-110 transition-transform duration-200" />
-                  Proceed to Checkout
-                  <ArrowRight key="checkout-arrow-icon" className="ml-2 h-4 w-4 opacity-70 group-hover:translate-x-1 transition-transform duration-200" />
-                </Button>
-                <div className="flex gap-2 mt-2">
                   <Button
-                    variant="outline"
-                    size="sm"
-                    className={`flex-1 transition-all duration-200
+                    className={`w-full group shadow-md hover:shadow-lg transform hover:translate-y-[-1px] transition-all duration-200
                       ${mounted && resolvedTheme === 'dark'
-                        ? 'text-gray-400 hover:text-blue-300 hover:bg-gray-700/50'
-                        : 'text-muted-foreground hover:text-primary hover:bg-secondary'
+                        ? 'bg-blue-600 hover:bg-blue-500 text-white'
+                        : 'bg-primary hover:bg-primary-hover text-primary-foreground'
                       }`}
-                    onClick={() => setOpen(false)}
+                    onClick={handleCheckout}
                   >
-                    Continue Shopping
+                    <ShoppingBag key="checkout-bag-icon" className="mr-2 h-4 w-4 group-hover:scale-110 transition-transform duration-200" />
+                    Proceed to Checkout
+                    <ArrowRight key="checkout-arrow-icon" className="ml-2 h-4 w-4 opacity-70 group-hover:translate-x-1 transition-transform duration-200" />
                   </Button>
-                  <Button
-                    variant="secondary"
-                    size="sm"
-                    className={`flex-1 transition-all duration-200 font-medium shadow-sm
+                </motion.div>
+                <div className="flex gap-2 mt-2">
+                  <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }} className="flex-1">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className={`w-full transition-all duration-200
                         ${mounted && resolvedTheme === 'dark'
-                        ? 'bg-blue-600/30 text-blue-200 border border-blue-900/40 hover:bg-blue-500/40 hover:text-blue-100 hover:border-blue-700/50'
-                        : 'bg-primary/20 text-primary border border-primary/30 hover:bg-primary/30 hover:text-primary-foreground hover:border-primary/40'
-                      }`}
-                    onClick={() => {
-                      router.push('/cart');
-                      setOpen(false);
-                    }}
-                  >
-                    <ShoppingCart key="view-cart-icon" className="mr-2 h-4 w-4 transition-transform duration-200 group-hover:scale-110" />
-                    View Cart
-                  </Button>
+                          ? 'text-gray-400 hover:text-blue-300 hover:bg-gray-700/50'
+                          : 'text-muted-foreground hover:text-primary hover:bg-secondary'
+                        }`}
+                      onClick={() => setOpen(false)}
+                    >
+                      Continue Shopping
+                    </Button>
+                  </motion.div>
+                  <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }} className="flex-1">
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      className={`w-full transition-all duration-200 font-medium shadow-sm
+                          ${mounted && resolvedTheme === 'dark'
+                          ? 'bg-blue-600/30 text-blue-200 border border-blue-900/40 hover:bg-blue-500/40 hover:text-blue-100 hover:border-blue-700/50'
+                          : 'bg-primary/20 text-primary border border-primary/30 hover:bg-primary/30 hover:text-primary-foreground hover:border-primary/40'
+                        }`}
+                      onClick={() => {
+                        router.push('/cart');
+                        setOpen(false);
+                      }}
+                    >
+                      <ShoppingCart key="view-cart-icon" className="mr-2 h-4 w-4 transition-transform duration-200 group-hover:scale-110" />
+                      View Cart
+                    </Button>
+                  </motion.div>
                 </div>
-              </div>
+              </motion.div>
             )}
           </div>
         </DrawerContent>

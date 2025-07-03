@@ -259,14 +259,31 @@ const CheckoutAuthDialog = ({
             >
               <div className="p-4 md:p-6 space-y-4">
                 {cartItems.map((item) => (
-                  <div key={item._id} className="flex items-start gap-3">
+                  <div key={`${item.productCode}-${item.selectedSize || 'default'}`} className="flex items-start gap-3">
                     <div className="relative w-14 h-14 md:w-16 md:h-16 rounded-md overflow-hidden border bg-background">
-                      <Image
-                        src={item.image}
-                        alt={item.name}
-                        fill
-                        className="object-cover"
-                      />
+                      {typeof item.image === 'string' && item.image !== '' ? (
+                        <Image
+                          src={item.image}
+                          alt={item.name}
+                          fill
+                          className="object-cover"
+                          onError={(e) => {
+                            // If image fails to load, show fallback UI
+                            e.target.style.display = 'none';
+                            e.target.parentNode.classList.add('flex', 'items-center', 'justify-center');
+                            const fallback = document.createElement('div');
+                            fallback.className = 'text-lg font-semibold text-muted-foreground';
+                            fallback.innerText = item.name?.substring(0, 1) || 'P';
+                            e.target.parentNode.appendChild(fallback);
+                          }}
+                        />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center">
+                          <span className="text-lg font-semibold text-muted-foreground">
+                            {item.name?.substring(0, 1) || 'P'}
+                          </span>
+                        </div>
+                      )}
                     </div>
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-medium truncate">{item.name}</p>

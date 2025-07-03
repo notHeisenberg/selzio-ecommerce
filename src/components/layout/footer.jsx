@@ -25,7 +25,7 @@ export function Footer() {
               <Link href="/" className="inline-block">
                 <div className="flex items-center">
                   <div className="relative h-10 w-10 mr-3">
-                    <Image src="/logo.png" alt="Selzio Logo" fill className="object-contain" />
+                    <Image src="/images/logo.png" alt="Selzio Logo" fill className="object-contain" />
                   </div>
                   <span className="text-2xl font-bold text-foreground dark:text-white">
                     SELZ<span className="text-primary">I</span>O

@@ -150,10 +150,10 @@ export const getFeaturedCategories = async () => {
     
     // Default images based on index if no specific mapping is available
     const defaultImages = [
-      '/categories/electronics.jpg',
-      '/categories/fashion.jpg',
-      '/categories/home.jpg',
-      '/categories/beauty.jpg'
+      '/images/categories/Old_money_all.png',
+      '/images/categories/New_money_all.png',
+      '/images/categories/Old_money_all.png',
+      '/images/categories/New_money_all.png'
     ];
     
     return {
@@ -189,7 +189,7 @@ export const getTopSellingProducts = async (limit = 4) => {
 // Fetch a single product by product code
 export const getProductByCode = async (productCode) => {
   try {
-    console.log('getProductByCode called with:', productCode);
+
     
     if (!productCode) {
       console.error('No productCode provided to getProductByCode');
@@ -197,7 +197,6 @@ export const getProductByCode = async (productCode) => {
     }
     
     const apiUrl = `/api/products/${productCode}`;
-    console.log('Fetching from API URL:', apiUrl);
     
     const response = await fetch(apiUrl);
     
@@ -208,16 +207,13 @@ export const getProductByCode = async (productCode) => {
     }
     
     const data = await response.json();
-    console.log('API response data:', data);
     
     return data;
   } catch (error) {
     console.error(`Error fetching product with code ${productCode}:`, error);
     // Try to find in cache as fallback
-    console.log('Falling back to cache lookup');
     const { products } = await initializeProducts();
     const cachedProduct = products.find(p => p.productCode === productCode);
-    console.log('Cached product found:', cachedProduct);
     return cachedProduct;
   }
 };
@@ -257,7 +253,7 @@ export const getRelatedProducts = async (productCode, limit = 4) => {
     }
     
     const apiUrl = `/api/products?relatedTo=${encodeURIComponent(productCode)}&excludeProductCode=${encodeURIComponent(productCode)}&limit=${limit}`;
-    console.log('Fetching related products from API URL:', apiUrl);
+
     
     const response = await fetch(apiUrl);
     
