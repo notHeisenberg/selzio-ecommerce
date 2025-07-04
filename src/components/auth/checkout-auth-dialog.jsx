@@ -70,8 +70,6 @@ const CheckoutAuthDialog = ({
   // Handle redirect after authentication state changes
   useEffect(() => {
     if (processingRedirect && isAuthenticated && user) {
-      console.log('Auth state confirmed, redirecting to checkout...');
-      
       // Ensure coupon data is in sessionStorage
       if (appliedCoupon) {
         sessionStorage.setItem('appliedCoupon', JSON.stringify(appliedCoupon));
@@ -82,7 +80,7 @@ const CheckoutAuthDialog = ({
       
       // Set a timeout to ensure auth state is fully processed
       const redirectTimer = setTimeout(() => {
-        console.log('Executing redirect now...');
+        
         setProcessingRedirect(false);
         
         if (onSuccess) {
@@ -101,7 +99,6 @@ const CheckoutAuthDialog = ({
   useEffect(() => {
     // If the session becomes authenticated and we're showing the dialog
     if (isAuthenticated && user && open) {
-      console.log('User is now authenticated while dialog is open, preparing to redirect...');
       // Prepare for redirect
       prepareForRedirect();
     }
@@ -158,9 +155,6 @@ const CheckoutAuthDialog = ({
     // Set flag to monitor auth state for redirect
     setProcessingRedirect(true);
     
-    // Log for debugging
-    console.log('Preparing for redirect after authentication...');
-    console.log('Redirect URL stored in session:', redirectUrl);
   };
   
   // Handle login
@@ -370,8 +364,6 @@ const CheckoutAuthDialog = ({
               {/* Social Login Buttons */}
               <SocialLogin 
                 onSuccess={() => {
-                  console.log('Social login success, preparing for redirect...');
-                  
                   // Ensure coupon data is saved to sessionStorage
                   if (appliedCoupon) {
                     sessionStorage.setItem('appliedCoupon', JSON.stringify(appliedCoupon));

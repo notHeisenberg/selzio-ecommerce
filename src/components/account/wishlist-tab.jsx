@@ -80,7 +80,7 @@ export default function WishlistTab() {
   useEffect(() => {
     const timer = setTimeout(() => {
       if (isLoading) {
-        console.log("Force exiting loading state after timeout");
+          
         setForceLoaded(true);
       }
     }, 3000); // 3 seconds timeout
@@ -91,7 +91,6 @@ export default function WishlistTab() {
   // Refetch wishlist data when component mounts
   useEffect(() => {
     if (mounted) {
-      console.log("Refetching wishlist data...");
       try {
         refetchWishlist().catch(err => {
           console.error("Error refetching wishlist:", err);
@@ -109,22 +108,13 @@ export default function WishlistTab() {
     if (mounted) {
       
       if (isLoading) {
-        console.log("Wishlist is loading...");
+        
       } else {
-        console.log("Wishlist items:", wishlistItems);
-        console.log("Total items:", totalItems);
         
         // Check for issues with wishlist items
         if (wishlistItems && wishlistItems.length > 0) {
           wishlistItems.forEach((item, index) => {
-            console.log(`Item ${index}:`, {
-              id: item.id,
-              name: item.name,
-              hasImage: !!item.image,
-              imageUrl: item.image,
-              price: item.price,
-              category: item.category
-            });
+            
           });
         } else if (totalItems > 0) {
           console.warn("Total items > 0 but no wishlist items found");
@@ -149,7 +139,7 @@ export default function WishlistTab() {
 
       // Convert ID to string for consistency
       const stringProductId = String(product.id);
-      console.log(`Moving product ${stringProductId} (${product.name}) to cart...`);
+      
       
       // First add to cart
       addToCart(product);
@@ -221,20 +211,14 @@ export default function WishlistTab() {
 
       // Convert to string for consistency
       const stringItemId = String(itemId);
-      console.log(`Removing item ${stringItemId} (${itemName || 'Unknown'}) from wishlist...`);
+      
       
       // Remove from wishlist and wait for completion
       await removeFromWishlist(stringItemId);
       
       // Immediately refetch to update UI
       refetchWishlist();
-      
-      // Show success toast
-      toast({
-        title: "Removed from Wishlist",
-        description: `${itemName || 'Item'} has been removed from your wishlist.`,
-        variant: "default"
-      });
+
     } catch (error) {
       console.error("Error removing item from wishlist:", error);
       let errorMessage = "Failed to remove item from wishlist. Please try again.";

@@ -47,9 +47,6 @@ export default function LoginPage() {
     setServerError('');
     
     try {
-      // Log the login attempt for debugging
-      console.log('Attempting to login:', { email: values.email });
-      
       // Call the login function from our auth hook
       await login(values.email, values.password);
       
@@ -154,7 +151,7 @@ export default function LoginPage() {
       <div className="absolute top-4 left-4">
         <Link href="/" className="flex items-center">
           <div className="relative h-10 w-10 mr-2">
-            <Image src="/logo.png" alt="Selzio Logo" fill className="object-contain" />
+            <Image src="/images/logo.png" alt="Selzio Logo" fill className="object-contain" />
           </div>
           <span className="text-xl font-bold text-foreground dark:text-white">
             SELZ<span className="text-primary">I</span>O

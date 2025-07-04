@@ -84,21 +84,21 @@ export function PriceRangeSlider({
       <Slider
         classNames={{
           base: "w-full",
-          filler: "bg-gradient-to-r from-primary-500 to-secondary-400 h-2",
+          filler: "bg-primary h-2",
           labelWrapper: "mb-2",
           label: "font-medium text-default-700 text-medium",
           value: "font-medium text-default-500 text-small",
           thumb: [
-            "w-6 h-6",
-            "bg-gradient-to-r from-secondary-400 to-primary-500",
-            "border-2 border-white",
-            "shadow-md",
-            "data-[dragging=true]:shadow-lg data-[dragging=true]:shadow-black/20",
+            "w-5 h-5",
+            "bg-primary",
+            "border-2 border-background",
+            "shadow-sm",
+            "data-[dragging=true]:shadow-md data-[dragging=true]:shadow-black/10",
             "data-[dragging=true]:scale-110",
             "transition-all duration-150",
           ],
-          step: "data-[in-range=true]:bg-black/30 dark:data-[in-range=true]:bg-white/50",
-          track: "h-2 rounded-full bg-gray-200 dark:bg-gray-700",
+          step: "data-[in-range=true]:bg-primary/30",
+          track: "h-2 rounded-full bg-muted",
         }}
         value={value}
         onChange={onChange}
@@ -117,11 +117,11 @@ export function PriceRangeSlider({
           placement: "bottom",
           classNames: {
             base: [
-              "before:bg-gradient-to-r before:from-secondary-400 before:to-primary-500",
+              "before:bg-primary",
             ],
             content: [
-              "py-2 px-3 shadow-xl",
-              "text-white bg-gradient-to-r from-secondary-400 to-primary-500",
+              "py-2 px-3 shadow-md",
+              "text-primary-foreground bg-primary",
             ],
           },
         }}

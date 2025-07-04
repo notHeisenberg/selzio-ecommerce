@@ -24,6 +24,7 @@ export function FiltersBar({
   selectedCategory = "all",
   onCategorySelect,
   className = "",
+  searchPlaceholder = "Search products..."
 }) {
   return (
     <div className={`${className}`}>
@@ -66,7 +67,7 @@ export function FiltersBar({
               const newValue = typeof e === 'object' ? e.target.value : e;
               onSearchChange(newValue);
             }}
-            placeholder="Search products..."
+            placeholder={searchPlaceholder}
             width="min-w-[200px] md:w-[250px]"
           />
         </div>
@@ -100,7 +101,7 @@ export function FiltersBar({
               const newValue = typeof e === 'object' ? e.target.value : e;
               onSearchChange(newValue);
             }}
-            placeholder="Search products..."
+            placeholder={searchPlaceholder}
             width="w-full"
           />
         </div>

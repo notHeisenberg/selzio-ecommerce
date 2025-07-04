@@ -18,7 +18,7 @@ import { getProducts, navItems, createSlug } from '@/data/products';
 import { useAuth } from '@/hooks/use-auth';
 
 export function Navbar() {
-  const { isVisible, scrollY } = useScrollDirection();
+  const { isVisible, scrollY } = useScrollDirection({ isNavbar: true });
   const pathname = usePathname();
   const [isCategoryOpen, setIsCategoryOpen] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -158,7 +158,7 @@ export function Navbar() {
           scrollY > 0 ? 'shadow-sm' : ''
         )}
       >
-        <div className="container mx-auto px-4">
+        <div className="container mx-auto px-4 lg:max-w-[1200px]">
           {/* Top Row - Logo, Navigation, Icons */}
           <div className="flex h-16 md:h-20 items-center justify-between">
             {/* Logo */}
@@ -177,7 +177,7 @@ export function Navbar() {
                 />
               </div>
               <span className="text-lg md:text-xl font-bold text-foreground dark:text-white">
-                SELZ<span className="text-primary">I</span>O
+                SELZ<span className="text-rose-500">I</span>O
               </span>
             </Link>
 

@@ -11,7 +11,8 @@ const COLLECTIONS = {
   ORDERS: "orders",
   REVIEWS: "reviews",
   CATEGORIES: "categories",
-  WISHLIST: "wishlist"
+  WISHLIST: "wishlist",
+  COMBOS: "combos"
 };
 
 // MongoDB Client options
@@ -63,6 +64,10 @@ export async function getUsersCollection() {
 
 export async function getProductsCollection() {
   return getCollection(COLLECTIONS.PRODUCTS);
+}
+
+export async function getCombosCollection() {
+  return getCollection(COLLECTIONS.COMBOS);
 }
 
 export async function getOrdersCollection() {

@@ -21,17 +21,12 @@ export function Hero() {
       {/* Background Image with Overlay */}
       <div className="absolute inset-0">
         <Image
-          src="/images/hero-bg.jpg"
+          src="/images/Banner.jpg"
           alt="Hero background"
           fill
           className="object-cover w-full"
           priority
         />
-        <div className={`absolute inset-0 ${
-          mounted && resolvedTheme === 'dark'
-            ? 'bg-gradient-to-r from-black/80 to-black/60'
-            : 'bg-gradient-to-r from-[#faf9f6]/60 to-[#faf9f6]/80'
-        }`} />
       </div>
 
       {/* Content */}

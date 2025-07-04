@@ -228,7 +228,7 @@ export default function ProductReviews({ product, toast }) {
     <section>
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 mb-8">
         {/* Review Summary */}
-        <div className="lg:col-span-4 bg-secondary/10 p-6 rounded-lg">
+        <div className="lg:col-span-4 bg-secondary/10 p-6 rounded-none">
           <div className="text-center mb-4">
             <div className="text-5xl font-bold mb-2">{product.rating || 0}</div>
             <div className="flex justify-center mb-1">
@@ -525,7 +525,7 @@ export default function ProductReviews({ product, toast }) {
                 <motion.div
                   initial={{ opacity: 0, y: -10 }}
                   animate={{ opacity: 1, y: 0 }}
-                  className="mb-4 p-2 border-l-4 border-amber-400 bg-amber-50 dark:bg-amber-900/20 flex justify-between items-center"
+                  className="mb-4 p-2 border-l-4 border-amber-400 bg-amber-50 dark:bg-amber-900/20 flex justify-between items-center rounded-none"
                 >
                   <div className="flex items-center">
                     <span className="mr-2">Showing {filteredReviews.length} {filteredReviews.length === 1 ? 'review' : 'reviews'} with</span> 
@@ -561,7 +561,7 @@ export default function ProductReviews({ product, toast }) {
                       {visibleReviews.map((review, index) => (
                         <motion.div 
                           key={review._id || index}
-                          className="group border-2 border-gray-200 dark:border-gray-700 hover:border-black dark:hover:border-white transition-colors"
+                          className="group border-2 border-gray-200 dark:border-gray-700 hover:border-black dark:hover:border-white transition-colors rounded-none"
                           initial={{ opacity: 0, y: 20 }}
                           animate={{ 
                             opacity: 1, 
@@ -595,7 +595,7 @@ export default function ProductReviews({ product, toast }) {
                                   <div className="flex items-center">
                                     <h4 className="font-bold text-black dark:text-white">{review.name}</h4>
                                     {review.verified && (
-                                      <Badge variant="outline" className="ml-2 border-green-600 text-green-600 dark:border-green-400 dark:text-green-400 uppercase text-xs">
+                                      <Badge variant="outline" className="ml-2 border-green-600 text-green-600 dark:border-green-400 dark:text-green-400 uppercase text-xs rounded-none">
                                         Verified
                                       </Badge>
                                     )}
@@ -637,7 +637,7 @@ export default function ProductReviews({ product, toast }) {
                             {review.image && (
                               <div className="mt-3 mb-4">
                                 <motion.div 
-                                  className="relative overflow-hidden cursor-pointer inline-block border-2 border-black dark:border-white"
+                                  className="relative overflow-hidden cursor-pointer inline-block border-2 border-black dark:border-white rounded-none"
                                   whileHover={{ scale: 1.03 }}
                                   transition={{ type: "spring", stiffness: 400, damping: 17 }}
                                   onClick={() => openImagePreview(review.image)}
@@ -697,7 +697,7 @@ export default function ProductReviews({ product, toast }) {
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     exit={{ opacity: 0 }}
-                    className="border-l-4 border-red-500 bg-red-50 dark:bg-red-900/20 p-4"
+                    className="border-l-4 border-red-500 bg-red-50 dark:bg-red-900/20 p-4 rounded-none"
                   >
                     <p className="text-red-600 dark:text-red-400">Error loading reviews: {error}</p>
                   </motion.div>
@@ -707,7 +707,7 @@ export default function ProductReviews({ product, toast }) {
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     exit={{ opacity: 0 }}
-                    className="text-center py-10 border-2 border-dashed border-gray-200 dark:border-gray-700"
+                    className="text-center py-10 border-2 border-dashed border-gray-200 dark:border-gray-700 rounded-none"
                   >
                     <p className="text-lg font-medium text-black dark:text-white mb-2">
                       {selectedRatingFilter 
@@ -736,8 +736,8 @@ export default function ProductReviews({ product, toast }) {
       
       {/* Image Preview Dialog */}
       <Dialog open={previewDialogOpen} onOpenChange={setPreviewDialogOpen}>
-        <DialogContent className="sm:max-w-[800px] max-h-[90vh] p-0 border-0 bg-transparent shadow-none" closeButton={false}>
-          <div className="relative h-[70vh] bg-black/90 p-1">
+        <DialogContent className="sm:max-w-[800px] max-h-[90vh] p-0 border-0 bg-transparent shadow-none rounded-none" closeButton={false}>
+          <div className="relative h-[70vh] bg-black/90 p-1 rounded-none">
             {imagePreviewUrl && (
               <Image
                 src={imagePreviewUrl}

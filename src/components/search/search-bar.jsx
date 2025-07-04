@@ -9,6 +9,35 @@ import gsap from 'gsap';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { searchProducts, getProductUrl } from '@/data/products';
+import { getCombos } from '@/data/combos';
+
+// Helper function to get the display image from various possible formats
+const getDisplayImage = (result) => {
+  // For combo items
+  if (result.isCombo) {
+    // Use combo image directly or first from array
+    return result.image || 
+           (result.images && result.images.length > 0 ? result.images[0] : '/images/product-placeholder.jpg');
+  }
+  
+  // For products - handle image arrays
+  if (Array.isArray(result.image)) {
+    return result.image.length > 0 ? result.image[0] : '/images/product-placeholder.jpg';
+  }
+  
+  // Handle case where image is directly on the product object
+  if (result.image) {
+    return result.image;
+  }
+  
+  // If product has images array
+  if (Array.isArray(result.images) && result.images.length > 0) {
+    return result.images[0];
+  }
+  
+  // Final fallback
+  return '/images/product-placeholder.jpg';
+};
 
 const SearchBar = () => {
   const router = useRouter();
@@ -18,7 +47,7 @@ const SearchBar = () => {
   const [isFocused, setIsFocused] = useState(false);
   const searchRef = useRef(null);
   const spinnerRef = useRef(null);
-  const debouncedSearch = useDebounce(searchQuery, 500);
+  const debouncedSearch = useDebounce(searchQuery, 300); // Reduced debounce time for more responsiveness
 
   // GSAP hover animations
   const handleResultHover = (e) => {
@@ -64,12 +93,16 @@ const SearchBar = () => {
   };
 
   const handleResultClick = (result) => {
-    // Get product URL using the centralized function
-    const route = getProductUrl(result);
-
-    // Navigate to the product page
-    router.push(route);
+    if (result.isCombo) {
+      // Navigate to combo page
+      router.push(`/combos/${result.comboCode}`);
+    } else {
+      // Navigate to product page
+      const route = getProductUrl(result);
+      router.push(route);
+    }
     setIsFocused(false);
+    setSearchQuery(''); // Clear search after navigating
   };
 
   useEffect(() => {
@@ -110,13 +143,40 @@ const SearchBar = () => {
     };
   }, []);
 
-  // Search function using the searchProducts function from products.js
-  const searchProductsFromAPI = async (query) => {
+  // Search function that includes both products and combos
+  const performSearch = async (query) => {
+    if (!query.trim()) {
+      setSearchResults([]);
+      return;
+    }
+    
     setIsSearching(true);
     try {
-      // Call the searchProducts function
-      const results = await searchProducts(query);
-      setSearchResults(results || []);
+      // Search for products
+      const products = await searchProducts(query);
+      
+      // Search for combos
+      const allCombos = await getCombos();
+      
+      // Filter combos based on query
+      const query_lower = query.toLowerCase().trim();
+      const combos = allCombos.filter(combo => 
+        (combo.name && combo.name.toLowerCase().includes(query_lower)) ||
+        (combo.description && combo.description.toLowerCase().includes(query_lower)) ||
+        (combo.comboCode && combo.comboCode.toLowerCase().includes(query_lower))
+      );
+      
+      // Prepare combos with the right structure
+      const formattedCombos = combos.map(combo => ({
+        ...combo,
+        isCombo: true,
+        // No need to set image property here as getDisplayImage will handle it
+      }));
+      
+      // Combine and limit results
+      const combinedResults = [...formattedCombos, ...products].slice(0, 8);
+      
+      setSearchResults(combinedResults || []);
     } catch (error) {
       console.error('Search error:', error);
       setSearchResults([]);
@@ -127,7 +187,7 @@ const SearchBar = () => {
 
   useEffect(() => {
     if (debouncedSearch) {
-      searchProductsFromAPI(debouncedSearch);
+      performSearch(debouncedSearch);
     } else {
       setSearchResults([]);
     }
@@ -144,6 +204,19 @@ const SearchBar = () => {
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
+  
+  // Clear search and results when clicking the escape key
+  useEffect(() => {
+    const handleEscKey = (event) => {
+      if (event.key === 'Escape') {
+        setSearchQuery('');
+        setIsFocused(false);
+      }
+    };
+    
+    document.addEventListener('keydown', handleEscKey);
+    return () => document.removeEventListener('keydown', handleEscKey);
+  }, []);
 
   return (
     <div ref={searchRef} className="relative w-full">
@@ -154,12 +227,12 @@ const SearchBar = () => {
         )} />
         <Input
           type="search"
-          placeholder="Search products..."
+          placeholder="Search products & combos..."
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
           onFocus={() => setIsFocused(true)}
           className={cn(
-            "w-full pl-10 py-5 bg-card/50 border-border rounded-md transition-all duration-300",
+            "w-full pl-10 py-5 bg-card/50 border-border rounded-none transition-all duration-300",
             "focus:bg-card focus:border-primary focus:ring-1 focus:ring-primary focus-visible:ring-primary",
             isSearching && "pr-10"
           )}
@@ -175,22 +248,26 @@ const SearchBar = () => {
 
       {/* Search Results Dropdown */}
       {isFocused && searchResults.length > 0 && (
-        <div className="absolute top-full left-0 right-0 mt-1 bg-card/95 backdrop-blur-sm rounded-md shadow-lg border border-border max-h-96 overflow-y-auto z-50">
+        <div className="absolute top-full left-0 right-0 mt-1 bg-card/95 backdrop-blur-sm rounded-none shadow-lg border border-border max-h-96 overflow-y-auto z-50">
           {searchResults.map((result) => (
             <div
-              key={result.productCode}
+              key={result.isCombo ? `combo-${result.comboCode}` : `product-${result.productCode}`}
               onMouseEnter={handleResultHover}
               onMouseLeave={handleResultLeave}
               onClick={() => handleResultClick(result)}
-              className="p-3 cursor-pointer"
+              className="p-3 cursor-pointer hover:bg-secondary/50 transition-all duration-200"
             >
               <div className="flex items-center gap-3">
-                <div className="relative w-12 h-12 rounded-md overflow-hidden flex-shrink-0 result-image">
+                <div className="relative w-12 h-12 rounded-none overflow-hidden flex-shrink-0 result-image border border-border">
                   <Image
-                    src={result.image}
-                    alt={result.name}
+                    src={getDisplayImage(result)}
+                    alt={result.name || 'Product Image'}
                     fill
+                    sizes="48px"
                     className="object-cover"
+                    onError={(e) => {
+                      e.currentTarget.src = '/images/product-placeholder.jpg';
+                    }}
                   />
                 </div>
                 <div className="flex-1 min-w-0 result-content">
@@ -198,18 +275,27 @@ const SearchBar = () => {
                     <div>
                       <h4 className="text-sm font-medium text-foreground truncate">
                         {result.name}
+                        {result.isCombo && <span className="ml-2 text-xs bg-primary/10 text-primary px-1.5 py-0.5 rounded-none">Combo</span>}
                       </h4>
                       <p className="text-xs text-muted-foreground">
-                        {result.category} {result.subcategory && `· ${result.subcategory}`}
+                        {!result.isCombo ? (
+                          <>
+                            {result.category} {result.subcategory && `· ${result.subcategory}`}
+                          </>
+                        ) : (
+                          'Special Combo Offer'
+                        )}
                       </p>
                     </div>
                     <span className="text-sm font-medium text-primary ml-2">
-                      {result.price.toFixed(2)} BDT
+                      {result.price ? `${result.price.toFixed(2)} BDT` : ''}
                     </span>
                   </div>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    {result.stock > 10 ? 'In Stock' : result.stock > 0 ? 'Low Stock' : 'Out of Stock'}
-                  </p>
+                  {!result.isCombo && (
+                    <p className="text-xs text-muted-foreground mt-1">
+                      {result.stock > 10 ? 'In Stock' : result.stock > 0 ? 'Low Stock' : 'Out of Stock'}
+                    </p>
+                  )}
                 </div>
               </div>
             </div>
@@ -219,8 +305,8 @@ const SearchBar = () => {
 
       {/* No Results Message */}
       {isFocused && searchQuery && !isSearching && searchResults.length === 0 && (
-        <div className="absolute top-full left-0 right-0 mt-1 bg-card/95 backdrop-blur-sm rounded-md shadow-lg border border-border p-3">
-          <p className="text-sm text-muted-foreground">No products found</p>
+        <div className="absolute top-full left-0 right-0 mt-1 bg-card/95 backdrop-blur-sm rounded-none shadow-lg border border-border p-3">
+          <p className="text-sm text-muted-foreground">No products or combos found</p>
         </div>
       )}
     </div>

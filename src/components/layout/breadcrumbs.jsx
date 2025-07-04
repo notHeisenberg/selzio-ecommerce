@@ -3,6 +3,8 @@
 import { useParams, usePathname } from 'next/navigation';
 import Link from 'next/link';
 import { Home, ChevronRight } from 'lucide-react';
+import { useScrollDirection } from '@/hooks/use-scroll-direction';
+import { cn } from '@/lib/utils';
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -12,9 +14,21 @@ import {
 } from "@/components/ui/breadcrumb";
 
 export function Breadcrumbs({ items = [], showHome = true, className = "" }) {
+  const { isVisible, scrollY } = useScrollDirection({ 
+    isNavbar: false, 
+    thresholdPixels: 5 
+  });
+
   return (
-    <div className={`bg-background ${className}`}>
-      <div className="container mx-auto px-4 py-4">
+    <div 
+      className={cn(
+        'bg-background sticky top-16 md:top-20 z-30 transition-all duration-300 border-b',
+        !isVisible ? '-translate-y-full' : 'translate-y-0',
+        scrollY > 0 ? 'shadow-sm' : '',
+        className
+      )}
+    >
+      <div className="container mx-auto px-4 py-3 lg:max-w-[1200px]">
         <Breadcrumb>
           <BreadcrumbList>
             {showHome && (

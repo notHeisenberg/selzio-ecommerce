@@ -304,7 +304,6 @@ export default function OrdersTab() {
         
       // Get auth token from localStorage
       const token = localStorage.getItem('auth_token');
-      console.log('Using auth token for cancellation request:', token ? 'Found token' : 'No token');
       
       // Call API to update order status to cancellation_requested with reason
       const response = await axios.put(`/api/orders/${selectedOrder._id}`, 
@@ -321,10 +320,6 @@ export default function OrdersTab() {
           withCredentials: true
         }
       );
-      
-      // Log the response for debugging
-      console.log('Server response status:', response.status);
-      console.log('Server response data:', response.data);
       
       if (response.data && response.data.success) {
         toast({
@@ -359,16 +354,8 @@ export default function OrdersTab() {
     try {
       const newStatus = approved ? "cancelled" : "pending"; // Always return to pending if rejected
       
-      console.log('Admin responding to cancellation request:', {
-        orderId: selectedOrder._id,
-        approved,
-        newStatus
-      });
-
       // Get auth token from localStorage
       const token = localStorage.getItem('auth_token');
-      console.log('Using auth token:', token ? 'Found token' : 'No token');
-      
       // Use axios instead of fetch for better header handling
       const response = await axios.put(`/api/orders/${selectedOrder._id}`, 
         {
@@ -386,9 +373,6 @@ export default function OrdersTab() {
         }
       );
       
-      // Log the response for debugging
-      console.log('Server response status:', response.status);
-      console.log('Server response data:', response.data);
       
       if (response.data && response.data.success) {
         toast({
@@ -552,7 +536,7 @@ export default function OrdersTab() {
 
           {/* Loading overlay for refetching */}
           {isFetching && !isLoading && (
-            <div className="absolute inset-0 bg-background/50 flex items-center justify-center rounded-md z-10">
+            <div className="absolute inset-0 bg-background/50 flex items-center justify-center rounded-none z-10">
               <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
             </div>
           )}
@@ -578,7 +562,7 @@ export default function OrdersTab() {
           ) : (
             <div className="space-y-6">
               {orders.map((order) => (
-                <div key={order._id} className="border rounded-lg p-4 space-y-4 hover:shadow-md transition-shadow duration-200 border-border hover:border-primary/20">
+                <div key={order._id} className="border rounded-none p-4 space-y-4 hover:shadow-md transition-shadow duration-200 border-border hover:border-primary/20">
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                     <div>
                       <h3 className="font-medium text-primary">Order #{order._id.slice(-6).toUpperCase()}</h3>
@@ -680,7 +664,7 @@ export default function OrdersTab() {
 
                   {/* Show cancellation reason directly */}
                   {order.status === 'cancellation_requested' && order.cancellationReason && (
-                    <div className="mt-2 p-2 bg-orange-50 dark:bg-orange-950/30 rounded-md border border-orange-200 dark:border-orange-900/50">
+                    <div className="mt-2 p-2 bg-orange-50 dark:bg-orange-950/30 rounded-none border border-orange-200 dark:border-orange-900/50">
                       <div className="flex items-start gap-2">
                         <AlertCircle className="h-4 w-4 text-orange-500 mt-0.5 flex-shrink-0" />
                         <div>
@@ -691,13 +675,13 @@ export default function OrdersTab() {
                     </div>
                   )}
 
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-muted/50 p-3 rounded-md">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-muted/50 p-3 rounded-none">
                     <div>
                       <h4 className="text-sm font-medium mb-2 text-primary">Items</h4>
                       <div className="space-y-3">
                         {order.items.map((item) => (
-                          <div key={item._id} className="flex items-center gap-3 bg-card p-2 rounded-md shadow-sm">
-                            <div className="relative w-14 h-14 rounded-md overflow-hidden border">
+                          <div key={item._id} className="flex items-center gap-3 bg-card p-2 rounded-none shadow-sm">
+                            <div className="relative w-14 h-14 rounded-none overflow-hidden border">
                               <Image
                                 src={item.image || null}
                                 alt={item.name}
@@ -718,7 +702,7 @@ export default function OrdersTab() {
 
                     <div>
                       <h4 className="text-sm font-medium mb-2 text-primary">Order Details</h4>
-                      <div className="bg-card p-3 rounded-md shadow-sm space-y-2 text-sm">
+                      <div className="bg-card p-3 rounded-none shadow-sm space-y-2 text-sm">
                         <div className="flex justify-between items-center pb-2 border-b border-border">
                           <span className="font-medium">Total:</span>
                           <span className="font-bold text-primary">{order.total !== undefined ? order.total.toFixed(2) : '0.00'} Tk</span>
@@ -1000,7 +984,7 @@ export default function OrdersTab() {
 
                 {/* Admin sees customer details */}
                 {isAdmin && orderDetails.user && (
-                  <div className="bg-muted/50 rounded-lg p-4">
+                  <div className="bg-muted/50 rounded-none p-4">
                     <h3 className="text-lg font-semibold mb-3 flex items-center text-primary">
                       <User className="h-4 w-4 mr-2" />
                       Customer Information
@@ -1015,7 +999,7 @@ export default function OrdersTab() {
                 )}
 
                 {/* Dates */}
-                <div className="grid grid-cols-2 gap-4 text-sm bg-muted/50 p-3 rounded-lg">
+                <div className="grid grid-cols-2 gap-4 text-sm bg-muted/50 p-3 rounded-none">
                   <div>
                     <p className="font-medium text-primary">Ordered On:</p>
                     <p>{new Date(orderDetails.createdAt).toLocaleString()}</p>
@@ -1027,12 +1011,12 @@ export default function OrdersTab() {
                 </div>
 
                 {/* Order Items */}
-                <div className="bg-card border border-border rounded-lg shadow-sm">
+                <div className="bg-card border border-border rounded-none shadow-sm">
                   <h3 className="text-lg font-semibold p-4 border-b border-border text-primary">Items</h3>
                   <div className="p-4 space-y-4">
                     {orderDetails.items.map((item) => (
-                      <div key={item.id} className="flex flex-col sm:flex-row items-start gap-4 border-b border-border pb-4 hover:bg-muted/30 p-2 rounded-md transition-colors duration-200">
-                        <div className="relative w-16 h-16 rounded-md overflow-hidden border border-border flex-shrink-0 mx-auto sm:mx-0 shadow-sm">
+                      <div key={item.id} className="flex flex-col sm:flex-row items-start gap-4 border-b border-border pb-4 hover:bg-muted/30 p-2 rounded-none transition-colors duration-200">
+                        <div className="relative w-16 h-16 rounded-none overflow-hidden border border-border flex-shrink-0 mx-auto sm:mx-0 shadow-sm">
                           <Image
                             src={item.image || null}
                             alt={item.name || "Product"}
@@ -1056,9 +1040,65 @@ export default function OrdersTab() {
                     ))}
                   </div>
                 </div>
+                
+                {/* Combo Items - Display if any combo products exist in the order */}
+                {orderDetails.items.some(item => item.isCombo) && (
+                  <div className="bg-card border border-border rounded-none shadow-sm">
+                    <h3 className="text-lg font-semibold p-4 border-b border-border text-primary">Combo Details</h3>
+                    <div className="p-4 space-y-6">
+                      {orderDetails.items
+                        .filter(item => item.isCombo)
+                        .map((combo, comboIndex) => (
+                          <div key={`combo-${comboIndex}`} className="border border-border p-4 rounded-none">
+                            <div className="flex items-center gap-3 mb-3 pb-2 border-b border-border">
+                              <div className="relative w-12 h-12 rounded-none overflow-hidden border border-border flex-shrink-0">
+                                <Image
+                                  src={combo.image || '/images/product-placeholder.jpg'}
+                                  alt={combo.name}
+                                  fill
+                                  className="object-cover"
+                                />
+                              </div>
+                              <div>
+                                <h4 className="font-medium">{combo.name}</h4>
+                                <p className="text-sm text-muted-foreground">Quantity: {combo.quantity}</p>
+                              </div>
+                              <div className="ml-auto font-medium text-primary">
+                                {combo.price ? (combo.price * combo.quantity).toFixed(2) : '0.00'} Tk
+                              </div>
+                            </div>
+                            
+                            {combo.products && combo.products.length > 0 && (
+                              <div className="pl-4 space-y-3">
+                                <p className="text-sm font-medium text-primary mb-2">Products in this combo:</p>
+                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                                  {combo.products.map((comboProduct, productIndex) => (
+                                    <div key={`combo-product-${productIndex}`} className="flex items-center gap-2 bg-muted/30 p-2 rounded-none">
+                                      <div className="relative w-10 h-10 rounded-none overflow-hidden border border-border flex-shrink-0">
+                                        <Image
+                                          src={comboProduct.image || '/images/product-placeholder.jpg'}
+                                          alt={comboProduct.name}
+                                          fill
+                                          className="object-cover"
+                                        />
+                                      </div>
+                                      <div className="flex-1 min-w-0">
+                                        <p className="font-medium truncate">{comboProduct.name}</p>
+                                        {comboProduct.size && <p className="text-xs text-muted-foreground">Size: {comboProduct.size}</p>}
+                                      </div>
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        ))}
+                    </div>
+                  </div>
+                )}
 
                 {/* Payment Information */}
-                <div className="bg-card border border-border rounded-lg shadow-sm">
+                <div className="bg-card border border-border rounded-none shadow-sm">
                   <h3 className="text-lg font-semibold p-4 border-b border-border text-primary">Payment Information</h3>
                   <div className="p-4 space-y-3 text-sm">
                     <div className="flex justify-between items-center pb-2 border-b border-border">
@@ -1068,7 +1108,7 @@ export default function OrdersTab() {
                     <div className="flex justify-between items-center pb-2 border-b border-border">
                       <span className="font-medium">Status:</span>
                       <div className="flex justify-center mb-2">
-                        <Badge className={`${extendedOrderStatuses[orderDetails.status]?.color || 'bg-gray-500'} text-white font-medium px-4 py-1 rounded-md text-sm`}>
+                        <Badge className={`${extendedOrderStatuses[orderDetails.status]?.color || 'bg-gray-500'} text-white font-medium px-4 py-1 rounded-none text-sm`}>
                           {extendedOrderStatuses[orderDetails.status]?.label || orderDetails.status}
                         </Badge>
                       </div>
@@ -1082,7 +1122,7 @@ export default function OrdersTab() {
                     {isAdmin && orderDetails.payment?.paymentScreenshot && (
                       <div className="mt-4 pt-3 border-t border-border">
                         <p className="font-medium mb-2">Payment Screenshot:</p>
-                        <div className="relative w-full h-48 rounded-lg overflow-hidden border border-border shadow-sm">
+                        <div className="relative w-full h-48 rounded-none overflow-hidden border border-border shadow-sm">
                           <Image
                             src={orderDetails.payment?.paymentScreenshot || null}
                             alt="Payment Screenshot"
@@ -1096,7 +1136,7 @@ export default function OrdersTab() {
                 </div>
 
                 {/* Order Totals */}
-                <div className="bg-muted/50 p-4 rounded-lg shadow-sm">
+                <div className="bg-muted/50 p-4 rounded-none shadow-sm">
                   <div className="space-y-2">
                     <div className="flex justify-between items-center pb-2">
                       <span>Subtotal:</span>
@@ -1123,7 +1163,7 @@ export default function OrdersTab() {
 
                 {/* Shipping Information */}
                 {orderDetails.shipping && (
-                  <div className="bg-card border border-border rounded-lg shadow-sm">
+                  <div className="bg-card border border-border rounded-none shadow-sm">
                     <h3 className="text-lg font-semibold p-4 border-b border-border text-primary">Shipping Information</h3>
                     <div className="p-4 space-y-3 text-sm">
                       {/* Shipping Method */}
@@ -1159,7 +1199,7 @@ export default function OrdersTab() {
                       {orderDetails.shipping.info && (
                         <div className="mt-3">
                           <p className="font-medium mb-2">Shipping Address:</p>
-                          <div className="bg-muted/50 p-4 rounded-md space-y-2">
+                          <div className="bg-muted/50 p-4 rounded-none space-y-2">
                             {/* Address */}
                             {orderDetails.shipping.info.address && (
                               <p>
@@ -1199,7 +1239,7 @@ export default function OrdersTab() {
                       {!orderDetails.shipping.info && orderDetails.shipping.address && (
                         <div className="mt-3">
                           <p className="font-medium mb-2">Delivery Address:</p>
-                          <div className="bg-muted/50 p-3 rounded-md">
+                          <div className="bg-muted/50 p-3 rounded-none">
                             <p className="whitespace-pre-line">{orderDetails.shipping.address}</p>
                           </div>
                         </div>
@@ -1218,13 +1258,13 @@ export default function OrdersTab() {
 
                 {/* Admin Notes Section */}
                 {isAdmin && (
-                  <div className="bg-card border border-border rounded-lg shadow-sm">
+                  <div className="bg-card border border-border rounded-none shadow-sm">
                     <h3 className="text-lg font-semibold p-4 border-b border-border text-primary">Admin Notes</h3>
                     <div className="p-4 space-y-1 text-sm">
                       <p className="text-xs text-muted-foreground mb-2">Private notes about this order (only visible to admin)</p>
                       <textarea
-                        className="w-full border border-input rounded-md p-2 h-24 text-sm focus:border-primary/30 focus:ring focus:ring-primary/10 focus:outline-none bg-background"
-                        placeholder="Add notes about this order..."
+                        className="w-full border border-input rounded-none p-2 h-24 text-sm focus:border-primary/30 focus:ring focus:ring-primary/10 focus:outline-none bg-background"
+                        placeholder="Add notes about this order (only visible to admins)"
                         value={adminNotes}
                         onChange={(e) => setAdminNotes(e.target.value)}
                       ></textarea>
@@ -1250,7 +1290,7 @@ export default function OrdersTab() {
 
                 {/* Add cancellation request info section when applicable */}
                 {orderDetails.status === 'cancellation_requested' && (
-                  <div className="bg-orange-50 border border-orange-200 rounded-lg p-4 shadow-sm dark:bg-orange-950/30 dark:border-orange-900/50 dark:text-orange-100">
+                  <div className="bg-orange-50 border border-orange-200 rounded-none p-4 shadow-sm dark:bg-orange-950/30 dark:border-orange-900/50 dark:text-orange-100">
                     <h3 className="text-lg font-semibold mb-2 text-orange-700 flex items-center dark:text-orange-300">
                       <AlertCircle className="h-4 w-4 mr-2" />
                       Cancellation Request
@@ -1290,7 +1330,7 @@ export default function OrdersTab() {
 
                 {/* Show cancellation history if the order was cancelled */}
                 {orderDetails.status === 'cancelled' && orderDetails.cancellationReason && (
-                  <div className="bg-red-50 border border-red-200 rounded-lg p-4 shadow-sm dark:bg-red-950/30 dark:border-red-900/50 dark:text-red-100">
+                  <div className="bg-red-50 border border-red-200 rounded-none p-4 shadow-sm dark:bg-red-950/30 dark:border-red-900/50 dark:text-red-100">
                     <h3 className="text-lg font-semibold mb-2 text-red-700 flex items-center dark:text-red-300">
                       <AlertCircle className="h-4 w-4 mr-2" />
                       Order Cancelled

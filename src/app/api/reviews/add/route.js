@@ -54,7 +54,7 @@ export async function POST(request) {
       verified: !!session, // Mark as verified if user is logged in
       date: new Date(),
     };
-console.log(review)
+
     // Handle image upload if provided
     if (imageFile) {
       try {

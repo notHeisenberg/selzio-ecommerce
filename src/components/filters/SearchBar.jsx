@@ -29,6 +29,19 @@ export function SearchBar({
       transition: { duration: 0.2 }
     }
   };
+  
+  // Direct change handler to simplify event handling
+  const handleChange = (e) => {
+    if (typeof onChange === 'function') {
+      // Make sure we're passing a proper event object with target.value
+      if (e && e.target) {
+        onChange(e);
+      } else {
+        // Create a synthetic event if the event object is missing
+        onChange({ target: { value: e } });
+      }
+    }
+  };
 
   return (
     <div className={`relative ${width} ${className}`}>
@@ -41,9 +54,10 @@ export function SearchBar({
         <motion.div variants={filterComponentVariants} whileFocus="focus">
           <Input
             placeholder={placeholder}
-            className="pl-10 w-full transition-all duration-200"
+            className="pl-10 w-full transition-all duration-200 rounded-none"
             value={value}
-            onChange={onChange}
+            onChange={handleChange}
+            type="search"
           />
         </motion.div>
       </motion.div>

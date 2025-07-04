@@ -241,10 +241,6 @@ export default function CheckoutPage() {
         headers: {
           'Content-Type': 'multipart/form-data',
         },
-        onUploadProgress: (progressEvent) => {
-          const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total);
-          console.log(`Upload progress: ${percentCompleted}%`);
-        },
       });
       
       if (!response.data.success) {
@@ -499,18 +495,7 @@ export default function CheckoutPage() {
     return () => clearTimeout(initTimer);
   }, []);
 
-  // Debug auth state and cart
-  useEffect(() => {
 
-
-    // Also check for redirect URL in session storage
-    if (typeof window !== 'undefined') {
-      const redirectUrl = sessionStorage.getItem('auth_redirect');
-      if (redirectUrl) {
-        console.log('Stored redirect URL found:', redirectUrl);
-      }
-    }
-  }, [isAuthenticated, authLoading, user, cartItems]);
 
   // Modify the loading check to include initializing state
   if (authLoading || initializing || (cartItems.length === 0 && initializing)) {
@@ -585,7 +570,7 @@ export default function CheckoutPage() {
                     <div className="max-h-[200px] overflow-y-auto px-3 py-2 space-y-3">
                       {cartItems.length > 0 ? (
                         cartItems.map((item) => (
-                          <div key={`${item.productCode}-${item.selectedSize || 'default'}`} className="flex items-start gap-3 pb-3 border-b last:border-0 last:pb-0">
+                          <div key={`${item.isCombo ? item.comboCode : item.productCode}-${item.selectedSize || 'default'}`} className="flex items-start gap-3 pb-3 border-b last:border-0 last:pb-0">
                             <div className="relative w-14 h-14 rounded-none overflow-hidden border-2 bg-card flex-shrink-0">
                               <Image
                                 src={item.image}
@@ -603,6 +588,21 @@ export default function CheckoutPage() {
                                 )}
                                 <p className="text-xs text-muted-foreground">Qty: {item.quantity}</p>
                               </div>
+                              
+                              {/* Show combo items */}
+                              {item.isCombo && item.products && item.products.length > 0 && (
+                                <div className="mt-1 text-xs text-muted-foreground">
+                                  <p className="text-xs font-medium">Includes:</p>
+                                  <ul className="list-disc pl-4 mt-0.5">
+                                    {item.products.map((product, idx) => (
+                                      <li key={idx} className="text-xs">
+                                        {product.name} {product.size && `(${product.size})`}
+                                      </li>
+                                    ))}
+                                  </ul>
+                                </div>
+                              )}
+                              
                               <p className="text-sm font-semibold">{(item.price * item.quantity).toFixed(2)} Tk</p>
                             </div>
                           </div>
@@ -1179,7 +1179,7 @@ export default function CheckoutPage() {
                         <div className="max-h-[320px] overflow-y-auto px-3 py-2 space-y-3">
                           {cartItems.length > 0 ? (
                             cartItems.map((item) => (
-                              <div key={`${item.productCode}-${item.selectedSize || 'default'}`} className="flex items-start gap-3 pb-3 border-b last:border-0 last:pb-0">
+                              <div key={`${item.isCombo ? item.comboCode : item.productCode}-${item.selectedSize || 'default'}`} className="flex items-start gap-3 pb-3 border-b last:border-0 last:pb-0">
                                 <div className="relative w-16 h-16 rounded-none overflow-hidden border-2 bg-card flex-shrink-0">
                                   <Image
                                     src={item.image}
@@ -1197,6 +1197,21 @@ export default function CheckoutPage() {
                                     )}
                                     <p className="text-xs text-muted-foreground">Qty: {item.quantity}</p>
                                   </div>
+                                  
+                                  {/* Show combo items */}
+                                  {item.isCombo && item.products && item.products.length > 0 && (
+                                    <div className="mt-1 text-xs text-muted-foreground">
+                                      <p className="text-xs font-medium">Includes:</p>
+                                      <ul className="list-disc pl-4 mt-0.5">
+                                        {item.products.map((product, idx) => (
+                                          <li key={idx} className="text-xs">
+                                            {product.name} {product.size && `(${product.size})`}
+                                          </li>
+                                        ))}
+                                      </ul>
+                                    </div>
+                                  )}
+                                  
                                   <p className="text-sm font-semibold">{(item.price * item.quantity).toFixed(2)} Tk</p>
                                 </div>
                               </div>

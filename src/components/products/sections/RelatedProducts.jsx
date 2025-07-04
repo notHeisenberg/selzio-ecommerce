@@ -40,10 +40,10 @@ export default function RelatedProducts({ productCode, limit = 4 }) {
           <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
             {[1, 2, 3, 4].map((i) => (
               <div key={i} className="w-full">
-                <Skeleton className="aspect-square w-full rounded-lg" />
+                <Skeleton className="aspect-square w-full rounded-none" />
                 <div className="mt-3 space-y-2">
-                  <Skeleton className="h-5 w-3/4" />
-                  <Skeleton className="h-4 w-1/2" />
+                  <Skeleton className="h-5 w-3/4 rounded-none" />
+                  <Skeleton className="h-4 w-1/2 rounded-none" />
                 </div>
               </div>
             ))}
@@ -59,7 +59,7 @@ export default function RelatedProducts({ productCode, limit = 4 }) {
 
   return (
     <section className="w-full py-12 bg-secondary/5">
-      <div className="container px-4 md:px-6">
+      <div className="container px-4 md:px-6 lg:max-w-[1200px]">
         <h2 className="text-2xl font-bold mb-8">You May Also Like</h2>
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
           {relatedProducts.map((product, index) => (

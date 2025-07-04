@@ -1,14 +1,18 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { getProducts, getCategories } from "@/data/products";
+import { getCombos } from "@/data/combos";
 import { ProductCard } from "@/components/products/product-card";
+import { ComboCard } from "@/components/home/combo-card";
 import { Button } from "@/components/ui/button";
 import { motion } from "framer-motion";
 import { Metadata } from "next";
 import { metadata } from "./metadata"
 import { Navbar } from "@/components/layout/navbar";
 import { FiltersBar, CategoryFilter } from "@/components/filters";
+import Link from "next/link";
+import { Eye, EyeOff } from "lucide-react";
 
 // Cannot use metadata in client components, would need a separate
 // metadata.js file or move this to a server component if metadata is needed
@@ -26,24 +30,58 @@ export default function StorePage() {
   const [error, setError] = useState(null);
   const [minPrice, setMinPrice] = useState(0);
   const [maxPrice, setMaxPrice] = useState(3000);
+  const [combos, setCombos] = useState([]);
+  const [loadingCombos, setLoadingCombos] = useState(true);
+  const [showCombos, setShowCombos] = useState(true);
+
+  // Load combos
+  const loadCombos = async () => {
+    try {
+      setLoadingCombos(true);
+      const combosData = await getCombos();
+      setCombos(combosData);
+    } catch (err) {
+      console.error('Failed to load combos:', err);
+    } finally {
+      setLoadingCombos(false);
+    }
+  };
 
   // Load products from MongoDB via products.js
-  useEffect(() => {
-    const loadProducts = async () => {
-      try {
-        setLoading(true);
-        const products = await getProducts();
-        setAllProducts(products);
-        setFilteredProducts(products);
-      } catch (err) {
-        console.error('Failed to load products:', err);
-        setError('Failed to load products. Please try again later.');
-      } finally {
-        setLoading(false);
-      }
-    };
+  const loadProducts = async () => {
+    try {
+      setLoading(true);
+      const products = await getProducts();
+      setAllProducts(products);
+      setFilteredProducts(products);
+    } catch (err) {
+      console.error('Failed to load products:', err);
+      setError('Failed to load products. Please try again later.');
+    } finally {
+      setLoading(false);
+    }
+  };
 
+  // Load data on component mount
+  useEffect(() => {
     loadProducts();
+    loadCombos();
+    
+    // Check if user has a preference for showing/hiding combos
+    const savedShowCombos = localStorage.getItem("showCombosInStore");
+    if (savedShowCombos !== null) {
+      setShowCombos(savedShowCombos === "true");
+    }
+  }, []);
+
+  // Save combo visibility preference
+  useEffect(() => {
+    localStorage.setItem("showCombosInStore", showCombos.toString());
+  }, [showCombos]);
+
+  // Toggle combo visibility
+  const toggleCombosVisibility = useCallback(() => {
+    setShowCombos(prev => !prev);
   }, []);
 
   // Apply filters whenever any filter changes
@@ -54,15 +92,73 @@ export default function StorePage() {
 
     // Apply search filter
     if (searchQuery) {
-      const query = searchQuery.toLowerCase();
-      result = result.filter(
-        (product) =>
-          product.name.toLowerCase().includes(query) ||
-          product.description.toLowerCase().includes(query) ||
-          product.category.toLowerCase().includes(query) ||
-          (product.subcategory && product.subcategory.toLowerCase().includes(query)) ||
-          (product.tags && product.tags.some(tag => tag.toLowerCase().includes(query)))
-      );
+      const query = searchQuery.toLowerCase().trim();
+      result = result.filter(product => {
+        // Core search fields always checked
+        if (
+          (product.name && product.name.toLowerCase().includes(query)) ||
+          (product.productCode && product.productCode.toLowerCase().includes(query)) ||
+          (product.description && product.description.toLowerCase().includes(query)) ||
+          (product.category && product.category.toLowerCase().includes(query)) ||
+          (product.subcategory && product.subcategory.toLowerCase().includes(query))
+        ) {
+          return true;
+        }
+        
+        // Check tags array
+        if (product.tags && Array.isArray(product.tags)) {
+          if (product.tags.some(tag => tag.toLowerCase().includes(query))) {
+            return true;
+          }
+        }
+        
+        // Check SKU
+        if (product.sku && product.sku.toLowerCase().includes(query)) {
+          return true;
+        }
+        
+        // Check brand
+        if (product.brand && product.brand.toLowerCase().includes(query)) {
+          return true;
+        }
+        
+        // Check material
+        if (product.material && product.material.toLowerCase().includes(query)) {
+          return true;
+        }
+        
+        // Check size variations
+        if (product.sizes && Array.isArray(product.sizes)) {
+          if (product.sizes.some(size => 
+            (size.name && size.name.toLowerCase().includes(query))
+          )) {
+            return true;
+          }
+        }
+        
+        // Check color variations
+        if (product.colors && Array.isArray(product.colors)) {
+          if (product.colors.some(color => 
+            (color.name && color.name.toLowerCase().includes(query))
+          )) {
+            return true;
+          }
+        }
+        
+        // Check additional info fields
+        if (product.additionalInfo) {
+          const additionalInfo = product.additionalInfo;
+          if (typeof additionalInfo === 'object') {
+            return Object.values(additionalInfo).some(value => 
+              value && typeof value === 'string' && value.toLowerCase().includes(query)
+            );
+          } else if (typeof additionalInfo === 'string') {
+            return additionalInfo.toLowerCase().includes(query);
+          }
+        }
+        
+        return false;
+      });
     }
 
     // Apply subcategory filter
@@ -132,7 +228,11 @@ export default function StorePage() {
         {/* Combined filters bar */}
         <FiltersBar
           searchQuery={searchQuery}
-          onSearchChange={(e) => setSearchQuery(e.target.value)}
+          onSearchChange={(e) => {
+            // Ensure we're handling both event objects and direct values
+            const value = e && typeof e === 'object' && e.target ? e.target.value : e;
+            setSearchQuery(value);
+          }}
           stockFilter={stockFilter}
           onStockFilterChange={setStockFilter}
           priceRange={priceRange}
@@ -147,6 +247,7 @@ export default function StorePage() {
           selectedCategory={selectedSubcategory}
           onCategorySelect={setSelectedSubcategory}
           className="mb-6"
+          searchPlaceholder="Search by name, code, tag, color..."
         />
         
         <div className="flex flex-col lg:flex-row gap-8">
@@ -188,11 +289,72 @@ export default function StorePage() {
               </div>
             </div>
 
+            {/* Combos Section with Toggle */}
+            {combos.length > 0 && (
+              <div className="mb-10">
+                <div className="flex justify-between items-center mb-4">
+                  <div className="flex items-center gap-2">
+                    {
+                      showCombos && (
+                        <h2 className="text-xl font-medium">Special Combos</h2>
+                      )
+                    }
+                    
+                    <Button 
+                      variant="ghost" 
+                      size="sm" 
+                      onClick={toggleCombosVisibility}
+                      className="p-1 h-auto"
+                      title={showCombos ? "Hide combos" : "Show combos"}
+                    >
+                      {showCombos ? (
+                        <>
+                        <span>Hide combos</span>
+                        <EyeOff className="h-4 w-4 text-muted-foreground" />
+                        </>
+                      ) : (
+                        <>
+                        <span>Show combos</span>
+                        <Eye className="h-4 w-4 text-muted-foreground" />
+                        </>
+                      )}
+                    </Button>
+                  </div>
+                  {
+                    showCombos && (
+                      <Link href="/combos">
+                        <Button variant="outline" className="text-sm rounded-none">View All Combos</Button>
+                      </Link>
+                    )
+                  }
+                </div>
+                
+                {showCombos && (
+                  <>
+                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                      {loadingCombos ? (
+                        Array(3).fill(0).map((_, index) => (
+                          <div key={`combo-skeleton-${index}`} className="animate-pulse">
+                            <div className="bg-secondary/70 h-[250px] rounded-none"></div>
+                          </div>
+                        ))
+                      ) : (
+                        combos.slice(0, 3).map((combo, index) => (
+                          <ComboCard key={combo.comboCode} combo={combo} index={index} />
+                        ))
+                      )}
+                    </div>
+                    <div className="border-b mt-8 mb-8"></div>
+                  </>
+                )}
+              </div>
+            )}
+
             {loading ? (
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-6 lg:grid-cols-3">
                 {Array(6).fill(0).map((_, index) => (
                   <div key={`skeleton-${index}`} className="animate-pulse">
-                    <div className="bg-secondary/70 h-[250px] sm:h-[300px] rounded-md"></div>
+                    <div className="bg-secondary/70 h-[250px] sm:h-[300px] rounded-none"></div>
                   </div>
                 ))}
               </div>

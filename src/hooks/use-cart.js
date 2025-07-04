@@ -44,6 +44,36 @@ export const CartProvider = ({ children }) => {
   const validateProduct = (product) => {
     // Ensure required fields exist
     if (!product) return null;
+    
+    // Handle combo products
+    if (product.isCombo) {
+      if (!product.comboCode) return null;
+      if (!product.name) return null;
+      if (typeof product.price !== 'number' || isNaN(product.price)) return null;
+      
+      // Handle image field for combo
+      let imageUrl = '';
+      if (product.image) {
+        if (typeof product.image === 'string' && product.image.trim() !== '') {
+          imageUrl = product.image;
+        }
+      }
+      
+      // Create a sanitized version of the combo
+      return {
+        ...product,
+        comboCode: product.comboCode,
+        name: product.name,
+        price: product.price,
+        image: imageUrl,
+        isCombo: true,
+        quantity: 1,
+        // Make sure we keep the products array for combos
+        products: product.products || []
+      };
+    }
+    
+    // Regular product validation (unchanged)
     if (!product.productCode) return null;
     if (!product.name) return null;
     if (typeof product.price !== 'number' || isNaN(product.price)) return null;
@@ -121,43 +151,86 @@ export const CartProvider = ({ children }) => {
     }
     
     setCartItems(prevItems => {
-      // Generate a unique identifier for this product + size combination
-      const selectedSize = validatedProduct.selectedSize || null;
-      const itemId = `${validatedProduct.productCode}${selectedSize ? `-${selectedSize}` : ''}`;
-      
-      // Check if item already exists in cart with the same size
-      const existingItemIndex = prevItems.findIndex(item => {
-        const itemSize = item.selectedSize || null;
-        const existingItemId = `${item.productCode}${itemSize ? `-${itemSize}` : ''}`;
-        return existingItemId === itemId;
-      });
-      
-      if (existingItemIndex !== -1) {
-        // Update quantity if item exists
-        const updatedItems = [...prevItems];
-        updatedItems[existingItemIndex] = {
-          ...updatedItems[existingItemIndex],
-          quantity: updatedItems[existingItemIndex].quantity + quantity
-        };
+      // Check if this is a combo product
+      if (validatedProduct.isCombo) {
+        // For combo products, use the comboCode as the unique identifier
+        const comboId = validatedProduct.comboCode;
         
-        // Store last added item information
-        setLastAddedItem({
-          product: updatedItems[existingItemIndex],
-          quantity: quantity
-        });
+        // Check if combo already exists in cart
+        const existingComboIndex = prevItems.findIndex(item => 
+          item.isCombo && item.comboCode === comboId
+        );
         
-        return updatedItems;
+        if (existingComboIndex !== -1) {
+          // Update quantity if combo exists
+          const updatedItems = [...prevItems];
+          updatedItems[existingComboIndex] = {
+            ...updatedItems[existingComboIndex],
+            quantity: updatedItems[existingComboIndex].quantity + quantity
+          };
+          
+          // Store last added item information
+          setLastAddedItem({
+            product: updatedItems[existingComboIndex],
+            quantity: quantity
+          });
+          
+          return updatedItems;
+        } else {
+          // Add new combo to cart
+          const newItem = { ...validatedProduct, quantity };
+          
+          // Store last added item information
+          setLastAddedItem({
+            product: newItem,
+            quantity: quantity
+          });
+          
+          return [...prevItems, newItem];
+        }
       } else {
-        // Add new item to cart
-        const newItem = { ...validatedProduct, quantity };
+        // Regular product handling (unchanged)
+        // Generate a unique identifier for this product + size combination
+        const selectedSize = validatedProduct.selectedSize || null;
+        const itemId = `${validatedProduct.productCode}${selectedSize ? `-${selectedSize}` : ''}`;
         
-        // Store last added item information
-        setLastAddedItem({
-          product: newItem,
-          quantity: quantity
+        // Check if item already exists in cart with the same size
+        const existingItemIndex = prevItems.findIndex(item => {
+          // Skip combo products
+          if (item.isCombo) return false;
+          
+          const itemSize = item.selectedSize || null;
+          const existingItemId = `${item.productCode}${itemSize ? `-${itemSize}` : ''}`;
+          return existingItemId === itemId;
         });
         
-        return [...prevItems, newItem];
+        if (existingItemIndex !== -1) {
+          // Update quantity if item exists
+          const updatedItems = [...prevItems];
+          updatedItems[existingItemIndex] = {
+            ...updatedItems[existingItemIndex],
+            quantity: updatedItems[existingItemIndex].quantity + quantity
+          };
+          
+          // Store last added item information
+          setLastAddedItem({
+            product: updatedItems[existingItemIndex],
+            quantity: quantity
+          });
+          
+          return updatedItems;
+        } else {
+          // Add new item to cart
+          const newItem = { ...validatedProduct, quantity };
+          
+          // Store last added item information
+          setLastAddedItem({
+            product: newItem,
+            quantity: quantity
+          });
+          
+          return [...prevItems, newItem];
+        }
       }
     });
     
@@ -213,6 +286,17 @@ export const CartProvider = ({ children }) => {
   // Remove item from cart
   const removeItem = (productCode, selectedSize = null) => {
     setCartItems(prevItems => {
+      // First check if this is a combo being removed by comboCode
+      const comboItems = prevItems.filter(item => 
+        item.isCombo && item.comboCode === productCode
+      );
+      
+      if (comboItems.length > 0) {
+        // Remove the combo item
+        return prevItems.filter(item => !(item.isCombo && item.comboCode === productCode));
+      }
+      
+      // Regular product removal logic
       if (selectedSize) {
         // Remove specific item with size
         return prevItems.filter(item => {

@@ -50,7 +50,7 @@ export function PriceRangeFilter({
       <div className="text-sm whitespace-nowrap mr-1">Price:</div>
       
       <div className="flex-grow relative">
-        <div className="absolute top-[-20px] right-1 text-xs whitespace-nowrap">
+        <div className="absolute top-[-20px] right-1 text-xs whitespace-nowrap text-muted-foreground">
           {currency}{priceRange[0]} - {currency}{priceRange[1]}
         </div>
         <PriceRangeSlider
@@ -74,15 +74,15 @@ export function PriceRangeFilter({
               whileTap={{ scale: 0.95 }}
             >
               <Button 
-                variant="ghost" 
+                variant="outline" 
                 size="sm" 
-                className="h-6 w-6 px-4 flex items-center justify-center gap-1 text-xs rounded-none border-none bg-transparent hover:bg-transparent"
+                className="h-6 w-6 px-4 flex items-center justify-center gap-1 text-xs rounded-none"
               >
                 <Settings className="h-3 w-6" />
               </Button>
             </motion.div>
           </PopoverTrigger>
-          <PopoverContent className="w-[200px] p-3">
+          <PopoverContent className="w-[200px] p-3 rounded-none">
             <div className="space-y-3">
               <h4 className="text-sm font-medium">Set Price Range</h4>
               <div className="grid grid-cols-2 gap-2">
@@ -94,7 +94,7 @@ export function PriceRangeFilter({
                     type="number"
                     value={minPriceInput}
                     onChange={(e) => setMinPriceInput(e.target.value)}
-                    className="h-8 rounded-none border border-gray-700 bg-transparent hover:bg-transparent hover:border-gray-300"
+                    className="h-8 rounded-none"
                   />
                 </div>
                 <div>
@@ -105,14 +105,14 @@ export function PriceRangeFilter({
                     type="number"
                     value={maxPriceInput}
                     onChange={(e) => setMaxPriceInput(e.target.value)}
-                    className="h-8 rounded-none border border-gray-700 bg-transparent hover:bg-transparent hover:border-gray-300"
+                    className="h-8 rounded-none"
                   />
                 </div>
               </div>
               <Button 
                 size="sm" 
                 onClick={handleApplyPriceRange} 
-                className="w-full h-8 rounded-none text-inherit hover:text-gray-500 dark:hover:text-gray-300 border border-gray-700 bg-transparent hover:bg-transparent hover:border-gray-300"
+                className="w-full h-8 rounded-none"
               >
                 Apply
               </Button>
@@ -129,7 +129,7 @@ export function PriceRangeFilter({
             variant="ghost" 
             size="sm" 
             onClick={onResetAllFilters}
-            className="h-6 px-2 flex items-center gap-1 text-xs text-gray-500 rounded-none border-none bg-transparent hover:bg-transparent"
+            className="h-6 px-2 flex items-center gap-1 text-xs rounded-none"
           >
             <RefreshCw className="h-3 w-3 mr-1" />
             <span>Reset</span>

@@ -37,12 +37,6 @@ export default function CategoryPage() {
 
   // Get normalized category name for lookup
   const normalizedCategory = normalizeCategory(category);
-  
-  // Debug logs
-  console.log('Original category from URL:', category);
-  console.log('Normalized category:', normalizedCategory);
-  console.log('Available categories:', Object.keys(sampleSubcategories));
-
   // Find subcategories for this category
   const subcategories = sampleSubcategories[normalizedCategory] || [];
 

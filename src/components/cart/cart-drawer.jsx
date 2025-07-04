@@ -19,6 +19,10 @@ import {
   DrawerTrigger,
 } from "@/components/ui/drawer";
 import { Input } from '@/components/ui/input';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import Link from 'next/link';
+import { MinusIcon, PlusIcon } from 'lucide-react';
+import { formatPrice, getDiscountedPrice } from '@/lib/utils';
 
 const CartDrawer = () => {
   const [open, setOpen] = useState(false);
@@ -35,6 +39,20 @@ const CartDrawer = () => {
   const { isAuthenticated } = useAuth();
   const [mounted, setMounted] = useState(false);
   const { resolvedTheme } = useTheme();
+
+  // Calculate the total price for an item including discount
+  const calculateItemTotal = (item) => {
+    if (!item) return 0;
+    
+    // Apply any item-specific discount
+    let itemPrice = item.price;
+    if (item.discount && item.discount > 0) {
+      itemPrice = getDiscountedPrice(itemPrice, item.discount);
+    }
+    
+    // Multiply by quantity
+    return itemPrice * item.quantity;
+  };
 
   // Avoid hydration mismatch and ensure data is loaded
   useEffect(() => {
@@ -257,266 +275,110 @@ const CartDrawer = () => {
             </DrawerHeader>
 
             {/* Drawer Content */}
-            <div className="flex-1 overflow-y-auto p-5">
-              {showLoading ? (
-                // Loading skeleton
-                <div className="space-y-4">
-                  {[1, 2].map((i) => (
-                    <div 
-                      key={`loading-${i}`}
-                      className="flex gap-4 pb-4 border-b border-gray-200 dark:border-gray-700/50"
-                    >
-                      <div className="w-20 h-20 bg-gray-200 dark:bg-gray-700 rounded-lg animate-pulse"></div>
-                      <div className="flex-1 space-y-2">
-                        <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-3/4 animate-pulse"></div>
-                        <div className="h-3 bg-gray-200 dark:bg-gray-700 rounded w-1/2 animate-pulse"></div>
-                        <div className="h-5 bg-gray-200 dark:bg-gray-700 rounded w-1/3 animate-pulse"></div>
+            <ScrollArea className="h-full">
+              {cartItems.length === 0 ? (
+                <div className="flex flex-col items-center justify-center h-[300px] px-4">
+                  <ShoppingCart className="h-16 w-16 text-muted-foreground mb-4" />
+                  <h3 className="font-medium text-lg mb-1">Your cart is empty</h3>
+                  <p className="text-muted-foreground text-center mb-4">
+                    Looks like you haven't added anything to your cart yet.
+                  </p>
+                  <Button onClick={() => setOpen(false)} asChild>
+                    <Link href="/store">
+                      Continue Shopping
+                    </Link>
+                  </Button>
+                </div>
+              ) : (
+                <div className="px-4 pb-6 space-y-4">
+                  {cartItems.map((item, index) => (
+                    <div key={index} className="flex py-4 border-b border-border">
+                      {/* Product image */}
+                      <div className="h-20 w-20 flex-shrink-0 overflow-hidden rounded-md border border-border">
+                        <Image
+                          src={item.image || '/images/product-placeholder.jpg'}
+                          alt={item.name}
+                          width={80}
+                          height={80}
+                          className="h-full w-full object-cover object-center"
+                        />
+                      </div>
+
+                      {/* Product details */}
+                      <div className="ml-4 flex flex-1 flex-col">
+                        <div>
+                          <div className="flex justify-between text-base font-medium">
+                            <Link
+                              href={item.isCombo ? `/combos/${item.comboCode}` : `/products/all/${item.productCode}`}
+                              className="hover:underline"
+                              onClick={() => setOpen(false)}
+                            >
+                              {item.name}
+                            </Link>
+                            <span className="ml-4">
+                              {formatPrice(calculateItemTotal(item))}
+                            </span>
+                          </div>
+                          {item.selectedSize && (
+                            <p className="mt-1 text-sm text-muted-foreground">
+                              Size: {item.selectedSize}
+                            </p>
+                          )}
+                          
+                          {/* Show combo items */}
+                          {item.isCombo && item.products && item.products.length > 0 && (
+                            <div className="mt-1 text-sm text-muted-foreground">
+                              <p className="text-xs font-medium">Combo includes:</p>
+                              <ul className="list-disc pl-4 mt-0.5">
+                                {item.products.map((product, idx) => (
+                                  <li key={idx} className="text-xs">
+                                    {product.name} {product.size && `(${product.size})`}
+                                  </li>
+                                ))}
+                              </ul>
+                            </div>
+                          )}
+                        </div>
+
+                        <div className="flex flex-1 items-end justify-between text-sm">
+                          {/* Quantity selector */}
+                          <div className="flex items-center gap-2">
+                            <label htmlFor={`quantity-${index}`} className="sr-only">
+                              Quantity, {item.name}
+                            </label>
+                            <button
+                              type="button"
+                              className="size-6 rounded-md border border-border flex items-center justify-center"
+                              onClick={() => updateQuantity(item.isCombo ? item.comboCode : item.productCode, Math.max(1, item.quantity - 1), item.selectedSize)}
+                              disabled={item.quantity <= 1}
+                            >
+                              <MinusIcon className="size-3" />
+                            </button>
+                            <span>{item.quantity}</span>
+                            <button
+                              type="button"
+                              className="size-6 rounded-md border border-border flex items-center justify-center"
+                              onClick={() => updateQuantity(item.isCombo ? item.comboCode : item.productCode, item.quantity + 1, item.selectedSize)}
+                            >
+                              <PlusIcon className="size-3" />
+                            </button>
+                          </div>
+
+                          {/* Remove button */}
+                          <button
+                            type="button"
+                            className="text-red-600 hover:text-red-500 font-medium"
+                            onClick={() => removeItem(item.isCombo ? item.comboCode : item.productCode, item.selectedSize)}
+                          >
+                            Remove
+                          </button>
+                        </div>
                       </div>
                     </div>
                   ))}
                 </div>
-              ) : cartItems.length > 0 ? (
-                <motion.div 
-                  variants={staggerContainer}
-                  initial="hidden"
-                  animate="visible"
-                  className="space-y-4"
-                >
-                  <AnimatePresence>
-                    {cartItems.map((item) => (
-                      <motion.div
-                        key={`${item.productCode}-${item.selectedSize || 'default'}`}
-                        variants={cartItemVariants}
-                        initial="hidden"
-                        animate="visible"
-                        exit="exit"
-                        layout
-                        className={`flex gap-4 pb-4 last:border-0 border-b
-                          ${mounted && resolvedTheme === 'dark'
-                            ? 'border-gray-700/50'
-                            : 'border-slate-200'
-                          }`}
-                      >
-                        <motion.div 
-                          whileHover={{ scale: 1.05 }}
-                          transition={{ type: "spring", stiffness: 400, damping: 10 }}
-                          className={`relative w-20 h-20 rounded-lg overflow-hidden flex-shrink-0 
-                            ${mounted && resolvedTheme === 'dark'
-                              ? 'bg-gray-700 border border-gray-600 shadow-md'
-                              : 'bg-white border border-slate-200 shadow-sm'
-                            }`}
-                        >
-                          {typeof item.image === 'string' && item.image !== '' ? (
-                            <Image
-                              src={item.image}
-                              alt={item.name || 'Product'}
-                              fill
-                              className="object-cover"
-                              onError={(e) => {
-                                // If image fails to load, show fallback UI
-                                e.target.style.display = 'none';
-                                e.target.parentNode.classList.add('flex', 'items-center', 'justify-center');
-                                const fallback = document.createElement('div');
-                                fallback.className = 'text-2xl font-semibold text-muted-foreground';
-                                fallback.innerText = item.name?.substring(0, 1) || 'P';
-                                e.target.parentNode.appendChild(fallback);
-                              }}
-                            />
-                          ) : (
-                            <div className="w-full h-full flex items-center justify-center bg-secondary/20">
-                              <span className="text-2xl font-semibold text-muted-foreground">
-                                {item.name?.substring(0, 1) || 'P'}
-                              </span>
-                            </div>
-                          )}
-                        </motion.div>
-                        <div className="flex-1 min-w-0">
-                          <h4 className={`text-sm font-medium truncate mb-1
-                            ${mounted && resolvedTheme === 'dark'
-                              ? 'text-gray-200'
-                              : 'text-slate-800'
-                            }`}
-                          >
-                            {item.name}
-                          </h4>
-                          <p className={`text-base font-semibold mb-2
-                            ${mounted && resolvedTheme === 'dark'
-                              ? 'text-blue-400'
-                              : 'text-violet-700'
-                            }`}
-                          >
-                            {item.price.toFixed(2)} BDT
-                          </p>
-                          
-                          {/* Display size if available */}
-                          {item.selectedSize && (
-                            <p className="text-xs text-muted-foreground mb-2">
-                              Size: <span className="font-medium">({item.selectedSize})</span>
-                              {item.sizeStock !== undefined && (
-                                <span className="ml-1 text-xs">
-                                  {item.sizeStock > 0 
-                                    ? `(${item.sizeStock} in stock)` 
-                                    : '(Low stock)'}
-                                </span>
-                              )}
-                            </p>
-                          )}
-                          
-                          {/* Display short description or regular description if available */}
-                          {(item.shortDescription || item.description) && (
-                            <p className="text-xs text-muted-foreground mb-2 line-clamp-2">
-                              {item.shortDescription 
-                                ? (typeof item.shortDescription === 'string' && item.shortDescription.startsWith('<') 
-                                  ? item.shortDescription.replace(/<[^>]*>/g, '') 
-                                  : item.shortDescription)
-                                : (typeof item.description === 'string' && item.description.startsWith('<') 
-                                  ? item.description.replace(/<[^>]*>/g, '') 
-                                  : item.description)}
-                            </p>
-                          )}
-                          
-                          <div className="flex items-center gap-2">
-                            <motion.div 
-                              whileHover={{ scale: 1.1 }} 
-                              whileTap={{ scale: 0.9 }}
-                              className="shadow-sm"
-                            >
-                              <Button
-                                variant="outline"
-                                size="icon"
-                                className={`h-7 w-7 rounded-md shadow-sm transition-all duration-200
-                                  ${mounted && resolvedTheme === 'dark'
-                                    ? 'border-gray-600 hover:bg-gray-700 hover:text-blue-400'
-                                    : 'border-border hover:bg-secondary hover:text-primary'
-                                  }`}
-                                onClick={() => updateQuantity(item.productCode, item.quantity - 1, item.selectedSize)}
-                                disabled={item.quantity <= 1}
-                              >
-                                <Minus className="h-3 w-3" />
-                              </Button>
-                            </motion.div>
-                            <motion.span 
-                              key={`qty-${item.productCode}-${item.selectedSize}-${item.quantity}`}
-                              initial={{ scale: 1.2 }}
-                              animate={{ scale: 1 }}
-                              className="text-sm font-medium w-6 text-center text-foreground"
-                            >
-                              {item.quantity}
-                            </motion.span>
-                            <motion.div 
-                              whileHover={{ scale: 1.1 }} 
-                              whileTap={{ scale: 0.9 }}
-                              className="shadow-sm"
-                            >
-                              <Button
-                                variant="outline"
-                                size="icon"
-                                className={`h-7 w-7 rounded-md shadow-sm transition-all duration-200
-                                  ${mounted && resolvedTheme === 'dark'
-                                    ? 'border-gray-600 hover:bg-gray-700 hover:text-blue-400'
-                                    : 'border-border hover:bg-secondary hover:text-primary'
-                                  }`}
-                                onClick={() => updateQuantity(item.productCode, item.quantity + 1, item.selectedSize)}
-                              >
-                                <Plus className="h-3 w-3" />
-                              </Button>
-                            </motion.div>
-                            <motion.div 
-                              whileHover={{ scale: 1.1 }}
-                              whileTap={{ scale: 0.9 }}
-                              className="ml-auto"
-                            >
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className={`h-7 w-7 rounded-md hover:scale-110 transition-all duration-200
-                                  ${mounted && resolvedTheme === 'dark'
-                                    ? 'text-red-400 hover:bg-red-900/30 hover:text-red-300'
-                                    : 'text-destructive hover:bg-destructive/10 hover:text-destructive'
-                                  }`}
-                                onClick={() => removeItem(item.productCode, item.selectedSize)}
-                              >
-                                <Trash2 className="h-4 w-4" />
-                              </Button>
-                            </motion.div>
-                          </div>
-                        </div>
-                      </motion.div>
-                    ))}
-                  </AnimatePresence>
-                </motion.div>
-              ) : (
-                <motion.div 
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  transition={{ duration: 0.3 }}
-                  className={`text-center py-12 
-                    ${mounted && resolvedTheme === 'dark'
-                      ? 'bg-gray-800/30 rounded-lg border border-gray-700/30'
-                      : 'bg-slate-50 rounded-lg'
-                    }`}
-                >
-                  <motion.div 
-                    initial={{ scale: 0.8, opacity: 0 }}
-                    animate={{ scale: 1, opacity: 1 }}
-                    transition={{ delay: 0.1, type: "spring" }}
-                    className="flex justify-center mb-4"
-                  >
-                    <div className={`rounded-full p-3 
-                      ${mounted && resolvedTheme === 'dark'
-                        ? 'bg-gray-700'
-                        : 'bg-slate-100'
-                      }`}
-                    >
-                      <ShoppingCart key="empty-cart-icon" className={`h-6 w-6 
-                        ${mounted && resolvedTheme === 'dark'
-                          ? 'text-gray-400'
-                          : 'text-slate-400'
-                        }`}
-                      />
-                    </div>
-                  </motion.div>
-                  <motion.h4 
-                    initial={{ y: 10, opacity: 0 }}
-                    animate={{ y: 0, opacity: 1 }}
-                    transition={{ delay: 0.15 }}
-                    className="text-lg font-semibold text-foreground mb-2"
-                  >
-                    Your cart is empty
-                  </motion.h4>
-                  <motion.p 
-                    initial={{ y: 10, opacity: 0 }}
-                    animate={{ y: 0, opacity: 1 }}
-                    transition={{ delay: 0.2 }}
-                    className="text-muted-foreground mb-6"
-                  >
-                    Looks like you haven't added any items to your cart yet.
-                  </motion.p>
-                  <motion.div
-                    initial={{ y: 10, opacity: 0 }}
-                    animate={{ y: 0, opacity: 1 }}
-                    transition={{ delay: 0.25 }}
-                    whileHover={{ scale: 1.05 }}
-                    whileTap={{ scale: 0.95 }}
-                  >
-                    <Button
-                      onClick={() => {
-                        router.push('/store');
-                        setOpen(false);
-                      }}
-                      className={`px-5 group
-                        ${mounted && resolvedTheme === 'dark'
-                          ? 'bg-blue-600 hover:bg-blue-500 text-white'
-                          : 'bg-violet-600 hover:bg-violet-700 text-white'
-                        }`}
-                    >
-                      Start Shopping
-                      <ArrowRight key="start-shopping-arrow" className="ml-2 h-4 w-4 transition-transform duration-200 group-hover:translate-x-1" />
-                    </Button>
-                  </motion.div>
-                </motion.div>
               )}
-            </div>
+            </ScrollArea>
 
             {cartItems.length > 0 && !showLoading && (
               <motion.div

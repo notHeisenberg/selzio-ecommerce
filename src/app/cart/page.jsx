@@ -172,7 +172,7 @@ export default function CartPage() {
       setShowAuthDialog(true);
     }
   };
-console.log(cartItems)
+
   return (
     <div className="flex min-h-screen flex-col">
       <Navbar />
@@ -225,7 +225,7 @@ console.log(cartItems)
                   <motion.div variants={containerVariants} className="space-y-4">
                     {cartItems.map((item) => (
                       <motion.div 
-                        key={`${item.productCode}-${item.selectedSize || 'default'}`}
+                        key={`${item.isCombo ? `combo-${item.comboCode}` : `product-${item.productCode}-${item.selectedSize || 'default'}`}`}
                         variants={itemVariants}
                         initial="hidden"
                         animate="visible"
@@ -302,6 +302,20 @@ console.log(cartItems)
                                       )}
                                     </div>
                                   )}
+                                  
+                                  {/* Show combo items */}
+                                  {item.isCombo && item.products && item.products.length > 0 && (
+                                    <div className="mb-3 p-2 bg-secondary/20 rounded-md">
+                                      <p className="text-sm font-medium mb-1">Combo includes:</p>
+                                      <ul className="list-disc pl-5 space-y-0.5">
+                                        {item.products.map((product, idx) => (
+                                          <li key={idx} className="text-sm text-muted-foreground">
+                                            {product.name} {product.size && `(${product.size})`}
+                                          </li>
+                                        ))}
+                                      </ul>
+                                    </div>
+                                  )}
                                 </div>
                                 
                                 <div className="flex justify-between items-center">
@@ -319,14 +333,18 @@ console.log(cartItems)
                                             ? 'border-gray-600 hover:bg-gray-700 hover:text-blue-400'
                                             : 'border-border hover:bg-secondary hover:text-primary'
                                           }`}
-                                        onClick={() => updateQuantity(item.productCode, item.quantity - 1, item.selectedSize)}
+                                        onClick={() => updateQuantity(
+                                          item.isCombo ? item.comboCode : item.productCode, 
+                                          item.quantity - 1, 
+                                          item.selectedSize
+                                        )}
                                         disabled={item.quantity <= 1}
                                       >
                                         <Minus key={`minus-${item.productCode}`} className="h-4 w-4" />
                                       </Button>
                                     </motion.div>
                                     <motion.span 
-                                      key={`qty-${item.productCode}-${item.selectedSize}-${item.quantity}`}
+                                      key={`qty-${item.isCombo ? item.comboCode : item.productCode}-${item.selectedSize}-${item.quantity}`}
                                       initial={{ scale: 1.2 }}
                                       animate={{ scale: 1 }}
                                       className="text-sm font-medium w-8 text-center text-foreground"
@@ -346,7 +364,11 @@ console.log(cartItems)
                                             ? 'border-gray-600 hover:bg-gray-700 hover:text-blue-400'
                                             : 'border-border hover:bg-secondary hover:text-primary'
                                           }`}
-                                        onClick={() => updateQuantity(item.productCode, item.quantity + 1, item.selectedSize)}
+                                        onClick={() => updateQuantity(
+                                          item.isCombo ? item.comboCode : item.productCode, 
+                                          item.quantity + 1, 
+                                          item.selectedSize
+                                        )}
                                       >
                                         <Plus key={`plus-${item.productCode}`} className="h-4 w-4" />
                                       </Button>
@@ -367,7 +389,10 @@ console.log(cartItems)
                                           ? 'text-red-400 hover:bg-red-900/30 hover:text-red-300'
                                           : 'text-destructive hover:bg-destructive/10'
                                         }`}
-                                      onClick={() => removeItem(item.productCode, item.selectedSize)}
+                                      onClick={() => removeItem(
+                                        item.isCombo ? item.comboCode : item.productCode, 
+                                        item.selectedSize
+                                      )}
                                     >
                                       <Trash2 className="h-4 w-4 mr-1" />
                                       Remove
