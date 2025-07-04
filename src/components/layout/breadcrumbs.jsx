@@ -4,6 +4,7 @@ import { useParams, usePathname } from 'next/navigation';
 import Link from 'next/link';
 import { Home, ChevronRight } from 'lucide-react';
 import { useScrollDirection } from '@/hooks/use-scroll-direction';
+import { useGalleryScroll } from '@/hooks/use-gallery-scroll';
 import { cn } from '@/lib/utils';
 import {
   Breadcrumb,
@@ -14,16 +15,22 @@ import {
 } from "@/components/ui/breadcrumb";
 
 export function Breadcrumbs({ items = [], showHome = true, className = "" }) {
-  const { isVisible, scrollY } = useScrollDirection({ 
+  const { scrollDirection, scrollY } = useScrollDirection({ 
     isNavbar: false, 
     thresholdPixels: 5 
   });
+  const { scrolledPastGallery, isProductPage } = useGalleryScroll();
+  
+  // Different hiding behavior based on page type
+  const shouldHide = isProductPage 
+    ? scrollDirection === 'down' && scrolledPastGallery // Product page: hide when scrolling down past gallery
+    : scrollDirection === 'down';                       // Other pages: hide when scrolling down
 
   return (
     <div 
       className={cn(
         'bg-background sticky top-16 md:top-20 z-30 transition-all duration-300 border-b',
-        !isVisible ? '-translate-y-full' : 'translate-y-0',
+        shouldHide ? '-translate-y-full' : 'translate-y-0',
         scrollY > 0 ? 'shadow-sm' : '',
         className
       )}

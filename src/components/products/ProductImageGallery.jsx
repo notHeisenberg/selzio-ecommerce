@@ -66,7 +66,7 @@ export default function ProductImageGallery({ product }) {
 
   return (
     <>
-      <div className="lg:w-1/2 lg:sticky lg:top-36 lg:self-start max-h-screen md:mb-14 lg:mb-0">
+      <div className="lg:w-1/2 lg:sticky lg:top-36 lg:self-start max-h-screen md:mb-14 lg:mb-0" data-gallery-container>
         {/* Main Image */}
         <motion.div 
           className="relative aspect-square w-full overflow-hidden rounded-lg bg-card shadow-sm cursor-zoom-in"

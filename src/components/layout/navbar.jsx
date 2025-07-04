@@ -176,7 +176,7 @@ export function Navbar() {
                   className="object-contain" 
                 />
               </div>
-              <span className="text-lg md:text-xl font-bold text-foreground dark:text-white">
+              <span className="text-lg md:text-xl font-bold text-foreground dark:text-white mr-2">
                 SELZ<span className="text-rose-500">I</span>O
               </span>
             </Link>
