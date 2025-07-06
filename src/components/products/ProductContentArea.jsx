@@ -61,12 +61,6 @@ export default function ProductContentArea({
         
         // Call the handleAddToCart function with the customized product
         handleAddToCart(productWithSize, quantity);
-        
-        // Show a success message using toast
-        toast({
-            title: "Added to Cart",
-            description: `${product.name} (Size: ${selectedSize || 'Standard'}) has been added to your cart.`
-        });
     };
 
     // Buy now with selected size

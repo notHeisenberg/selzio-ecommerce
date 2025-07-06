@@ -48,7 +48,7 @@ export function RichTextSection() {
                     >
                         {mounted && resolvedTheme === 'dark' ? (
                             <Button asChild className="bg-transparent border border-white text-white hover:bg-white/10 rounded-none py-6 px-16">
-                                <Link href="/collections">
+                                <Link href="/store">
                                     Shop now!!
                                     <ArrowRight className="ml-2 h-5 w-5" />
                                 </Link>

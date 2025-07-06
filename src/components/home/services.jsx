@@ -2,23 +2,14 @@
 
 import { Truck, Headset, Shield, RefreshCcw } from 'lucide-react';
 import { motion } from 'framer-motion';
-import { useTheme } from 'next-themes';
-import { useState, useEffect } from 'react';
 
 export function Services() {
-  const { resolvedTheme } = useTheme();
-  const [mounted, setMounted] = useState(false);
-
-  // Avoid hydration mismatch
-  useEffect(() => {
-    setMounted(true);
-  }, []);
 
   const services = [
     {
       id: 1,
       title: "Free Delivery",
-      description: "Free shipping on all orders over $100",
+      description: "Free shipping on all orders over 2000 BDT",
       icon: Truck,
     },
     {

@@ -18,9 +18,10 @@ import {
   FormMessage,
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
-import { Loader2 } from 'lucide-react';
+import { Loader2, Mail, Lock, ArrowRight } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import SocialLogin from '@/components/auth/social-login';
+import { motion } from 'framer-motion';
 
 const loginSchema = z.object({
   email: z.string().email('Please enter a valid email'),
@@ -146,113 +147,173 @@ export default function LoginPage() {
     // NextAuth will handle the redirect
   };
 
+  // Animation variants
+  const containerVariants = {
+    hidden: { opacity: 0 },
+    visible: {
+      opacity: 1,
+      transition: {
+        staggerChildren: 0.1,
+        delayChildren: 0.2
+      }
+    }
+  };
+
+  const itemVariants = {
+    hidden: { y: 20, opacity: 0 },
+    visible: {
+      y: 0,
+      opacity: 1,
+      transition: { type: "spring", stiffness: 300, damping: 24 }
+    }
+  };
+
   return (
-    <div className="container max-w-md mx-auto py-16 px-4">
-      <div className="absolute top-4 left-4">
+    <div className="min-h-screen bg-gradient-to-b from-background to-secondary/20 flex flex-col items-center justify-center p-4">
+      <motion.div 
+        initial={{ y: -20, opacity: 0 }}
+        animate={{ y: 0, opacity: 1 }}
+        transition={{ duration: 0.5 }}
+        className="absolute top-4 left-4 z-10"
+      >
         <Link href="/" className="flex items-center">
           <div className="relative h-10 w-10 mr-2">
             <Image src="/images/logo.png" alt="Selzio Logo" fill className="object-contain" />
           </div>
           <span className="text-xl font-bold text-foreground dark:text-white">
-            SELZ<span className="text-primary">I</span>O
+            SELZ<span className="text-rose-500">I</span>O
           </span>
         </Link>
-      </div>
+      </motion.div>
       
-      <div className="space-y-6">
-        <div className="space-y-2 text-center">
-          <h1 className="text-3xl font-bold">Sign In</h1>
-          <p className="text-muted-foreground">Enter your credentials to sign in to your account</p>
-        </div>
+      <motion.div 
+        variants={containerVariants}
+        initial="hidden"
+        animate="visible"
+        className="w-full max-w-md bg-background border border-border shadow-lg p-8 rounded-none"
+      >
+        <motion.div variants={itemVariants} className="space-y-2 text-center mb-8">
+          <h1 className="text-3xl font-bold">Welcome Back</h1>
+          <p className="text-muted-foreground">Sign in to your account to continue</p>
+        </motion.div>
         
         {serverError && (
-          <div className="p-3 bg-destructive/15 border border-destructive text-destructive rounded-md text-sm">
+          <motion.div 
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="p-3 bg-destructive/15 border border-destructive text-destructive mb-6 text-sm"
+          >
             {serverError}
-          </div>
+          </motion.div>
         )}
         
-        <SocialLogin 
-          onSuccess={handleSocialLoginSuccess} 
-          redirectUrl="/"
-        />
+        <motion.div variants={itemVariants}>
+          <SocialLogin 
+            onSuccess={handleSocialLoginSuccess} 
+            redirectUrl="/"
+          />
+        </motion.div>
         
-        <div className="relative">
+        <motion.div variants={itemVariants} className="relative my-6">
           <div className="absolute inset-0 flex items-center">
             <span className="w-full border-t"></span>
           </div>
           <div className="relative flex justify-center text-xs uppercase">
             <span className="bg-background px-2 text-muted-foreground">Or continue with</span>
           </div>
-        </div>
+        </motion.div>
         
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-            <FormField
-              control={form.control}
-              name="email"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Email</FormLabel>
-                  <FormControl>
-                    <Input
-                      type="email" 
-                      placeholder="name@example.com" 
-                      {...field} 
-                      disabled={isLoading}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-5">
+            <motion.div variants={itemVariants}>
+              <FormField
+                control={form.control}
+                name="email"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="text-foreground/80">Email</FormLabel>
+                    <div className="relative">
+                      <Mail className="absolute left-3 top-3.5 h-5 w-5 text-muted-foreground" />
+                      <FormControl>
+                        <Input
+                          type="email" 
+                          placeholder="name@example.com" 
+                          className="pl-10 py-6 bg-secondary/30 border-border focus:border-primary focus-visible:ring-1 focus-visible:ring-primary"
+                          {...field} 
+                          disabled={isLoading}
+                        />
+                      </FormControl>
+                    </div>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </motion.div>
             
-            <FormField
-              control={form.control}
-              name="password"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Password</FormLabel>
-                  <FormControl>
-                    <Input 
-                      type="password" 
-                      placeholder="••••••••" 
-                      {...field} 
-                      disabled={isLoading}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+            <motion.div variants={itemVariants}>
+              <FormField
+                control={form.control}
+                name="password"
+                render={({ field }) => (
+                  <FormItem>
+                    <div className="flex justify-between items-center">
+                      <FormLabel className="text-foreground/80">Password</FormLabel>
+                      <Link 
+                        href="/auth/forgot-password" 
+                        className="text-xs text-primary hover:underline"
+                      >
+                        Forgot password?
+                      </Link>
+                    </div>
+                    <div className="relative">
+                      <Lock className="absolute left-3 top-3.5 h-5 w-5 text-muted-foreground" />
+                      <FormControl>
+                        <Input 
+                          type="password" 
+                          placeholder="••••••••" 
+                          className="pl-10 py-6 bg-secondary/30 border-border focus:border-primary focus-visible:ring-1 focus-visible:ring-primary"
+                          {...field} 
+                          disabled={isLoading}
+                        />
+                      </FormControl>
+                    </div>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </motion.div>
             
-            <Button type="submit" className="w-full" disabled={isLoading}>
-              {isLoading ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Signing in...
-                </>
-              ) : (
-                'Sign In'
-              )}
-            </Button>
+            <motion.div variants={itemVariants} className="pt-2">
+              <Button 
+                type="submit" 
+                className="w-full py-6 bg-primary hover:bg-primary/90 text-white dark:text-black font-medium text-base"
+                disabled={isLoading}
+              >
+                {isLoading ? (
+                  <>
+                    <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                    Signing in...
+                  </>
+                ) : (
+                  <span className="flex items-center justify-center">
+                    Sign In
+                    <ArrowRight className="ml-2 h-5 w-5" />
+                  </span>
+                )}
+              </Button>
+            </motion.div>
           </form>
         </Form>
         
-        <div className="text-center space-y-2">
+        <motion.div variants={itemVariants} className="text-center mt-8">
           <p className="text-sm text-muted-foreground">
             Don't have an account?{' '}
-            <Link href="/auth/register" className="text-primary underline underline-offset-4 hover:text-primary/90">
-              Sign up
+            <Link href="/auth/register" className="text-primary font-medium hover:underline">
+              Create an account
             </Link>
           </p>
-          <Link 
-            href="/auth/forgot-password" 
-            className="text-sm text-primary underline underline-offset-4 hover:text-primary/90"
-          >
-            Forgot your password?
-          </Link>
-        </div>
-      </div>
+        </motion.div>
+      </motion.div>
     </div>
   );
 } 

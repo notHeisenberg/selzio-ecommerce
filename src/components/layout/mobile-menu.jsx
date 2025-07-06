@@ -3,13 +3,14 @@
 import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { X, LogIn, UserPlus } from 'lucide-react';
+import { X, LogIn, UserPlus, ChevronRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import gsap from 'gsap';
 import Image from 'next/image';
 import SearchBar from '@/components/search/search-bar';
 import { getProducts, navItems, createSlug } from '@/data/products';
 import { useAuth } from '@/hooks/use-auth';
+import { motion, AnimatePresence } from 'framer-motion';
 
 const MobileMenu = ({ isOpen, onClose }) => {
   const menuRef = useRef(null);
@@ -17,6 +18,7 @@ const MobileMenu = ({ isOpen, onClose }) => {
   const router = useRouter();
   const { isAuthenticated } = useAuth();
   const [categories, setCategories] = useState([]);
+  const [expandedCategory, setExpandedCategory] = useState(null);
   
   // Fetch subcategories when the menu opens
   useEffect(() => {
@@ -76,6 +78,56 @@ const MobileMenu = ({ isOpen, onClose }) => {
       fetchSubcategories();
     }
   }, [isOpen]);
+
+  const toggleCategory = (category) => {
+    setExpandedCategory(expandedCategory === category ? null : category);
+  };
+  
+  // Animation variants
+  const menuVariants = {
+    hidden: { x: '100%' },
+    visible: { 
+      x: '0%', 
+      transition: { 
+        type: "tween", 
+        duration: 0.3, 
+        ease: "easeInOut" 
+      } 
+    },
+    exit: { 
+      x: '100%', 
+      transition: { 
+        type: "tween", 
+        duration: 0.2, 
+        ease: "easeInOut" 
+      } 
+    }
+  };
+
+  const itemVariants = {
+    hidden: { x: 20, opacity: 0 },
+    visible: (custom) => ({
+      x: 0,
+      opacity: 1,
+      transition: {
+        delay: 0.1 + custom * 0.05,
+        duration: 0.4,
+        ease: "easeOut"
+      }
+    })
+  };
+
+  const subcategoryVariants = {
+    hidden: { height: 0, opacity: 0 },
+    visible: { 
+      height: 'auto', 
+      opacity: 1,
+      transition: { 
+        duration: 0.3, 
+        ease: "easeOut" 
+      } 
+    }
+  };
   
   useEffect(() => {
     // Add event listener to handle escape key
@@ -86,25 +138,6 @@ const MobileMenu = ({ isOpen, onClose }) => {
     if (isOpen) {
       document.addEventListener('keydown', handleEscape);
       document.body.style.overflow = 'hidden'; // Prevent background scrolling
-      
-      // Menu animation
-      gsap.fromTo(menuRef.current,
-        { x: '100%' },
-        { x: '0%', duration: 0.3, ease: "power2.out" }
-      );
-      
-      // Items animation
-      gsap.fromTo('.menu-item',
-        { x: 20, opacity: 0 },
-        { 
-          x: 0, 
-          opacity: 1, 
-          duration: 0.4, 
-          stagger: 0.05,
-          delay: 0.2,
-          ease: "power2.out" 
-        }
-      );
     }
     
     return () => {
@@ -113,132 +146,199 @@ const MobileMenu = ({ isOpen, onClose }) => {
     };
   }, [isOpen, onClose]);
   
-  if (!isOpen) return null;
-  
   return (
-    <div 
-      className="fixed inset-0 z-50 bg-black/50"
-      onClick={onClose}
-    >
-      <div 
-        ref={menuRef}
-        className="absolute top-0 right-0 h-full w-[300px] bg-card border-l border-border shadow-xl"
-        onClick={e => e.stopPropagation()} // Prevent closing when clicking menu
-      >
-        <div className="h-full flex flex-col">
-          {/* Header */}
-          <div className="flex items-center justify-between p-4 border-b border-border">
-            <Link 
-              href="/" 
-              className="flex items-center"
-              onClick={onClose}
-            >
-              <div className="relative h-8 w-8 mr-2">
-                <Image src="/logo.png" alt="Selzio Logo" fill className="object-contain" />
-              </div>
-              <span className="text-lg font-bold text-foreground dark:text-white">
-                SELZ<span className="text-primary">I</span>O
-              </span>
-            </Link>
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={onClose}
-              className="text-muted-foreground hover:text-primary hover:bg-secondary"
-            >
-              <X className="h-6 w-6" />
-            </Button>
-          </div>
-
-          {/* Search Bar */}
-          <div className="p-4 border-b border-border">
-            <SearchBar />
-          </div>
-
-          {/* Authentication Buttons - Only when not logged in */}
-          {!isAuthenticated && (
-            <div className="p-4 flex flex-col gap-2 border-b border-border">
-              <Button 
-                className="menu-item w-full justify-start"
-                variant="outline"
-                onClick={() => {
-                  router.push('/auth/login');
-                  onClose();
-                }}
+    <AnimatePresence>
+      {isOpen && (
+        <motion.div 
+          className="fixed inset-0 z-50 bg-black/50"
+          onClick={onClose}
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+        >
+          <motion.div 
+            ref={menuRef}
+            className="absolute top-0 right-0 h-full w-full sm:w-[400px] bg-card border-l border-border shadow-xl"
+            onClick={e => e.stopPropagation()} // Prevent closing when clicking menu
+            variants={menuVariants}
+            initial="hidden"
+            animate="visible"
+            exit="exit"
+          >
+            <div className="h-full flex flex-col">
+              {/* Header */}
+              <motion.div 
+                className="flex items-center justify-between p-4 border-b border-border"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: 0.2 }}
               >
-                <LogIn className="mr-2 h-4 w-4" />
-                Login
-              </Button>
-              <Button 
-                className="menu-item w-full justify-start"
-                onClick={() => {
-                  router.push('/auth/register');
-                  onClose();
-                }}
+                <Link 
+                  href="/" 
+                  className="flex items-center"
+                  onClick={onClose}
+                >
+                  <div className="relative h-8 w-8 mr-2">
+                    <Image src="/images/logo.png" alt="Selzio Logo" fill className="object-contain" />
+                  </div>
+                  <span className="text-lg font-bold text-foreground dark:text-white">
+                    SELZ<span className="text-rose-500">I</span>O
+                  </span>
+                </Link>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={onClose}
+                  className="text-muted-foreground hover:text-primary hover:bg-secondary"
+                >
+                  <X className="h-6 w-6" />
+                </Button>
+              </motion.div>
+
+              {/* Search Bar */}
+              <motion.div 
+                className="p-4 border-b border-border"
+                initial={{ opacity: 0, y: -10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.3 }}
               >
-                <UserPlus className="mr-2 h-4 w-4" />
-                Sign Up
-              </Button>
-            </div>
-          )}
+                <SearchBar />
+              </motion.div>
 
-          {/* Navigation */}
-          <nav className="flex-1 overflow-y-auto p-4">
-            <div className="space-y-6">
-              {/* Main Navigation */}
-              <div className="space-y-2">
-                {navItems.map((item) => (
-                  <Link
-                    key={item.href}
-                    href={item.href}
-                    onClick={onClose}
-                    className={`
-                      menu-item block px-4 py-2 text-lg font-medium rounded-lg transition-colors duration-200
-                      ${pathname === item.href 
-                        ? 'text-primary bg-secondary' 
-                        : 'text-foreground hover:text-primary hover:bg-secondary'
-                      }
-                    `}
-                  >
-                    {item.name}
-                  </Link>
-                ))}
-              </div>
+              {/* Authentication Buttons - Only when not logged in */}
+              {!isAuthenticated && (
+                <motion.div 
+                  className="p-4 flex flex-col gap-2 border-b border-border"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ delay: 0.4 }}
+                >
+                  <motion.div variants={itemVariants} custom={0} initial="hidden" animate="visible">
+                    <Button 
+                      className="w-full justify-start"
+                      variant="outline"
+                      onClick={() => {
+                        router.push('/auth/login');
+                        onClose();
+                      }}
+                    >
+                      <LogIn className="mr-2 h-4 w-4" />
+                      Login
+                    </Button>
+                  </motion.div>
+                  <motion.div variants={itemVariants} custom={1} initial="hidden" animate="visible">
+                    <Button 
+                      className="w-full justify-start"
+                      onClick={() => {
+                        router.push('/auth/register');
+                        onClose();
+                      }}
+                    >
+                      <UserPlus className="mr-2 h-4 w-4" />
+                      Sign Up
+                    </Button>
+                  </motion.div>
+                </motion.div>
+              )}
 
-              {/* Subcategories by Category */}
-              <div className="space-y-4">
-                <h3 className="px-4 text-sm font-medium text-muted-foreground uppercase tracking-wider">
-                  Products
-                </h3>
-                {categories.map((categoryGroup) => (
-                  <div key={categoryGroup.category} className="mb-2 space-y-1">
-                    <div className="px-4 py-1 text-sm font-medium text-primary bg-primary/5 rounded-lg">
-                      {categoryGroup.category}
-                    </div>
-                    {categoryGroup.subcategories.map((subcategory) => (
-                      <Link
-                        key={subcategory.href}
-                        href={subcategory.href}
-                        onClick={onClose}
-                        className={`
-                          menu-item block px-6 py-1.5 text-sm rounded-lg transition-colors duration-200
-                          ${pathname === subcategory.href 
-                            ? 'text-primary bg-secondary' 
-                            : 'text-foreground hover:text-primary hover:bg-secondary'
-                          }
-                        `}
+              {/* Navigation */}
+              <nav className="flex-1 overflow-y-auto p-4">
+                <div className="space-y-6">
+                  {/* Main Navigation */}
+                  <div className="space-y-2">
+                    {navItems.map((item, index) => (
+                      <motion.div
+                        key={item.href}
+                        variants={itemVariants}
+                        custom={index}
+                        initial="hidden"
+                        animate="visible"
                       >
-                        {subcategory.name}
-                      </Link>
+                        <Link
+                          href={item.href}
+                          onClick={onClose}
+                          className={`
+                            block px-4 py-3 text-lg font-medium transition-colors duration-200
+                            ${pathname === item.href 
+                              ? 'text-primary bg-secondary' 
+                              : 'text-foreground hover:text-primary hover:bg-secondary'
+                            }
+                          `}
+                        >
+                          {item.name}
+                        </Link>
+                      </motion.div>
                     ))}
                   </div>
-                ))}
-              </div>
+
+                  {/* Subcategories by Category */}
+                  <div className="space-y-4">
+                    <motion.h3 
+                      className="px-4 text-sm font-medium text-muted-foreground uppercase tracking-wider"
+                      variants={itemVariants}
+                      custom={navItems.length}
+                      initial="hidden"
+                      animate="visible"
+                    >
+                      Products
+                    </motion.h3>
+                    {categories.map((categoryGroup, catIndex) => (
+                      <motion.div 
+                        key={categoryGroup.category} 
+                        className="mb-2"
+                        variants={itemVariants}
+                        custom={navItems.length + 1 + catIndex}
+                        initial="hidden"
+                        animate="visible"
+                      >
+                        <button
+                          onClick={() => toggleCategory(categoryGroup.category)}
+                          className="w-full px-4 py-2 text-sm font-medium text-primary bg-primary/5 flex justify-between items-center"
+                        >
+                          {categoryGroup.category}
+                          <ChevronRight 
+                            className={`h-4 w-4 transition-transform duration-200 ${
+                              expandedCategory === categoryGroup.category ? 'rotate-90' : ''
+                            }`} 
+                          />
+                        </button>
+                        <AnimatePresence>
+                          {expandedCategory === categoryGroup.category && (
+                            <motion.div
+                              variants={subcategoryVariants}
+                              initial="hidden"
+                              animate="visible"
+                              exit="hidden"
+                            >
+                              {categoryGroup.subcategories.map((subcategory) => (
+                                <Link
+                                  key={subcategory.href}
+                                  href={subcategory.href}
+                                  onClick={onClose}
+                                  className={`
+                                    block px-6 py-2 text-sm transition-colors duration-200
+                                    ${pathname === subcategory.href 
+                                      ? 'text-primary bg-secondary' 
+                                      : 'text-foreground hover:text-primary hover:bg-secondary'
+                                    }
+                                  `}
+                                >
+                                  {subcategory.name}
+                                </Link>
+                              ))}
+                            </motion.div>
+                          )}
+                        </AnimatePresence>
+                      </motion.div>
+                    ))}
+                  </div>
+                </div>
+              </nav>
             </div>
-          </nav>
-        </div>
-      </div>
-    </div>
+          </motion.div>
+        </motion.div>
+      )}
+    </AnimatePresence>
   );
 };
 

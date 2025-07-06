@@ -228,7 +228,7 @@ const CheckoutAuthDialog = ({
               <DialogHeader className="text-left space-y-1 flex-1">
                 <DialogTitle className="text-lg md:text-xl font-bold">Your Cart</DialogTitle>
                 <DialogDescription className={`text-xs md:text-sm ${!isCartVisible ? 'hidden' : ''}`}>
-                  {totalItems} {totalItems === 1 ? 'item' : 'items'} • ${grandTotal.toFixed(2)} (excluding shipping)
+                  {totalItems} {totalItems === 1 ? 'item' : 'items'} • {grandTotal.toFixed(2)} BDT (excluding shipping)
                 </DialogDescription>
               </DialogHeader>
               
@@ -280,9 +280,9 @@ const CheckoutAuthDialog = ({
                       )}
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium truncate">{item.name}</p>
+                      <p className="text-sm font-semibold truncate">{item.name}</p>
                       <p className="text-xs text-muted-foreground">Qty: {item.quantity}</p>
-                      <p className="text-sm font-semibold text-primary">${(item.price * item.quantity).toFixed(2)}</p>
+                      <p className="text-sm font-medium text-primary">{(item.price * item.quantity).toFixed(2)} BDT</p>
                     </div>
                   </div>
                 ))}
@@ -291,7 +291,7 @@ const CheckoutAuthDialog = ({
               <div className="p-4 md:p-6 pt-2 border-t space-y-2 bg-muted/80 sticky bottom-0">
                 <div className="flex justify-between">
                   <span className="text-xs md:text-sm">Subtotal</span>
-                  <span className="text-xs md:text-sm font-medium">${totalPrice.toFixed(2)}</span>
+                  <span className="text-xs md:text-sm font-medium">{totalPrice.toFixed(2)} BDT</span>
                 </div>
                 
                 {appliedCoupon && appliedCoupon.type === 'percentage' && (
@@ -300,7 +300,7 @@ const CheckoutAuthDialog = ({
                       <Tag className="h-3 w-3 mr-1" />
                       Discount ({appliedCoupon.discount * 100}%)
                     </span>
-                    <span>-${discountAmount.toFixed(2)}</span>
+                    <span>-{discountAmount.toFixed(2)} BDT</span>
                   </div>
                 )}
                 
@@ -310,7 +310,7 @@ const CheckoutAuthDialog = ({
                       <Tag className="h-3 w-3 mr-1" />
                       Discount
                     </span>
-                    <span>-${discountAmount.toFixed(2)}</span>
+                    <span>-{discountAmount.toFixed(2)} BDT</span>
                   </div>
                 )}
                 
@@ -321,7 +321,7 @@ const CheckoutAuthDialog = ({
                 
                 <div className="flex justify-between font-bold mt-2 pt-2 border-t">
                   <span className="text-sm md:text-base">Total</span>
-                  <span className="text-sm md:text-base text-primary">${grandTotal.toFixed(2)}</span>
+                  <span className="text-sm md:text-base text-primary">{grandTotal.toFixed(2)} BDT</span>
                 </div>
                 
                 <div className="text-xs text-center text-muted-foreground">

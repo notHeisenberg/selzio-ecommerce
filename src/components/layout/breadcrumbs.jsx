@@ -29,7 +29,7 @@ export function Breadcrumbs({ items = [], showHome = true, className = "" }) {
   return (
     <div 
       className={cn(
-        'bg-background sticky top-16 md:top-20 z-30 transition-all duration-300 border-b',
+        'bg-background sticky top-0 z-30 transition-all duration-300 border-b',
         shouldHide ? '-translate-y-full' : 'translate-y-0',
         scrollY > 0 ? 'shadow-sm' : '',
         className

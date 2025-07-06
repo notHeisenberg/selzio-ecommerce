@@ -13,6 +13,8 @@ import { Navbar } from "@/components/layout/navbar";
 import { FiltersBar, CategoryFilter } from "@/components/filters";
 import Link from "next/link";
 import { Eye, EyeOff } from "lucide-react";
+import { useScrollDirection } from "@/hooks/use-scroll-direction";
+import { cn } from "@/lib/utils";
 
 // Cannot use metadata in client components, would need a separate
 // metadata.js file or move this to a server component if metadata is needed
@@ -33,6 +35,7 @@ export default function StorePage() {
   const [combos, setCombos] = useState([]);
   const [loadingCombos, setLoadingCombos] = useState(true);
   const [showCombos, setShowCombos] = useState(true);
+  const { isVisible, scrollDirection } = useScrollDirection({ isNavbar: false });
 
   // Load combos
   const loadCombos = async () => {
@@ -269,7 +272,11 @@ export default function StorePage() {
 
           {/* Products Grid */}
           <div className="flex-1">
-            <div className="sticky top-16 z-10 flex flex-wrap justify-between items-center mb-4 py-2 px-1 border-b">
+            <div className={cn(
+              "sticky top-0 z-10 flex flex-wrap justify-between items-center mb-4 py-2 px-1 border-b bg-background/90 backdrop-blur-md",
+              "transition-all duration-300",
+              scrollDirection === 'down' ? '-translate-y-full' : 'translate-y-0'
+            )}>
               <p className="text-sm text-muted-foreground">
                 Showing <span className="font-medium text-foreground">{filteredProducts.length}</span> results
               </p>
