@@ -222,11 +222,6 @@ export default function ComboDetail({ comboCode }) {
     
     // Add to cart
     addToCart(comboCartItem, 1);
-    
-    toast({
-      title: "Added to Cart",
-      description: `${combo.name} has been added to your cart.`,
-    });
   };
 
   // Buy now (add to cart and redirect to checkout)
@@ -448,7 +443,7 @@ export default function ComboDetail({ comboCode }) {
             >
               <Button 
                 onClick={handleAddToCart}
-                className="flex-1 rounded-none"
+                className="flex-1 rounded-none py-4 sm:py-4 text-base font-medium w-full"
                 size="lg"
                 title="Add to Cart"
               >
@@ -457,7 +452,7 @@ export default function ComboDetail({ comboCode }) {
               <Button 
                 onClick={handleBuyNow}
                 variant="outline"
-                className="flex-1 rounded-none"
+                className="flex-1 rounded-none py-4 sm:py-4 text-base font-medium w-full"
                 size="lg"
                 title="Buy Now"
               >

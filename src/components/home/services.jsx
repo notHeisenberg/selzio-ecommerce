@@ -14,129 +14,95 @@ export function Services() {
     setMounted(true);
   }, []);
 
+  const services = [
+    {
+      id: 1,
+      title: "Free Delivery",
+      description: "Free shipping on all orders over $100",
+      icon: Truck,
+    },
+    {
+      id: 2,
+      title: "24/7 Support",
+      description: "Friendly customer support available 24/7",
+      icon: Headset,
+    },
+    {
+      id: 3,
+      title: "Secure Payment",
+      description: "100% secure and encrypted payment methods",
+      icon: Shield,
+    },
+    {
+      id: 4,
+      title: "Easy Returns",
+      description: "30-day money-back guarantee",
+      icon: RefreshCcw,
+    },
+  ];
+
   return (
-    <section className="py-20 bg-secondary/30 overflow-hidden">
+    <section className="py-20 bg-background">
       <div className="container mx-auto px-4">
+        <div className="text-center mb-16">
+          <h2 className="text-4xl font-bold mb-4">
+            Our Services
+          </h2>
+          <p className="text-muted-foreground max-w-2xl mx-auto">
+            We provide the best shopping experience with premium services tailored to your needs.
+          </p>
+        </div>
+
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 max-w-6xl mx-auto">
-          {/* Delivery Service Card */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5 }}
-            viewport={{ once: true }}
-            className="group h-full relative"
-          >
-            <div className={`p-8 rounded-xl relative z-10 h-full transition-all duration-500 
-              ${mounted && resolvedTheme === 'dark' 
-                ? 'bg-gradient-to-br from-gray-800/90 to-gray-900/70 border border-gray-700/50 shadow-[0_10px_25px_-12px_rgba(0,0,0,0.8)]' 
-                : 'bg-gradient-to-br from-white to-gray-50/90 border border-gray-200/70 shadow-[0_10px_25px_-15px_rgba(59,130,246,0.3)]'} 
-              backdrop-blur-sm
-              group-hover:-translate-y-2 
-              group-hover:shadow-[0_20px_30px_-12px_rgba(59,130,246,0.25)]
-              dark:group-hover:shadow-[0_20px_30px_-15px_rgba(0,0,0,0.9)]
-              overflow-hidden`}>
-              <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-transparent rounded-xl opacity-0 group-hover:opacity-100 transition-all duration-700"></div>
-              <div className="mb-5 bg-primary/10 rounded-full w-14 h-14 flex items-center justify-center backdrop-blur-sm
-                border border-primary/10 group-hover:border-primary/20 transition-all duration-500
-                group-hover:shadow-[0_0_15px_rgba(59,130,246,0.3)] relative z-10">
-                <Truck className="h-6 w-6 text-primary" />
+          {services.map((service, index) => (
+            <motion.div
+              key={service.id}
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              transition={{ 
+                duration: 0.5, 
+                delay: index * 0.1,
+                type: "spring",
+                stiffness: 100,
+                damping: 15
+              }}
+              viewport={{ once: true }}
+              whileHover={{
+                y: -5,
+                boxShadow: "0 10px 25px -5px rgba(0,0,0,0.1)",
+                transition: { duration: 0.2 }
+              }}
+              className="group border-2 border-gray-200 dark:border-gray-700 hover:border-black dark:hover:border-white transition-colors rounded-none h-full"
+            >
+              <div className="p-6 bg-white dark:bg-gray-900 transition-colors h-full flex flex-col">
+                {/* Icon Area */}
+                <div className="mb-6 flex justify-center">
+                  <motion.div 
+                    className="h-16 w-16 rounded-none border-2 border-black dark:border-white bg-black dark:bg-white flex items-center justify-center"
+                    whileHover={{ scale: 1.05 }}
+                    transition={{ type: "spring", stiffness: 400, damping: 17 }}
+                  >
+                    <service.icon className="h-8 w-8 text-white dark:text-black" />
+                  </motion.div>
+                </div>
+                
+                {/* Content */}
+                <div className="text-center">
+                  <h3 className="text-xl font-bold mb-3 text-black dark:text-white group-hover:underline decoration-2 underline-offset-4 transition-all">
+                    {service.title}
+                  </h3>
+                  <p className="text-muted-foreground transition-all group-hover:pl-2 duration-300">
+                    {service.description}
+                  </p>
+                </div>
+                
+                {/* Bottom Border Animation */}
+                <div className="mt-auto pt-4">
+                  <div className="w-0 h-0.5 bg-black dark:bg-white transition-all duration-300 group-hover:w-full"></div>
+                </div>
               </div>
-              <h3 className="text-xl font-bold mb-2 text-foreground relative z-10">Free Delivery</h3>
-              <p className="text-muted-foreground relative z-10">Free shipping on all orders over $100</p>
-              
-              <div className="absolute -bottom-20 -right-20 w-40 h-40 bg-primary/5 rounded-full transition-all duration-700 group-hover:scale-150 group-hover:opacity-80"></div>
-            </div>
-          </motion.div>
-
-          {/* Support Service Card */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, delay: 0.1 }}
-            viewport={{ once: true }}
-            className="group h-full relative"
-          >
-            <div className={`p-8 rounded-xl relative z-10 h-full transition-all duration-500 
-              ${mounted && resolvedTheme === 'dark' 
-                ? 'bg-gradient-to-br from-gray-800/90 to-gray-900/70 border border-gray-700/50 shadow-[0_10px_25px_-12px_rgba(0,0,0,0.8)]' 
-                : 'bg-gradient-to-br from-white to-gray-50/90 border border-gray-200/70 shadow-[0_10px_25px_-15px_rgba(59,130,246,0.3)]'} 
-              backdrop-blur-sm
-              group-hover:-translate-y-2 
-              group-hover:shadow-[0_20px_30px_-12px_rgba(59,130,246,0.25)]
-              dark:group-hover:shadow-[0_20px_30px_-15px_rgba(0,0,0,0.9)]
-              overflow-hidden`}>
-              <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-transparent rounded-xl opacity-0 group-hover:opacity-100 transition-all duration-700"></div>
-              <div className="mb-5 bg-primary/10 rounded-full w-14 h-14 flex items-center justify-center backdrop-blur-sm
-                border border-primary/10 group-hover:border-primary/20 transition-all duration-500
-                group-hover:shadow-[0_0_15px_rgba(59,130,246,0.3)] relative z-10">
-                <Headset className="h-6 w-6 text-primary" />
-              </div>
-              <h3 className="text-xl font-bold mb-2 text-foreground relative z-10">24/7 Support</h3>
-              <p className="text-muted-foreground relative z-10">Friendly customer support available 24/7</p>
-              
-              <div className="absolute -bottom-20 -right-20 w-40 h-40 bg-primary/5 rounded-full transition-all duration-700 group-hover:scale-150 group-hover:opacity-80"></div>
-            </div>
-          </motion.div>
-
-          {/* Secure Payment Card */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, delay: 0.2 }}
-            viewport={{ once: true }}
-            className="group h-full relative"
-          >
-            <div className={`p-8 rounded-xl relative z-10 h-full transition-all duration-500 
-              ${mounted && resolvedTheme === 'dark' 
-                ? 'bg-gradient-to-br from-gray-800/90 to-gray-900/70 border border-gray-700/50 shadow-[0_10px_25px_-12px_rgba(0,0,0,0.8)]' 
-                : 'bg-gradient-to-br from-white to-gray-50/90 border border-gray-200/70 shadow-[0_10px_25px_-15px_rgba(59,130,246,0.3)]'} 
-              backdrop-blur-sm
-              group-hover:-translate-y-2 
-              group-hover:shadow-[0_20px_30px_-12px_rgba(59,130,246,0.25)]
-              dark:group-hover:shadow-[0_20px_30px_-15px_rgba(0,0,0,0.9)]
-              overflow-hidden`}>
-              <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-transparent rounded-xl opacity-0 group-hover:opacity-100 transition-all duration-700"></div>
-              <div className="mb-5 bg-primary/10 rounded-full w-14 h-14 flex items-center justify-center backdrop-blur-sm
-                border border-primary/10 group-hover:border-primary/20 transition-all duration-500
-                group-hover:shadow-[0_0_15px_rgba(59,130,246,0.3)] relative z-10">
-                <Shield className="h-6 w-6 text-primary" />
-              </div>
-              <h3 className="text-xl font-bold mb-2 text-foreground relative z-10">Secure Payment</h3>
-              <p className="text-muted-foreground relative z-10">100% secure and encrypted payment methods</p>
-              
-              <div className="absolute -bottom-20 -right-20 w-40 h-40 bg-primary/5 rounded-full transition-all duration-700 group-hover:scale-150 group-hover:opacity-80"></div>
-            </div>
-          </motion.div>
-
-          {/* Returns Card */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, delay: 0.3 }}
-            viewport={{ once: true }}
-            className="group h-full relative"
-          >
-            <div className={`p-8 rounded-xl relative z-10 h-full transition-all duration-500 
-              ${mounted && resolvedTheme === 'dark' 
-                ? 'bg-gradient-to-br from-gray-800/90 to-gray-900/70 border border-gray-700/50 shadow-[0_10px_25px_-12px_rgba(0,0,0,0.8)]' 
-                : 'bg-gradient-to-br from-white to-gray-50/90 border border-gray-200/70 shadow-[0_10px_25px_-15px_rgba(59,130,246,0.3)]'} 
-              backdrop-blur-sm
-              group-hover:-translate-y-2 
-              group-hover:shadow-[0_20px_30px_-12px_rgba(59,130,246,0.25)]
-              dark:group-hover:shadow-[0_20px_30px_-15px_rgba(0,0,0,0.9)]
-              overflow-hidden`}>
-              <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-transparent rounded-xl opacity-0 group-hover:opacity-100 transition-all duration-700"></div>
-              <div className="mb-5 bg-primary/10 rounded-full w-14 h-14 flex items-center justify-center backdrop-blur-sm
-                border border-primary/10 group-hover:border-primary/20 transition-all duration-500
-                group-hover:shadow-[0_0_15px_rgba(59,130,246,0.3)] relative z-10">
-                <RefreshCcw className="h-6 w-6 text-primary" />
-              </div>
-              <h3 className="text-xl font-bold mb-2 text-foreground relative z-10">Easy Returns</h3>
-              <p className="text-muted-foreground relative z-10">30-day money-back guarantee</p>
-              
-              <div className="absolute -bottom-20 -right-20 w-40 h-40 bg-primary/5 rounded-full transition-all duration-700 group-hover:scale-150 group-hover:opacity-80"></div>
-            </div>
-          </motion.div>
+            </motion.div>
+          ))}
         </div>
       </div>
     </section>

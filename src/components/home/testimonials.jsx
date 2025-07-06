@@ -1,7 +1,7 @@
 "use client"
 
-import { useEffect, useState, useRef, useCallback } from "react";
-import { Star, StarHalf, Star as StarEmpty, Quote, ChevronLeft, ChevronRight } from "lucide-react";
+import { useState, useEffect, useRef, useCallback } from "react";
+import { Star, ChevronLeft, ChevronRight, User, Loader2, X } from "lucide-react";
 import {
   Carousel,
   CarouselContent,
@@ -9,88 +9,104 @@ import {
   CarouselNext,
   CarouselPrevious,
 } from "@/components/ui/carousel";
-import { Card, CardContent } from "@/components/ui/card";
-import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { useTheme } from "next-themes";
+import { cn } from "@/lib/utils";
+import { Avatar } from "@/components/ui/avatar";
+import { Badge } from "@/components/ui/badge";
+import { format } from "date-fns";
+import { motion, AnimatePresence } from "framer-motion";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
+import { useToast } from "@/hooks/use-toast";
 
+// More realistic testimonials with verified purchase status
 const testimonials = [
   {
     id: 1,
     name: "Sarah Johnson",
-    role: "Fashion Enthusiast",
-    image: "/images/testimonials/sarah.jpg",
+    role: "Verified Buyer",
+    verified: true,
+    date: "2023-11-15",
+    image: null,
     rating: 5,
-    text: "The quality of products at Selzio is exceptional. I've been shopping here for months and have never been disappointed. Their customer service is outstanding!",
+    text: "I ordered the minimalist watch and I'm absolutely in love with it. The quality is exceptional and it looks even better in person than in the photos. Shipping was fast and the packaging was very secure. Definitely coming back for more!",
   },
   {
     id: 2,
     name: "Michael Chen",
-    role: "Regular Customer",
-    image: "/images/testimonials/michael.jpg",
-    rating: 4.3,
-    text: "What sets Selzio apart is their attention to detail and commitment to quality. The shipping is fast, and the packaging is always perfect.",
+    role: "Verified Buyer",
+    verified: true,
+    date: "2023-12-03",
+    image: null,
+    rating: 4,
+    text: "The leather jacket I purchased exceeded my expectations in terms of quality. The fit is perfect and the material feels premium. My only small complaint is that the shipping took a bit longer than expected, but the product was worth the wait.",
   },
   {
     id: 3,
     name: "Emma Rodriguez",
-    role: "Style Blogger",
-    image: "/images/testimonials/emma.jpg",
-    rating: 3.7,
-    text: "As a fashion blogger, I'm always looking for unique pieces. Selzio consistently delivers trendy, high-quality items that my followers love.",
+    role: "Fashion Blogger",
+    verified: true,
+    date: "2024-01-20",
+    image: null,
+    rating: 5,
+    text: "As someone who reviews fashion items professionally, I can say that Selzio's collection stands out from the crowd. The attention to detail and quality control is evident in every piece I've purchased. My followers have been asking where I got these items!",
   },
   {
     id: 4,
     name: "David Lee",
-    role: "Tech Reviewer",
-    image: "/images/testimonials/david.jpg",
-    rating: 4.8,
-    text: "Selzio's electronics selection is top-notch. Fast shipping and great prices!",
+    role: "Verified Buyer",
+    verified: true,
+    date: "2024-02-05",
+    image: null,
+    rating: 4,
+    text: "The wireless earbuds I purchased have great sound quality and battery life. Customer service was also very helpful when I had questions about the features. Would definitely recommend to friends looking for good tech products.",
   },
   {
     id: 5,
     name: "Priya Patel",
-    role: "Home Decor Lover",
-    image: "/images/testimonials/priya.jpg",
-    rating: 4.0,
-    text: "Beautiful home products and excellent customer support. Highly recommend!",
+    role: "Interior Designer",
+    verified: true,
+    date: "2024-03-12",
+    image: null,
+    rating: 5,
+    text: "I've ordered several home decor items for my clients and myself. The quality is consistent and the designs are unique. What I appreciate most is how accurately the products match their online descriptions and images.",
   },
   {
     id: 6,
     name: "Lucas Smith",
-    role: "Gadget Enthusiast",
-    image: "/images/testimonials/lucas.jpg",
-    rating: 3.5,
-    text: "Good variety of gadgets. Some items could be cheaper, but overall a great experience.",
+    role: "Verified Buyer",
+    verified: false,
+    date: "2024-04-08",
+    image: null,
+    rating: 4,
+    text: "The smart watch has been a great addition to my tech collection. Good functionality and battery life. The app is intuitive and setup was easy. The only reason I'm not giving 5 stars is because the band could be more comfortable for all-day wear.",
   },
 ];
 
-function getStarIcons(rating) {
-  // Returns an array of 5 elements: 'full', 'half', or 'empty'
-  const stars = [];
-  for (let i = 0; i < 5; i++) {
-    if (rating >= i + 1) {
-      stars.push('full');
-    } else if (rating > i && rating < i + 1) {
-      stars.push('half');
-    } else {
-      stars.push('empty');
-    }
-  }
-  return stars;
-}
-
 export function Testimonials() {
   const { resolvedTheme } = useTheme();
-  const [displayRatings, setDisplayRatings] = useState(
-    testimonials.map(() => 0)
-  );
   const [api, setApi] = useState();
   const [currentPage, setCurrentPage] = useState(0);
   const intervalRef = useRef(null);
   const [isHovered, setIsHovered] = useState(false);
   const [totalPages, setTotalPages] = useState(2); // Default safe value
   const [isMounted, setIsMounted] = useState(false);
+  const { toast } = useToast();
+
+  // Review form state
+  const [reviewDialogOpen, setReviewDialogOpen] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState('');
+  
+  // Form data state
+  const [name, setName] = useState('');
+  const [email, setEmail] = useState('');
+  const [reviewText, setReviewText] = useState('');
+  const [rating, setRating] = useState(0);
+  const [localTestimonials, setLocalTestimonials] = useState([...testimonials]);
 
   // Mark component as mounted (client-side only)
   useEffect(() => {
@@ -112,7 +128,7 @@ export function Testimonials() {
     
     const calculatePages = () => {
       const visibleSlides = getVisibleSlides();
-      setTotalPages(Math.ceil(testimonials.length / visibleSlides));
+      setTotalPages(Math.ceil(localTestimonials.length / visibleSlides));
     };
     
     calculatePages();
@@ -120,34 +136,7 @@ export function Testimonials() {
     // Recalculate when window is resized
     window.addEventListener("resize", calculatePages);
     return () => window.removeEventListener("resize", calculatePages);
-  }, [isMounted, getVisibleSlides]);
-
-  // Animate rating count for each testimonial
-  useEffect(() => {
-    if (!isMounted) return;
-    
-    testimonials.forEach((testimonial, idx) => {
-      let currentStep = 0;
-      const steps = 20;
-      const stepDuration = 1000 / steps;
-      const interval = setInterval(() => {
-        currentStep++;
-        const progress = currentStep / steps;
-        const currentRating = Math.min(
-          testimonial.rating * progress,
-          testimonial.rating
-        );
-        setDisplayRatings((prev) => {
-          const updated = [...prev];
-          updated[idx] = Number(currentRating.toFixed(1));
-          return updated;
-        });
-        if (currentStep >= steps) clearInterval(interval);
-      }, stepDuration);
-      
-      return () => clearInterval(interval);
-    });
-  }, [isMounted]);
+  }, [isMounted, getVisibleSlides, localTestimonials]);
 
   // Simplify navigation - no explicit wrap needed when using duplicated content
   const handleNext = useCallback(() => {
@@ -201,13 +190,75 @@ export function Testimonials() {
     api.scrollTo(pageIndex * visibleSlides);
   }, [api, isMounted, getVisibleSlides]);
 
+  const handleReviewDialogOpen = () => {
+    setReviewDialogOpen(true);
+  };
+
+  const handleReviewDialogClose = () => {
+    setReviewDialogOpen(false);
+    resetForm();
+  };
+  
+  const resetForm = () => {
+    setName('');
+    setEmail('');
+    setReviewText('');
+    setRating(0);
+    setSubmitError('');
+  };
+
+  const handleSubmitReview = async (e) => {
+    e.preventDefault();
+    
+    // Validation
+    if (!name || !reviewText || rating === 0) {
+      setSubmitError('Please fill in all required fields and provide a rating.');
+      return;
+    }
+    
+    setIsSubmitting(true);
+    setSubmitError('');
+    
+    try {
+      // Create new testimonial
+      const newTestimonial = {
+        id: Date.now(),
+        name,
+        role: "Customer",
+        verified: false,
+        date: new Date().toISOString().split('T')[0],
+        image: null,
+        rating,
+        text: reviewText,
+      };
+      
+      // Simulate API call with timeout
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      // Add to local testimonials
+      setLocalTestimonials(prev => [newTestimonial, ...prev]);
+      
+      toast({
+        title: "Testimonial Submitted",
+        description: "Thank you for sharing your experience!",
+      });
+      
+      handleReviewDialogClose();
+    } catch (error) {
+      setSubmitError('An error occurred. Please try again.');
+      console.error('Error submitting testimonial:', error);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   // Don't render carousel on server
   if (!isMounted) {
     return (
       <section className="py-20 bg-background">
         <div className="container mx-auto px-4">
           <div className="text-center mb-16">
-            <h2 className="text-4xl font-bold mb-4 bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent dark:from-white dark:to-gray-400">
+            <h2 className="text-4xl font-bold mb-4">
               What Our Customers Say
             </h2>
             <p className="text-muted-foreground max-w-2xl mx-auto">
@@ -226,12 +277,20 @@ export function Testimonials() {
     <section className="py-20 bg-background">
       <div className="container mx-auto px-4">
         <div className="text-center mb-16">
-          <h2 className="text-4xl font-bold mb-4 bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent dark:from-white dark:to-gray-400">
+          <h2 className="text-4xl font-bold mb-4">
             What Our Customers Say
           </h2>
-          <p className="text-muted-foreground max-w-2xl mx-auto">
+          <p className="text-muted-foreground max-w-2xl mx-auto mb-8">
             Don't just take our word for it - hear from our satisfied customers about their shopping experience.
           </p>
+          <Button 
+            variant="outline" 
+            size="sm" 
+            className="rounded-none border-2 border-black dark:border-white bg-black text-white dark:bg-white dark:text-black hover:bg-white hover:text-black dark:hover:bg-black dark:hover:text-white uppercase tracking-wider font-bold"
+            onClick={handleReviewDialogOpen}
+          >
+            Share Your Experience
+          </Button>
         </div>
         <Carousel
           className="w-full max-w-6xl mx-auto"
@@ -244,145 +303,91 @@ export function Testimonials() {
           }}
         >
           <CarouselContent className="-mx-2">
-            {testimonials.map((testimonial, idx) => (
+            {localTestimonials.map((testimonial, index) => (
               <CarouselItem
                 key={testimonial.id}
                 className="basis-full md:basis-1/2 lg:basis-1/3 px-2"
               >
-                <div className="p-1 h-full">
-                  <div className="h-full relative group">
-                    {/* Background gradient effect */}
-                    <div className={`absolute inset-0 rounded-2xl opacity-80 transition-opacity duration-500 group-hover:opacity-100
-                      ${resolvedTheme === 'dark'
-                        ? 'bg-gradient-to-br from-gray-800 via-gray-800 to-gray-900/80'
-                        : 'bg-gradient-to-br from-white via-white to-violet-50'
-                      }`}
-                    />
-                    
-                    {/* Glass morphism card */}
-                    <div className={`relative h-full rounded-2xl p-6 overflow-hidden transition-all duration-500 
-                      ${resolvedTheme === 'dark'
-                        ? 'bg-gray-800/80 backdrop-blur-sm border border-gray-700/40 group-hover:shadow-[0_15px_35px_rgba(0,0,0,0.4)] group-hover:border-gray-600/50 group-hover:bg-gray-800/90'
-                        : 'bg-white/80 backdrop-blur-sm border border-white/40 group-hover:shadow-[0_15px_35px_rgb(124,58,237,0.12)] group-hover:border-violet-100/80 group-hover:bg-white/90'
-                      }
-                      group-hover:translate-y-[-5px]`}>
-                      
-                      {/* Decorative elements */}
-                      <div className={`absolute -top-12 -right-12 w-24 h-24 rounded-full blur-xl transition-all duration-700 ease-in-out group-hover:scale-150 group-hover:rotate-45 
-                        ${resolvedTheme === 'dark'
-                          ? 'bg-gradient-to-br from-blue-500/10 to-blue-400/5 group-hover:from-blue-500/20 group-hover:to-blue-400/10'
-                          : 'bg-gradient-to-br from-violet-200/20 to-violet-100/30 group-hover:from-violet-200/30 group-hover:to-violet-100/40'
-                        }`}></div>
-                      <div className={`absolute -bottom-8 -left-8 w-20 h-20 rounded-full blur-lg transition-all duration-700 ease-in-out group-hover:scale-150
-                        ${resolvedTheme === 'dark'
-                          ? 'bg-gradient-to-tr from-blue-600/10 to-blue-500/5 group-hover:from-blue-600/20 group-hover:to-blue-500/10'
-                          : 'bg-gradient-to-tr from-amber-200/20 to-amber-100/30 group-hover:from-amber-200/30 group-hover:to-amber-100/40'
-                        }`}></div>
-                      
-                      {/* Header with quote and rating */}
-                      <div className="flex justify-between items-center mb-4 relative">
-                        <div className={`h-10 w-10 rounded-full flex items-center justify-center shadow-sm transition-all duration-300 group-hover:rotate-[360deg] group-hover:shadow-md
-                          ${resolvedTheme === 'dark'
-                            ? 'bg-gradient-to-br from-gray-700 to-gray-800 border border-gray-600/50 group-hover:border-gray-500/80'
-                            : 'bg-gradient-to-br from-violet-100 to-violet-50 border border-violet-200/50 group-hover:border-violet-300/80'
-                          }`}>
-                          <Quote className={`h-5 w-5 group-hover:scale-110 transition-transform duration-500
-                            ${resolvedTheme === 'dark' ? 'text-blue-400' : 'text-violet-600'}`} /> 
-                        </div>
-                        <div className={`flex items-center px-3 py-1 rounded-full shadow-sm transition-all duration-300 group-hover:shadow-md 
-                          ${resolvedTheme === 'dark'
-                            ? 'bg-gray-700/70 border border-gray-600/50 group-hover:bg-gray-700/90 group-hover:border-gray-500/70'
-                            : 'bg-white/70 border border-violet-50 group-hover:bg-white/90 group-hover:border-violet-200/50'
-                          }`}>
-                          <span className={`text-lg font-bold mr-2 transition-all duration-500 bg-clip-text text-transparent
-                            ${resolvedTheme === 'dark'
-                              ? 'bg-gradient-to-r from-blue-400 to-blue-300 group-hover:from-blue-300 group-hover:to-blue-200'
-                              : 'bg-gradient-to-r from-amber-600 to-amber-400 group-hover:from-amber-500 group-hover:to-amber-300'
-                            }`}>
-                            {displayRatings[idx].toFixed(1)}
-                          </span>
-                          <div className="flex">
-                            {getStarIcons(displayRatings[idx]).map((type, i) =>
-                              type === 'full' ? (
-                                <Star key={i} className={`h-4 w-4 transition-transform duration-300 group-hover:scale-110
-                                  ${resolvedTheme === 'dark'
-                                    ? 'fill-blue-400 text-blue-400 group-hover:fill-blue-300'
-                                    : 'fill-amber-400 text-amber-400 group-hover:fill-amber-300'
-                                  }`} style={{ transitionDelay: `${i * 50}ms` }} />
-                              ) : type === 'half' ? (
-                                <StarHalf key={i} className={`h-4 w-4 transition-transform duration-300 group-hover:scale-110
-                                  ${resolvedTheme === 'dark'
-                                    ? 'fill-blue-400 text-blue-400 group-hover:fill-blue-300'
-                                    : 'fill-amber-400 text-amber-400 group-hover:fill-amber-300'
-                                  }`} style={{ transitionDelay: `${i * 50}ms` }} />
-                              ) : (
-                                <StarEmpty key={i} className={`h-4 w-4 transition-transform duration-300 group-hover:scale-110
-                                  ${resolvedTheme === 'dark'
-                                    ? 'text-gray-600 group-hover:text-gray-500'
-                                    : 'text-gray-200 group-hover:text-gray-300'
-                                  }`} style={{ transitionDelay: `${i * 50}ms` }} />
-                              )
+                <motion.div 
+                  className="group border-2 border-gray-200 dark:border-gray-700 hover:border-black dark:hover:border-white transition-colors rounded-none h-full"
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ 
+                    opacity: 1, 
+                    y: 0,
+                    transition: { 
+                      delay: index * 0.05, 
+                      type: "spring",
+                      stiffness: 100,
+                      damping: 15
+                    }
+                  }}
+                  whileHover={{
+                    y: -3,
+                    boxShadow: "0 10px 25px -5px rgba(0,0,0,0.1)",
+                    transition: { duration: 0.2 }
+                  }}
+                >
+                  {/* Review header with user info */}
+                  <div className="p-5 bg-white dark:bg-gray-900 transition-colors h-full flex flex-col">
+                    <div className="flex justify-between items-start mb-4">
+                      <div className="flex items-center">
+                        <motion.div whileHover={{ scale: 1.1 }} transition={{ type: "spring", stiffness: 400, damping: 17 }}>
+                          <Avatar className="h-10 w-10 mr-3 rounded-none border-2 border-black dark:border-white">
+                            <div className="bg-black dark:bg-white flex items-center justify-center h-full w-full text-white dark:text-black font-medium">
+                              {testimonial.name?.charAt(0).toUpperCase() || '?'}
+                            </div>
+                          </Avatar>
+                        </motion.div>
+                        <div>
+                          <div className="flex items-center">
+                            <h4 className="font-bold text-black dark:text-white">{testimonial.name}</h4>
+                            {testimonial.verified && (
+                              <Badge variant="outline" className="ml-2 border-green-600 text-green-600 dark:border-green-400 dark:text-green-400 uppercase text-xs rounded-none">
+                                Verified
+                              </Badge>
                             )}
+                          </div>
+                          <div className="flex mt-0.5">
+                            <motion.div 
+                              className="flex"
+                              initial={{ opacity: 0, x: -20 }}
+                              animate={{ opacity: 1, x: 0 }}
+                              transition={{ delay: index * 0.05 + 0.1, staggerChildren: 0.05 }}
+                            >
+                              {[...Array(5)].map((_, i) => (
+                                <motion.div
+                                  key={i}
+                                  initial={{ opacity: 0, y: -10 }}
+                                  animate={{ opacity: 1, y: 0 }}
+                                  transition={{ delay: i * 0.05 }}
+                                >
+                                  <Star
+                                    className={`h-3.5 w-3.5 ${i < testimonial.rating ? 'fill-amber-400 text-amber-400' : 'text-muted-foreground'}`}
+                                  />
+                                </motion.div>
+                              ))}
+                            </motion.div>
+                            <span className="text-xs text-muted-foreground ml-2">
+                              {testimonial.date && format(new Date(testimonial.date), 'MMM d, yyyy')}
+                            </span>
                           </div>
                         </div>
                       </div>
-                      
-                      {/* Testimonial Text */}
-                      <p className={`text-base leading-relaxed mb-4 flex-grow relative z-10 transition-colors duration-500
-                        ${resolvedTheme === 'dark'
-                          ? 'text-gray-300 group-hover:text-gray-200'
-                          : 'text-gray-600 group-hover:text-gray-700'
-                        }`}>
-                        <span className={`absolute -left-4 top-0 text-4xl font-serif transition-colors duration-500
-                          ${resolvedTheme === 'dark'
-                            ? 'text-blue-500/20 group-hover:text-blue-400/30'
-                            : 'text-violet-200/40 group-hover:text-violet-300/50'
-                          }`}>"</span>
-                        {testimonial.text}
-                        <span className={`absolute -bottom-4 right-0 text-4xl font-serif transition-colors duration-500
-                          ${resolvedTheme === 'dark'
-                            ? 'text-blue-500/20 group-hover:text-blue-400/30'
-                            : 'text-violet-200/40 group-hover:text-violet-300/50'
-                          }`}>"</span>
+                    </div>
+                    
+                    {/* Review content */}
+                    <div className="mb-4 mt-1 pl-0 transition-all group-hover:pl-2 duration-300 flex-grow">
+                      <p className="text-muted-foreground">{testimonial.text}</p>
+                    </div>
+                    
+                    {/* Review role */}
+                    <div className="mt-auto pt-3 border-t border-gray-100 dark:border-gray-800">
+                      <p className="text-xs text-muted-foreground">
+                        <span className="font-medium">{testimonial.role}</span>
                       </p>
-                      
-                      {/* Customer Info */}
-                      <div className={`flex items-center gap-3 mt-auto pt-3 relative transition-colors duration-300 border-t
-                        ${resolvedTheme === 'dark'
-                          ? 'border-gray-700 group-hover:border-gray-600'
-                          : 'border-gray-100 group-hover:border-violet-50'
-                        }`}>
-                        <div className={`h-10 w-10 rounded-full overflow-hidden bg-gray-200 ring-2 shadow-md transition-all duration-500 group-hover:shadow-lg group-hover:scale-105
-                          ${resolvedTheme === 'dark'
-                            ? 'ring-gray-700 group-hover:ring-gray-600'
-                            : 'ring-white group-hover:ring-violet-100'
-                          }`}>
-                          <img
-                            src={testimonial.image}
-                            alt={testimonial.name}
-                            className="h-full w-full object-cover object-center transition-transform duration-700 ease-out group-hover:scale-110"
-                          />
-                        </div>
-                        <div className="transform transition-transform duration-300 group-hover:translate-x-1">
-                          <h4 className={`font-semibold text-sm transition-colors duration-300
-                            ${resolvedTheme === 'dark'
-                              ? 'text-gray-200 group-hover:text-blue-300'
-                              : 'text-gray-800 group-hover:text-violet-800'
-                            }`}>
-                            {testimonial.name}
-                          </h4>
-                          <p className={`text-xs transition-colors duration-300
-                            ${resolvedTheme === 'dark'
-                              ? 'text-blue-400 group-hover:text-blue-300'
-                              : 'text-violet-600 group-hover:text-violet-700'
-                            }`}>
-                            {testimonial.role}
-                          </p>
-                        </div>
-                      </div>
                     </div>
                   </div>
-                </div>
+                </motion.div>
               </CarouselItem>
             ))}
           </CarouselContent>
@@ -393,30 +398,20 @@ export function Testimonials() {
             <div className="flex items-center gap-6">
               <Button
                 onClick={handlePrev}
-                className={`h-10 w-10 rounded-full flex items-center justify-center transition-all duration-300 shadow-sm 
-                  hover:scale-110 hover:-translate-x-1
-                  ${resolvedTheme === 'dark'
-                    ? 'bg-gray-800/80 backdrop-blur-sm border border-gray-700 text-gray-300 hover:bg-gray-700 hover:border-gray-600 hover:shadow-md hover:text-white'
-                    : 'bg-white/80 backdrop-blur-sm border border-violet-100 text-violet-600 hover:bg-violet-50 hover:border-violet-200 hover:shadow-md'
-                  }`}
+                className="rounded-none border-2 border-black dark:border-white hover:bg-black hover:text-white dark:hover:bg-white dark:hover:text-black"
                 variant="outline"
                 size="icon"
               >
-                <ChevronLeft className="h-5 w-5 transition-transform duration-300" />
+                <ChevronLeft className="h-5 w-5" />
               </Button>
               
               <Button
                 onClick={handleNext}
-                className={`h-10 w-10 rounded-full flex items-center justify-center transition-all duration-300 shadow-sm 
-                  hover:scale-110 hover:translate-x-1
-                  ${resolvedTheme === 'dark'
-                    ? 'bg-gray-800/80 backdrop-blur-sm border border-gray-700 text-gray-300 hover:bg-gray-700 hover:border-gray-600 hover:shadow-md hover:text-white'
-                    : 'bg-white/80 backdrop-blur-sm border border-violet-100 text-violet-600 hover:bg-violet-50 hover:border-violet-200 hover:shadow-md'
-                  }`}
+                className="rounded-none border-2 border-black dark:border-white hover:bg-black hover:text-white dark:hover:bg-white dark:hover:text-black"
                 variant="outline"
                 size="icon"
               >
-                <ChevronRight className="h-5 w-5 transition-transform duration-300" />
+                <ChevronRight className="h-5 w-5" />
               </Button>
             </div>
             
@@ -427,14 +422,10 @@ export function Testimonials() {
                   key={idx}
                   onClick={() => scrollToPage(idx)}
                   className={cn(
-                    "h-2.5 rounded-full transition-all duration-300 shadow-sm",
+                    "h-2.5 rounded-none transition-all duration-300",
                     currentPage === idx
-                      ? resolvedTheme === 'dark'
-                        ? "bg-gradient-to-r from-blue-500 to-blue-400 w-10"
-                        : "bg-gradient-to-r from-violet-600 to-violet-500 w-10"
-                      : resolvedTheme === 'dark'
-                        ? "bg-gray-700 border border-gray-600 w-2.5 hover:bg-gray-600"
-                        : "bg-white border border-violet-100 w-2.5 hover:bg-violet-50"
+                      ? "bg-black dark:bg-white w-10"
+                      : "bg-gray-200 dark:bg-gray-700 w-2.5 hover:bg-gray-300 dark:hover:bg-gray-600"
                   )}
                   aria-label={`Go to page ${idx + 1}`}
                 />
@@ -443,6 +434,174 @@ export function Testimonials() {
           </div>
         </Carousel>
       </div>
+
+      {/* Review Dialog with Form */}
+      <Dialog open={reviewDialogOpen} onOpenChange={setReviewDialogOpen}>
+        <DialogContent className="sm:max-w-[500px] max-h-[85vh] rounded-none border-2 border-black dark:border-white">
+          <DialogHeader className="border-b-2 border-black dark:border-white pb-3">
+            <DialogTitle className="text-lg uppercase tracking-wider font-bold">Share Your Experience</DialogTitle>
+          </DialogHeader>
+          
+          <AnimatePresence mode="wait">
+            <motion.form 
+              onSubmit={handleSubmitReview} 
+              className="space-y-5 mt-5 overflow-y-auto pr-1" 
+              style={{ maxHeight: "calc(85vh - 100px)" }}
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.2 }}
+            >
+              {/* Rating Selection */}
+              <div className="border-l-4 border-black dark:border-white pl-3 py-1">
+                <Label htmlFor="rating" className="text-sm font-bold uppercase tracking-wide">Rating*</Label>
+                <motion.div 
+                  className="flex items-center gap-1 mt-3"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ delay: 0.1 }}
+                >
+                  {[1, 2, 3, 4, 5].map((value) => (
+                    <motion.button
+                      key={value}
+                      type="button"
+                      onClick={() => setRating(value)}
+                      className="focus:outline-none"
+                      whileHover={{ scale: 1.1 }}
+                      whileTap={{ scale: 0.9 }}
+                      initial={{ scale: 0.9 }}
+                      animate={{ 
+                        scale: value <= rating ? 1.1 : 1,
+                        transition: { duration: 0.2 }
+                      }}
+                    >
+                      <Star
+                        className={`h-7 w-7 transition-all ${
+                          value <= rating ? 'fill-amber-400 text-amber-400' : 'text-muted-foreground'
+                        }`}
+                      />
+                    </motion.button>
+                  ))}
+                  <motion.span 
+                    className="ml-2 text-amber-500 dark:text-amber-400 text-sm font-medium"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: rating > 0 ? 1 : 0 }}
+                    transition={{ duration: 0.2 }}
+                  >
+                    {rating === 1 && "Poor"}
+                    {rating === 2 && "Fair"}
+                    {rating === 3 && "Good"}
+                    {rating === 4 && "Very Good"}
+                    {rating === 5 && "Excellent"}
+                  </motion.span>
+                </motion.div>
+              </div>
+              
+              {/* Name */}
+              <motion.div
+                initial={{ opacity: 0, y: 5 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.2 }}
+                className="border-l-4 border-black dark:border-white pl-3 py-1"
+              >
+                <Label htmlFor="name" className="text-sm font-bold uppercase tracking-wide">Your Name*</Label>
+                <Input 
+                  id="name"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  placeholder="Enter your name"
+                  className="mt-2 rounded-none border-2 border-gray-300 dark:border-gray-600 hover:border-black dark:hover:border-white focus:border-black dark:focus:border-white focus:ring-0 transition-colors"
+                  required
+                />
+              </motion.div>
+              
+              {/* Email (Optional) */}
+              <motion.div
+                initial={{ opacity: 0, y: 5 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.3 }}
+                className="border-l-4 border-transparent"
+              >
+                <Label htmlFor="email" className="text-sm font-bold uppercase tracking-wide">Your Email (Optional)</Label>
+                <Input 
+                  id="email"
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="Enter your email"
+                  className="mt-2 rounded-none border-2 border-gray-300 dark:border-gray-600 hover:border-black dark:hover:border-white focus:border-black dark:focus:border-white focus:ring-0 transition-colors"
+                />
+                <p className="text-xs text-muted-foreground mt-1">
+                  Your email will not be published.
+                </p>
+              </motion.div>
+              
+              {/* Review Text */}
+              <motion.div
+                initial={{ opacity: 0, y: 5 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.4 }}
+                className="border-l-4 border-black dark:border-white pl-3 py-1"
+              >
+                <Label htmlFor="review" className="text-sm font-bold uppercase tracking-wide">Your Experience*</Label>
+                <Textarea 
+                  id="review"
+                  value={reviewText}
+                  onChange={(e) => setReviewText(e.target.value)}
+                  placeholder="Share your experience with our products or services..."
+                  rows={4}
+                  className="mt-2 rounded-none border-2 border-gray-300 dark:border-gray-600 hover:border-black dark:hover:border-white focus:border-black dark:focus:border-white focus:ring-0 transition-colors resize-none"
+                  required
+                />
+              </motion.div>
+              
+              {/* Error Message */}
+              {submitError && (
+                <motion.div 
+                  className="bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 border-l-4 border-red-500 dark:border-red-400 p-3 text-sm"
+                  initial={{ opacity: 0, scaleY: 0, originY: 0 }}
+                  animate={{ opacity: 1, scaleY: 1 }}
+                  transition={{ duration: 0.2 }}
+                >
+                  {submitError}
+                </motion.div>
+              )}
+              
+              {/* Submit Button */}
+              <motion.div 
+                className="flex justify-end gap-3 pt-2 border-t-2 border-gray-200 dark:border-gray-700 mt-6"
+                initial={{ opacity: 0, y: 5 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.6 }}
+              >
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={handleReviewDialogClose}
+                  className="rounded-none border-2 border-gray-300 dark:border-gray-600 hover:border-black dark:hover:border-white hover:bg-transparent"
+                >
+                  CANCEL
+                </Button>
+                <Button 
+                  type="submit"
+                  size="sm"
+                  disabled={isSubmitting}
+                  className="rounded-none bg-black hover:bg-black/80 text-white dark:bg-white dark:text-black dark:hover:bg-white/80 uppercase tracking-wider border-2 border-black dark:border-white font-bold"
+                >
+                  {isSubmitting ? (
+                    <>
+                      <Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" />
+                      Submitting...
+                    </>
+                  ) : (
+                    'Submit'
+                  )}
+                </Button>
+              </motion.div>
+            </motion.form>
+          </AnimatePresence>
+        </DialogContent>
+      </Dialog>
     </section>
   );
 } 

@@ -573,9 +573,9 @@ export default function CartPage() {
                             {couponError}
                           </motion.p>
                         )}
-                        <p className="text-xs text-muted-foreground mt-1">
+                        {/* <p className="text-xs text-muted-foreground mt-1">
                           Try "WELCOME10" for 10% off or "FREESHIP" for free shipping
-                        </p>
+                        </p> */}
                       </div>
                     )}
                   </CardContent>

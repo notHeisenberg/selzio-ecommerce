@@ -538,9 +538,9 @@ const CartDrawer = () => {
                                 {couponError}
                               </motion.p>
                             )}
-                            <p className="text-xs text-muted-foreground">
+                            {/* <p className="text-xs text-muted-foreground">
                               Try WELCOME10 for 10% off
-                            </p>
+                            </p> */}
                             <button
                               onClick={() => setShowCouponInput(false)}
                               className="text-xs text-muted-foreground hover:text-foreground"
