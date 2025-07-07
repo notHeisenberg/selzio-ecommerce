@@ -20,77 +20,6 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 
-// Define trusted domains for multi-platform deployment
-const TRUSTED_DOMAINS = [
-  'https://selzio-ecommerce.vercel.app',
-  'https://selzio-ecommerce.netlify.app',
-  // Add localhost for development
-  'http://localhost:3000'
-];
-
-// Helper function to determine if we're in development mode
-const isDevelopment = () => {
-  if (typeof window === 'undefined') return false;
-  return window.location.hostname === 'localhost';
-};
-
-// Helper function to determine the best redirect URL based on current domain
-const getBestRedirectUrl = (redirectUrl) => {
-  if (!redirectUrl) return '/checkout';
-  
-  // If it's already a relative URL, use as is
-  if (redirectUrl.startsWith('/')) return redirectUrl;
-  
-  // Special case for development mode
-  if (isDevelopment()) {
-    // If URL is from production domains, convert to localhost equivalent
-    for (const domain of TRUSTED_DOMAINS) {
-      if (redirectUrl.startsWith(domain)) {
-        try {
-          const url = new URL(redirectUrl);
-          return `http://localhost:3000${url.pathname}${url.search}${url.hash}`;
-        } catch (e) {
-          console.error("Error parsing redirect URL:", e);
-        }
-      }
-    }
-    
-    // If not from trusted domain but is still absolute, use pathname only
-    if (redirectUrl.startsWith('http')) {
-      try {
-        const url = new URL(redirectUrl);
-        return url.pathname || '/checkout';
-      } catch (e) {
-        console.error("Error extracting pathname:", e);
-        return '/checkout';
-      }
-    }
-  }
-  
-  // If it's an absolute URL matching the current domain, use as is
-  if (typeof window !== 'undefined' && redirectUrl.startsWith(window.location.origin)) {
-    return redirectUrl;
-  }
-  
-  // If it's from one of our trusted domains but not the current one,
-  // extract the path and append to current domain
-  if (typeof window !== 'undefined' && !isDevelopment()) {
-    try {
-      for (const domain of TRUSTED_DOMAINS) {
-        if (redirectUrl.startsWith(domain)) {
-          const url = new URL(redirectUrl);
-          return `${window.location.origin}${url.pathname}${url.search}${url.hash}`;
-        }
-      }
-    } catch (e) {
-      console.error("Error parsing redirect URL:", e);
-    }
-  }
-  
-  // Default fallback
-  return redirectUrl;
-};
-
 const CheckoutAuthDialog = ({
   open,
   onOpenChange,
@@ -160,16 +89,13 @@ const CheckoutAuthDialog = ({
         } else {
           if (onOpenChange) onOpenChange(false);
           
-          // Get the best redirect URL for the current domain
-          const bestRedirectUrl = getBestRedirectUrl(fullRedirectUrl);
-          
           // Handle redirection to the correct URL (full URL or relative path)
-          if (bestRedirectUrl.startsWith('http')) {
+          if (fullRedirectUrl.startsWith('http')) {
             // For absolute URLs, use window.location.href
-            window.location.href = bestRedirectUrl;
+            window.location.href = fullRedirectUrl;
           } else {
             // For relative URLs, use Next.js router
-            router.push(bestRedirectUrl);
+            router.push(fullRedirectUrl);
           }
         }
       }, 1500); // Longer delay to ensure auth state is fully updated
@@ -224,24 +150,11 @@ const CheckoutAuthDialog = ({
       sessionStorage.setItem('appliedCoupon', JSON.stringify(appliedCoupon));
     }
     
-    // Store both relative and absolute redirect URLs for more robust handling
-    // The auth hook will prioritize intended_redirect (full URL) over auth_redirect
-    sessionStorage.setItem('intended_redirect', fullRedirectUrl);
+    // Store the full checkout redirect URL for social auth flows
+    sessionStorage.setItem('auth_redirect', fullRedirectUrl);
     
-    // In development mode, ensure we're using localhost URLs
-    if (isDevelopment() && fullRedirectUrl.startsWith('http') && !fullRedirectUrl.startsWith('http://localhost')) {
-      try {
-        const url = new URL(fullRedirectUrl);
-        const devUrl = `http://localhost:3000${url.pathname}${url.search}${url.hash}`;
-        sessionStorage.setItem('intended_redirect', devUrl);
-      } catch (e) {
-        console.error("Error converting to development URL:", e);
-      }
-    }
-    
-    // Use a relative redirect URL as a fallback
-    const relativeUrl = redirectUrl.startsWith('/') ? redirectUrl : '/checkout';
-    sessionStorage.setItem('auth_redirect', relativeUrl);
+    // Also store in a cookie that can be accessed by the server
+    document.cookie = `auth_redirect=${encodeURIComponent(fullRedirectUrl)};path=/;max-age=300;SameSite=Lax${window.location.protocol === 'https:' ? ';Secure' : ''}`;
     
     // Force refresh the authentication token for API requests
     if (typeof window !== 'undefined') {
@@ -253,6 +166,7 @@ const CheckoutAuthDialog = ({
     
     // Set flag to monitor auth state for redirect
     setProcessingRedirect(true);
+    
   };
   
   // Handle login
@@ -315,22 +229,11 @@ const CheckoutAuthDialog = ({
   // Get the base URL dynamically for proper redirects in production
   useEffect(() => {
     if (typeof window !== 'undefined') {
-      // For NextAuth, we need to use a relative URL for proper handling
-      // We'll still store the full URL for our custom handling after auth
-      const baseUrl = isDevelopment() ? 'http://localhost:3000' : window.location.origin;
-      
-      // Get the best redirect URL for the current domain
-      const bestRedirectUrl = getBestRedirectUrl(redirectUrl);
-      
-      // If it's already an absolute URL, use as is
-      const fullUrl = bestRedirectUrl.startsWith('http') 
-        ? bestRedirectUrl 
-        : `${baseUrl}${bestRedirectUrl.startsWith('/') ? '' : '/'}${bestRedirectUrl}`;
-      
+      // Use window.location.origin to get the current domain (works in both dev and production)
+      const baseUrl = window.location.origin;
+      // If the redirectUrl already has a protocol/hostname, use as is, otherwise prepend the baseUrl
+      const fullUrl = redirectUrl.startsWith('http') ? redirectUrl : `${baseUrl}${redirectUrl.startsWith('/') ? '' : '/'}${redirectUrl}`;
       setFullRedirectUrl(fullUrl);
-      
-      // Always store the intended redirect URL for NextAuth's redirect callback to use
-      window.sessionStorage.setItem('intended_redirect', fullUrl);
     }
   }, [redirectUrl]);
 
@@ -492,29 +395,10 @@ const CheckoutAuthDialog = ({
                   // Set processing state to show loading UI
                   setProcessingRedirect(true);
                   
-                  // Store both the full URL and relative URL for robust redirect handling
-                  if (isDevelopment() && fullRedirectUrl.startsWith('http') && !fullRedirectUrl.startsWith('http://localhost')) {
-                    try {
-                      // Convert any production URLs to localhost for development
-                      const url = new URL(fullRedirectUrl);
-                      const devUrl = `http://localhost:3000${url.pathname}${url.search}${url.hash}`;
-                      sessionStorage.setItem('intended_redirect', devUrl);
-                    } catch (e) {
-                      sessionStorage.setItem('intended_redirect', fullRedirectUrl);
-                    }
-                  } else {
-                    sessionStorage.setItem('intended_redirect', fullRedirectUrl);
-                  }
-                  
-                  // Always store a relative URL as fallback
-                  const relativeUrl = redirectUrl.startsWith('/') ? redirectUrl : '/checkout';
-                  sessionStorage.setItem('auth_redirect', relativeUrl);
-                  
                   // No setTimeout needed - just let the useEffect handle redirection
                   // when auth state changes
                 }}
-                // For NextAuth signIn, get the best URL format for the current environment
-                redirectUrl={getBestRedirectUrl(redirectUrl)}
+                redirectUrl={fullRedirectUrl}
                 className="mb-4"
                 compact={true}
               />

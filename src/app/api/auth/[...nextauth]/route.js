@@ -2,78 +2,13 @@ import NextAuth from "next-auth";
 import GoogleProvider from "next-auth/providers/google";
 import FacebookProvider from "next-auth/providers/facebook";
 import CredentialsProvider from "next-auth/providers/credentials";
-import { apiBaseUrl } from "@/lib/config";
+import { apiBaseUrl, appBaseUrl } from "@/lib/config";
 
 // Use the fixed API URL from config.js instead of directly using env variable
 const API_URL = apiBaseUrl;
 
-// Helper function to determine if we're in development mode
-const isDevelopment = () => {
-  return process.env.NODE_ENV === 'development';
-};
-
-// Helper function to determine the base URL based on environment
-const getBaseUrl = () => {
-  // For development, always use localhost
-  if (isDevelopment()) {
-    return 'http://localhost:3000';
-  }
-  
-  // For server-side rendering, trust the NEXTAUTH_URL environment variable first
-  if (process.env.NEXTAUTH_URL) {
-    return process.env.NEXTAUTH_URL;
-  }
-  
-  // Check for platform-specific URLs
-  if (process.env.NEXTAUTH_VERCEL_URL) {
-    return process.env.NEXTAUTH_VERCEL_URL;
-  }
-  
-  if (process.env.NEXTAUTH_NETLIFY_URL) {
-    return process.env.NEXTAUTH_NETLIFY_URL;
-  }
-  
-  // For Vercel deployments, use the VERCEL_URL
-  if (process.env.VERCEL_URL) {
-    return `https://${process.env.VERCEL_URL}`;
-  }
-  
-  // For Netlify deployments
-  if (process.env.NETLIFY_URL || process.env.URL) {
-    return process.env.NETLIFY_URL || process.env.URL;
-  }
-  
-  // Fallback for local development
-  return process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000';
-};
-
-// Get list of trusted domains for multi-domain setup (Vercel + Netlify)
-const getTrustedDomains = () => {
-  // Start with hard-coded production domains
-  const trustedDomains = [
-    'https://selzio-ecommerce.vercel.app',
-    'https://selzio-ecommerce.netlify.app',
-  ];
-  
-  // Always add localhost for development
-  trustedDomains.push('http://localhost:3000');
-  
-  // Add environment-specific URLs if available
-  if (process.env.NEXTAUTH_VERCEL_URL) {
-    trustedDomains.push(process.env.NEXTAUTH_VERCEL_URL);
-  }
-  
-  if (process.env.NEXTAUTH_NETLIFY_URL) {
-    trustedDomains.push(process.env.NEXTAUTH_NETLIFY_URL);
-  }
-  
-  if (process.env.NEXT_PUBLIC_SITE_URL) {
-    trustedDomains.push(process.env.NEXT_PUBLIC_SITE_URL);
-  }
-  
-  // Filter out duplicates and return unique domains
-  return [...new Set(trustedDomains)];
-};
+// Get the production URL from environment variables or config
+const NEXTAUTH_URL = appBaseUrl || process.env.NEXTAUTH_URL || process.env.VERCEL_URL || '';
 
 export const authOptions = {
   providers: [
@@ -156,6 +91,12 @@ export const authOptions = {
               console.log("Social auth successful:", data.user.email);
               token.accessToken = data.token;
               token.user = data.user;
+              
+              // Store the redirect URL in the token if available
+              const redirectUrl = data.redirectUrl || token.redirectUrl;
+              if (redirectUrl) {
+                token.redirectUrl = redirectUrl;
+              }
             } else {
               console.error("Social auth API error:", data.error);
               // Set token with minimal info to prevent undefined errors
@@ -190,6 +131,11 @@ export const authOptions = {
         session.user = token.user;
         session.accessToken = token.accessToken;
         
+        // Pass the redirect URL to the session if available
+        if (token.redirectUrl) {
+          session.redirectUrl = token.redirectUrl;
+        }
+        
         // Add an error flag if authentication failed
         if (token.user.error) {
           session.error = token.user.error;
@@ -197,82 +143,25 @@ export const authOptions = {
       }
       return session;
     },
-    // Fix for callback URL in production
     async redirect({ url, baseUrl }) {
-      // If we're in development, be more permissive with redirects
-      if (isDevelopment()) {
-        // Allow redirects to localhost
-        if (url.startsWith('http://localhost:')) {
-          return url;
-        }
-        
-        // For relative URLs in development, prefix with baseUrl
-        if (url.startsWith('/')) {
-          return `${baseUrl}${url}`;
-        }
-      }
+      // Check if there's a stored redirect URL in sessionStorage
+      // This will be handled client-side in the useEffect of the auth hook
       
-      // If the URL is absolute and starts with the baseUrl, allow it
-      if (url.startsWith(baseUrl)) {
+      // If the URL is relative (starts with /), make it absolute
+      if (url.startsWith('/')) {
+        // Use NEXTAUTH_URL from env if available, otherwise use baseUrl
+        const base = NEXTAUTH_URL || baseUrl;
+        return `${base}${url}`;
+      }
+      // If it's already absolute but on the same site, allow it
+      else if (url.startsWith(baseUrl) || 
+              (NEXTAUTH_URL && url.startsWith(NEXTAUTH_URL)) || 
+              (process.env.VERCEL_URL && url.includes(process.env.VERCEL_URL)) ||
+              (process.env.NETLIFY_URL && url.includes(process.env.NETLIFY_URL))) {
         return url;
       }
       
-      // For relative URLs, prefix with baseUrl
-      if (url.startsWith('/')) {
-        return `${baseUrl}${url}`;
-      }
-      
-      // Handle callback URLs from sessionStorage (common pattern in this app)
-      if (url.includes('callbackUrl=')) {
-        try {
-          // Extract the callback URL
-          const callbackParam = new URLSearchParams(url.split('?')[1]).get('callbackUrl');
-          if (callbackParam) {
-            // If it's from the same site or it's a relative URL, use it
-            if (callbackParam.startsWith(baseUrl) || callbackParam.startsWith('/')) {
-              return callbackParam;
-            }
-            
-            // In development mode, allow localhost redirects
-            if (isDevelopment() && callbackParam.startsWith('http://localhost:')) {
-              return callbackParam;
-            }
-            
-            // Get our list of trusted domains for multi-platform deployments
-            const trustedDomains = getTrustedDomains();
-            
-            // Check if the callback domain matches any of our trusted domains
-            for (const domain of trustedDomains) {
-              if (callbackParam.startsWith(domain)) {
-                return callbackParam;
-              }
-            }
-            
-            // If we got here, the callback domain isn't in our trusted list
-            console.log("Untrusted callback URL:", callbackParam);
-          }
-        } catch (e) {
-          console.error("Error parsing callback URL:", e);
-        }
-      }
-      
-      // Special case for development: Check if trying to redirect to a production URL
-      if (isDevelopment()) {
-        const trustedDomains = getTrustedDomains();
-        for (const domain of trustedDomains) {
-          if (url.startsWith(domain)) {
-            // In development, redirect to the local equivalent path instead
-            try {
-              const urlObj = new URL(url);
-              return `http://localhost:3000${urlObj.pathname}${urlObj.search}${urlObj.hash}`;
-            } catch (e) {
-              console.error("Error parsing production URL in development:", e);
-            }
-          }
-        }
-      }
-      
-      // Default to baseUrl if nothing else matches
+      // Default to the base URL for safety
       return baseUrl;
     }
   },
@@ -284,10 +173,6 @@ export const authOptions = {
     strategy: "jwt",
     maxAge: 30 * 24 * 60 * 60, // 30 days
   },
-  // Use the helper function to get the correct base URL
-  baseUrl: getBaseUrl(),
-  // Critical for production: Set the correct URL
-  url: getBaseUrl(),
   debug: process.env.NODE_ENV === 'development',
   secret: process.env.NEXTAUTH_SECRET,
 };
