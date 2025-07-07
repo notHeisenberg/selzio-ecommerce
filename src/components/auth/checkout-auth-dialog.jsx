@@ -28,6 +28,12 @@ const TRUSTED_DOMAINS = [
   'http://localhost:3000'
 ];
 
+// Helper function to determine if we're in development mode
+const isDevelopment = () => {
+  if (typeof window === 'undefined') return false;
+  return window.location.hostname === 'localhost';
+};
+
 // Helper function to determine the best redirect URL based on current domain
 const getBestRedirectUrl = (redirectUrl) => {
   if (!redirectUrl) return '/checkout';
@@ -35,9 +41,30 @@ const getBestRedirectUrl = (redirectUrl) => {
   // If it's already a relative URL, use as is
   if (redirectUrl.startsWith('/')) return redirectUrl;
   
-  // If we're in development, use as is
-  if (typeof window !== 'undefined' && window.location.hostname === 'localhost') {
-    return redirectUrl;
+  // Special case for development mode
+  if (isDevelopment()) {
+    // If URL is from production domains, convert to localhost equivalent
+    for (const domain of TRUSTED_DOMAINS) {
+      if (redirectUrl.startsWith(domain)) {
+        try {
+          const url = new URL(redirectUrl);
+          return `http://localhost:3000${url.pathname}${url.search}${url.hash}`;
+        } catch (e) {
+          console.error("Error parsing redirect URL:", e);
+        }
+      }
+    }
+    
+    // If not from trusted domain but is still absolute, use pathname only
+    if (redirectUrl.startsWith('http')) {
+      try {
+        const url = new URL(redirectUrl);
+        return url.pathname || '/checkout';
+      } catch (e) {
+        console.error("Error extracting pathname:", e);
+        return '/checkout';
+      }
+    }
   }
   
   // If it's an absolute URL matching the current domain, use as is
@@ -47,7 +74,7 @@ const getBestRedirectUrl = (redirectUrl) => {
   
   // If it's from one of our trusted domains but not the current one,
   // extract the path and append to current domain
-  if (typeof window !== 'undefined') {
+  if (typeof window !== 'undefined' && !isDevelopment()) {
     try {
       for (const domain of TRUSTED_DOMAINS) {
         if (redirectUrl.startsWith(domain)) {
@@ -201,6 +228,17 @@ const CheckoutAuthDialog = ({
     // The auth hook will prioritize intended_redirect (full URL) over auth_redirect
     sessionStorage.setItem('intended_redirect', fullRedirectUrl);
     
+    // In development mode, ensure we're using localhost URLs
+    if (isDevelopment() && fullRedirectUrl.startsWith('http') && !fullRedirectUrl.startsWith('http://localhost')) {
+      try {
+        const url = new URL(fullRedirectUrl);
+        const devUrl = `http://localhost:3000${url.pathname}${url.search}${url.hash}`;
+        sessionStorage.setItem('intended_redirect', devUrl);
+      } catch (e) {
+        console.error("Error converting to development URL:", e);
+      }
+    }
+    
     // Use a relative redirect URL as a fallback
     const relativeUrl = redirectUrl.startsWith('/') ? redirectUrl : '/checkout';
     sessionStorage.setItem('auth_redirect', relativeUrl);
@@ -279,7 +317,7 @@ const CheckoutAuthDialog = ({
     if (typeof window !== 'undefined') {
       // For NextAuth, we need to use a relative URL for proper handling
       // We'll still store the full URL for our custom handling after auth
-      const baseUrl = window.location.origin;
+      const baseUrl = isDevelopment() ? 'http://localhost:3000' : window.location.origin;
       
       // Get the best redirect URL for the current domain
       const bestRedirectUrl = getBestRedirectUrl(redirectUrl);
@@ -455,16 +493,28 @@ const CheckoutAuthDialog = ({
                   setProcessingRedirect(true);
                   
                   // Store both the full URL and relative URL for robust redirect handling
-                  sessionStorage.setItem('intended_redirect', fullRedirectUrl);
+                  if (isDevelopment() && fullRedirectUrl.startsWith('http') && !fullRedirectUrl.startsWith('http://localhost')) {
+                    try {
+                      // Convert any production URLs to localhost for development
+                      const url = new URL(fullRedirectUrl);
+                      const devUrl = `http://localhost:3000${url.pathname}${url.search}${url.hash}`;
+                      sessionStorage.setItem('intended_redirect', devUrl);
+                    } catch (e) {
+                      sessionStorage.setItem('intended_redirect', fullRedirectUrl);
+                    }
+                  } else {
+                    sessionStorage.setItem('intended_redirect', fullRedirectUrl);
+                  }
+                  
+                  // Always store a relative URL as fallback
                   const relativeUrl = redirectUrl.startsWith('/') ? redirectUrl : '/checkout';
                   sessionStorage.setItem('auth_redirect', relativeUrl);
                   
                   // No setTimeout needed - just let the useEffect handle redirection
                   // when auth state changes
                 }}
-                // For NextAuth signIn, use a relative URL
-                // The actual full URL is stored in sessionStorage for redirect after auth
-                redirectUrl={redirectUrl.startsWith('/') ? redirectUrl : `/checkout`}
+                // For NextAuth signIn, get the best URL format for the current environment
+                redirectUrl={getBestRedirectUrl(redirectUrl)}
                 className="mb-4"
                 compact={true}
               />

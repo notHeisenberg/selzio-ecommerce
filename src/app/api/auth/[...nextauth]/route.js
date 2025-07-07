@@ -7,8 +7,18 @@ import { apiBaseUrl } from "@/lib/config";
 // Use the fixed API URL from config.js instead of directly using env variable
 const API_URL = apiBaseUrl;
 
+// Helper function to determine if we're in development mode
+const isDevelopment = () => {
+  return process.env.NODE_ENV === 'development';
+};
+
 // Helper function to determine the base URL based on environment
 const getBaseUrl = () => {
+  // For development, always use localhost
+  if (isDevelopment()) {
+    return 'http://localhost:3000';
+  }
+  
   // For server-side rendering, trust the NEXTAUTH_URL environment variable first
   if (process.env.NEXTAUTH_URL) {
     return process.env.NEXTAUTH_URL;
@@ -39,11 +49,14 @@ const getBaseUrl = () => {
 
 // Get list of trusted domains for multi-domain setup (Vercel + Netlify)
 const getTrustedDomains = () => {
+  // Start with hard-coded production domains
   const trustedDomains = [
-    // Add both Vercel and Netlify URLs as trusted domains
     'https://selzio-ecommerce.vercel.app',
     'https://selzio-ecommerce.netlify.app',
   ];
+  
+  // Always add localhost for development
+  trustedDomains.push('http://localhost:3000');
   
   // Add environment-specific URLs if available
   if (process.env.NEXTAUTH_VERCEL_URL) {
@@ -186,6 +199,19 @@ export const authOptions = {
     },
     // Fix for callback URL in production
     async redirect({ url, baseUrl }) {
+      // If we're in development, be more permissive with redirects
+      if (isDevelopment()) {
+        // Allow redirects to localhost
+        if (url.startsWith('http://localhost:')) {
+          return url;
+        }
+        
+        // For relative URLs in development, prefix with baseUrl
+        if (url.startsWith('/')) {
+          return `${baseUrl}${url}`;
+        }
+      }
+      
       // If the URL is absolute and starts with the baseUrl, allow it
       if (url.startsWith(baseUrl)) {
         return url;
@@ -207,6 +233,11 @@ export const authOptions = {
               return callbackParam;
             }
             
+            // In development mode, allow localhost redirects
+            if (isDevelopment() && callbackParam.startsWith('http://localhost:')) {
+              return callbackParam;
+            }
+            
             // Get our list of trusted domains for multi-platform deployments
             const trustedDomains = getTrustedDomains();
             
@@ -222,6 +253,22 @@ export const authOptions = {
           }
         } catch (e) {
           console.error("Error parsing callback URL:", e);
+        }
+      }
+      
+      // Special case for development: Check if trying to redirect to a production URL
+      if (isDevelopment()) {
+        const trustedDomains = getTrustedDomains();
+        for (const domain of trustedDomains) {
+          if (url.startsWith(domain)) {
+            // In development, redirect to the local equivalent path instead
+            try {
+              const urlObj = new URL(url);
+              return `http://localhost:3000${urlObj.pathname}${urlObj.search}${urlObj.hash}`;
+            } catch (e) {
+              console.error("Error parsing production URL in development:", e);
+            }
+          }
         }
       }
       

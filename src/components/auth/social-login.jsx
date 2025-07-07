@@ -15,6 +15,12 @@ const TRUSTED_DOMAINS = [
   'http://localhost:3000'
 ];
 
+// Helper function to determine if we're in development mode
+const isDevelopment = () => {
+  if (typeof window === 'undefined') return false;
+  return window.location.hostname === 'localhost';
+};
+
 const SocialLogin = ({ 
   onSuccess, 
   redirectUrl = '/',
@@ -31,6 +37,40 @@ const SocialLogin = ({
     return TRUSTED_DOMAINS.some(domain => url.startsWith(domain));
   };
   
+  // Helper function to ensure we're using the correct URL format for the environment
+  const getEnvironmentAwareUrl = (url) => {
+    if (!url) return '/';
+    
+    // If it's a relative URL, return as is
+    if (url.startsWith('/')) return url;
+    
+    // In development mode
+    if (isDevelopment()) {
+      // If the URL is from one of our production domains, convert it to localhost
+      if (isUrlFromTrustedDomain(url)) {
+        try {
+          const urlObj = new URL(url);
+          return `http://localhost:3000${urlObj.pathname}${urlObj.search}${urlObj.hash}`;
+        } catch (e) {
+          console.error("Error parsing URL:", e);
+          return '/';
+        }
+      }
+      // If not from trusted domain but is still absolute, use pathname only
+      if (url.startsWith('http')) {
+        try {
+          const urlObj = new URL(url);
+          return urlObj.pathname || '/';
+        } catch (e) {
+          return '/';
+        }
+      }
+    }
+    
+    // For production, use as is
+    return url;
+  };
+  
   const handleGoogleLogin = async () => {
     setIsGoogleLoading(true);
     setError('');
@@ -38,11 +78,16 @@ const SocialLogin = ({
     try {
       // Store the redirect URL in sessionStorage for custom redirect handling
       if (typeof window !== 'undefined') {
+        // Handle development vs production URL formats
+        const storageUrl = isDevelopment() 
+          ? getEnvironmentAwareUrl(redirectUrl) 
+          : redirectUrl;
+        
         // Store raw redirect URL - can be relative or absolute
-        window.sessionStorage.setItem('auth_redirect', redirectUrl);
+        window.sessionStorage.setItem('auth_redirect', storageUrl);
         
         // If we're in production, make sure we're using the correct domain
-        if (window.location.hostname !== 'localhost') {
+        if (!isDevelopment()) {
           const currentDomain = window.location.origin;
           
           // If the redirect URL is absolute but from a different trusted domain,
@@ -57,11 +102,8 @@ const SocialLogin = ({
         }
       }
       
-      // IMPORTANT: Always use relative URLs with NextAuth.js signIn
-      // NextAuth has its own URL handling mechanism
-      const callbackUrl = redirectUrl.startsWith('http')
-        ? '/checkout' // If absolute URL was provided, use a safe relative fallback
-        : redirectUrl;
+      // Get the appropriate callback URL for the environment
+      const callbackUrl = getEnvironmentAwareUrl(redirectUrl);
       
       // Use callbackUrl (not redirect) as parameter for NextAuth
       await signIn('google', { 
