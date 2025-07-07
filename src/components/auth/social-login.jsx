@@ -44,11 +44,13 @@ const SocialLogin = ({
       // Also store in a cookie that can be accessed by the server
       document.cookie = `auth_redirect=${encodeURIComponent(normalizedRedirectUrl)};path=/;max-age=300;SameSite=Lax${window.location.protocol === 'https:' ? ';Secure' : ''}`;
       
+      // Also store in a session_redirect cookie for our custom redirect handler
+      document.cookie = `session_redirect=${encodeURIComponent(normalizedRedirectUrl)};path=/;max-age=300;SameSite=Lax${window.location.protocol === 'https:' ? ';Secure' : ''}`;
+      
       // Also store the current domain for NextAuth to use
       window.sessionStorage.setItem('site_domain', window.location.origin);
       
-      // For NextAuth callback, we need to use a relative URL
-      // NextAuth will handle the redirection after auth completion
+      // For NextAuth callback, use our custom redirect handler
       const callbackUrl = '/api/auth/callback/redirect';
       
       // Important: We need to use redirect: true for the OAuth popup to work correctly

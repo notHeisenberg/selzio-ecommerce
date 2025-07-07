@@ -144,8 +144,20 @@ export const authOptions = {
       return session;
     },
     async redirect({ url, baseUrl }) {
-      // Check if there's a stored redirect URL in sessionStorage
-      // This will be handled client-side in the useEffect of the auth hook
+      // Handle OAuth callback error case specifically
+      if (url.includes('error=OAuthCallback')) {
+        // Redirect to our custom redirect handler which will use stored redirect URL
+        return `${baseUrl}/api/auth/callback/redirect`;
+      }
+      
+      // Check if there's a callback URL in the URL parameters
+      const urlObj = new URL(url, baseUrl);
+      const callbackUrl = urlObj.searchParams.get('callbackUrl');
+      
+      // If we have a callbackUrl parameter and it's not the auth error URL, use it
+      if (callbackUrl && !callbackUrl.includes('error=OAuthCallback')) {
+        return callbackUrl;
+      }
       
       // If the URL is relative (starts with /), make it absolute
       if (url.startsWith('/')) {

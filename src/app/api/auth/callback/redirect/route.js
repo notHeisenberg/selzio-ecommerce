@@ -11,6 +11,9 @@ export async function GET(request) {
     // Get the stored redirect URL from the cookie
     const redirectCookie = cookies().get('auth_redirect');
     
+    // Check for redirect in session storage via cookie
+    const sessionStorageCookie = cookies().get('session_redirect');
+    
     // Determine where to redirect
     let redirectUrl = '/';
     
@@ -23,7 +26,15 @@ export async function GET(request) {
       try {
         redirectUrl = decodeURIComponent(redirectCookie.value);
       } catch (e) {
-        console.error('Failed to decode redirect URL:', e);
+        console.error('Failed to decode redirect URL from cookie:', e);
+      }
+    }
+    // Then check session storage cookie
+    else if (sessionStorageCookie?.value) {
+      try {
+        redirectUrl = decodeURIComponent(sessionStorageCookie.value);
+      } catch (e) {
+        console.error('Failed to decode redirect URL from session storage cookie:', e);
       }
     }
     
@@ -37,8 +48,12 @@ export async function GET(request) {
       redirectUrl = `${baseUrl}${redirectUrl.startsWith('/') ? '' : '/'}${redirectUrl}`;
     }
     
+    // Add a success parameter to indicate successful authentication
+    const finalUrl = new URL(redirectUrl);
+    finalUrl.searchParams.set('auth_success', 'true');
+    
     // Redirect to the final URL
-    return NextResponse.redirect(redirectUrl);
+    return NextResponse.redirect(finalUrl.toString());
   } catch (error) {
     console.error('Error in redirect handler:', error);
     
