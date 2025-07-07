@@ -32,6 +32,7 @@ const CheckoutAuthDialog = ({
   const [isCartVisible, setIsCartVisible] = useState(true);
   const [appliedCoupon, setAppliedCoupon] = useState(null);
   const [processingRedirect, setProcessingRedirect] = useState(false);
+  const [fullRedirectUrl, setFullRedirectUrl] = useState(redirectUrl);
 
   const router = useRouter();
   const { cartItems, totalItems, totalPrice } = useCart();
@@ -87,13 +88,21 @@ const CheckoutAuthDialog = ({
           onSuccess();
         } else {
           if (onOpenChange) onOpenChange(false);
-          router.push(redirectUrl);
+          
+          // Handle redirection to the correct URL (full URL or relative path)
+          if (fullRedirectUrl.startsWith('http')) {
+            // For absolute URLs, use window.location.href
+            window.location.href = fullRedirectUrl;
+          } else {
+            // For relative URLs, use Next.js router
+            router.push(fullRedirectUrl);
+          }
         }
       }, 1500); // Longer delay to ensure auth state is fully updated
       
       return () => clearTimeout(redirectTimer);
     }
-  }, [processingRedirect, isAuthenticated, user, onSuccess, onOpenChange, router, redirectUrl, appliedCoupon]);
+  }, [processingRedirect, isAuthenticated, user, onSuccess, onOpenChange, router, fullRedirectUrl, appliedCoupon]);
 
   // Detect when the auth state changes after initial render
   useEffect(() => {
@@ -141,8 +150,8 @@ const CheckoutAuthDialog = ({
       sessionStorage.setItem('appliedCoupon', JSON.stringify(appliedCoupon));
     }
     
-    // Also store the checkout redirect URL for social auth flows
-    sessionStorage.setItem('auth_redirect', redirectUrl);
+    // Store the full checkout redirect URL for social auth flows
+    sessionStorage.setItem('auth_redirect', fullRedirectUrl);
     
     // Force refresh the authentication token for API requests
     if (typeof window !== 'undefined') {
@@ -213,6 +222,17 @@ const CheckoutAuthDialog = ({
       setIsLoading(false);
     }
   };
+
+  // Get the base URL dynamically for proper redirects in production
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      // Use window.location.origin to get the current domain (works in both dev and production)
+      const baseUrl = window.location.origin;
+      // If the redirectUrl already has a protocol/hostname, use as is, otherwise prepend the baseUrl
+      const fullUrl = redirectUrl.startsWith('http') ? redirectUrl : `${baseUrl}${redirectUrl.startsWith('/') ? '' : '/'}${redirectUrl}`;
+      setFullRedirectUrl(fullUrl);
+    }
+  }, [redirectUrl]);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -375,7 +395,7 @@ const CheckoutAuthDialog = ({
                   // No setTimeout needed - just let the useEffect handle redirection
                   // when auth state changes
                 }}
-                redirectUrl={redirectUrl}
+                redirectUrl={fullRedirectUrl}
                 className="mb-4"
                 compact={true}
               />

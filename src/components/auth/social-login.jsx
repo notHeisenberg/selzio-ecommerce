@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useAuth } from '@/hooks/use-auth';
 import { Button } from '@/components/ui/button';
 import Image from 'next/image';
@@ -15,20 +15,41 @@ const SocialLogin = ({
 }) => {
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
   const [error, setError] = useState('');
+  const [normalizedRedirectUrl, setNormalizedRedirectUrl] = useState(redirectUrl);
   const { toast } = useToast();
+  
+  // Normalize the redirect URL to ensure it works in all environments
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      // If redirectUrl is already a full URL, use it as is
+      if (redirectUrl.startsWith('http')) {
+        setNormalizedRedirectUrl(redirectUrl);
+      } else {
+        // Otherwise, prepend the current origin
+        const baseUrl = window.location.origin;
+        const fullUrl = `${baseUrl}${redirectUrl.startsWith('/') ? '' : '/'}${redirectUrl}`;
+        setNormalizedRedirectUrl(fullUrl);
+      }
+    }
+  }, [redirectUrl]);
 
   const handleGoogleLogin = async () => {
     setIsGoogleLoading(true);
     setError('');
     
     try {
-      // Use redirect: true to ensure Google popup appears
-      // This is necessary because we need to go through the OAuth flow
-      window.sessionStorage.setItem('auth_redirect', redirectUrl);
+      // Store the normalized redirect URL in sessionStorage
+      window.sessionStorage.setItem('auth_redirect', normalizedRedirectUrl);
+      
+      // For OAuth flow to work correctly, we need to use a relative URL here
+      // NextAuth will handle the redirecting to the full URL after auth
+      const callbackUrl = redirectUrl.startsWith('http') 
+        ? redirectUrl 
+        : redirectUrl.startsWith('/') ? redirectUrl : `/${redirectUrl}`;
       
       // Important: We need to use redirect: true for the OAuth popup to work correctly
       await signIn('google', { 
-        callbackUrl: redirectUrl,
+        callbackUrl,
         redirect: true
       });
       
