@@ -144,28 +144,32 @@ export const authOptions = {
       return session;
     },
     async redirect({ url, baseUrl }) {
-      // Use the configured base URL from environment variables
-      const siteBaseUrl = NEXTAUTH_URL || baseUrl;
-      
-      // If the URL is relative, make it absolute using the configured base URL
-      if (url.startsWith('/')) {
-        return `${siteBaseUrl}${url}`;
+      // Always use our custom redirect handler for social auth
+      if (url.includes('/api/auth/callback/google') || 
+          url.includes('/api/auth/callback/facebook')) {
+        return '/api/auth/callback';
       }
       
+      // For error cases, also use our custom handler
+      if (url.includes('error=')) {
+        return '/api/auth/callback';
+      }
+      
+      // If the URL is relative (starts with /), make it absolute
+      if (url.startsWith('/')) {
+        // Use NEXTAUTH_URL from env if available, otherwise use baseUrl
+        const base = NEXTAUTH_URL || baseUrl;
+        return `${base}${url}`;
+      }
       // If it's already absolute but on the same site, allow it
-      if (url.startsWith(siteBaseUrl) || 
-          (process.env.VERCEL_URL && url.includes(process.env.VERCEL_URL)) ||
-          (process.env.NETLIFY_URL && url.includes(process.env.NETLIFY_URL))) {
+      else if (url.startsWith(baseUrl) || 
+              (NEXTAUTH_URL && url.startsWith(NEXTAUTH_URL)) || 
+              (process.env.VERCEL_URL && url.includes(process.env.VERCEL_URL))) {
         return url;
       }
       
-      // Default to the checkout page for OAuth callbacks
-      if (url.includes('error=OAuthCallback')) {
-        return `${siteBaseUrl}/checkout`;
-      }
-      
       // Default to the base URL for safety
-      return siteBaseUrl;
+      return baseUrl;
     }
   },
   pages: {

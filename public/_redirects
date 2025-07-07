@@ -1,5 +1,0 @@
-# Netlify redirects file
-# Handle OAuth callback errors
-/auth/login*  /api/auth/callback/redirect 302
-# Handle client-side routing
-/*  /index.html  200 

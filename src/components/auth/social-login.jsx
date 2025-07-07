@@ -1,10 +1,12 @@
 "use client";
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useAuth } from '@/hooks/use-auth';
 import { Button } from '@/components/ui/button';
 import Image from 'next/image';
 import { signIn } from 'next-auth/react';
 import { useToast } from '@/hooks/use-toast';
+import { appBaseUrl } from '@/lib/config';
 
 const SocialLogin = ({ 
   onSuccess, 
@@ -14,20 +16,44 @@ const SocialLogin = ({
 }) => {
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
   const [error, setError] = useState('');
+  const [normalizedRedirectUrl, setNormalizedRedirectUrl] = useState(redirectUrl);
   const { toast } = useToast();
+  
+  // Normalize the redirect URL to ensure it works in all environments
+  useEffect(() => {
+    // If redirectUrl is already a full URL, use it as is
+    if (redirectUrl.startsWith('http')) {
+      setNormalizedRedirectUrl(redirectUrl);
+    } else {
+      // Otherwise, prepend the appBaseUrl from config
+      const fullUrl = `${appBaseUrl}${redirectUrl.startsWith('/') ? '' : '/'}${redirectUrl}`;
+      setNormalizedRedirectUrl(fullUrl);
+    }
+  }, [redirectUrl]);
 
   const handleGoogleLogin = async () => {
     setIsGoogleLoading(true);
     setError('');
     
     try {
-      // Use the provided redirectUrl directly
+      // Store the normalized redirect URL in sessionStorage with the full domain
+      window.sessionStorage.setItem('auth_redirect', normalizedRedirectUrl);
+      
+      // Also store in a cookie that can be accessed by the server
+      document.cookie = `auth_redirect=${encodeURIComponent(normalizedRedirectUrl)};path=/;max-age=300;SameSite=Lax${window.location.protocol === 'https:' ? ';Secure' : ''}`;
+      
+      // For NextAuth callback, we need to use a relative URL
+      // NextAuth will handle the redirection after auth completion
+      const callbackUrl = '/api/auth/callback';
+      
+      // Important: We need to use redirect: true for the OAuth popup to work correctly
       await signIn('google', { 
-        callbackUrl: redirectUrl,
+        callbackUrl,
         redirect: true
       });
       
-      // This code won't execute because the page will redirect
+      // Note: The code below won't execute because the page will redirect
+      // The handling of success will happen in the NextAuth callback
     } catch (err) {
       setError(err.message || 'Google login failed. Please try again.');
       console.error('Google login error:', err);

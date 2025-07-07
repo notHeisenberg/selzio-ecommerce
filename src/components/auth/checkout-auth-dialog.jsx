@@ -11,6 +11,7 @@ import { Label } from '@/components/ui/label';
 import SocialLogin from '@/components/auth/social-login';
 import { useCart } from '@/hooks/use-cart';
 import { useAuth } from '@/hooks/use-auth';
+import { appBaseUrl } from '@/lib/config';
 import {
   Dialog,
   DialogContent,
@@ -150,6 +151,12 @@ const CheckoutAuthDialog = ({
       sessionStorage.setItem('appliedCoupon', JSON.stringify(appliedCoupon));
     }
     
+    // Store the full checkout redirect URL for social auth flows
+    sessionStorage.setItem('auth_redirect', fullRedirectUrl);
+    
+    // Also store in a cookie that can be accessed by the server
+    document.cookie = `auth_redirect=${encodeURIComponent(fullRedirectUrl)};path=/;max-age=300;SameSite=Lax${window.location.protocol === 'https:' ? ';Secure' : ''}`;
+    
     // Force refresh the authentication token for API requests
     if (typeof window !== 'undefined') {
       const token = localStorage.getItem('auth_token');
@@ -160,6 +167,7 @@ const CheckoutAuthDialog = ({
     
     // Set flag to monitor auth state for redirect
     setProcessingRedirect(true);
+    
   };
   
   // Handle login
@@ -221,13 +229,9 @@ const CheckoutAuthDialog = ({
 
   // Get the base URL dynamically for proper redirects in production
   useEffect(() => {
-    if (typeof window !== 'undefined') {
-      // Use window.location.origin to get the current domain (works in both dev and production)
-      const baseUrl = window.location.origin;
-      // If the redirectUrl already has a protocol/hostname, use as is, otherwise prepend the baseUrl
-      const fullUrl = redirectUrl.startsWith('http') ? redirectUrl : `${baseUrl}${redirectUrl.startsWith('/') ? '' : '/'}${redirectUrl}`;
-      setFullRedirectUrl(fullUrl);
-    }
+    // Use appBaseUrl from config to ensure consistent URLs across the app
+    const fullUrl = redirectUrl.startsWith('http') ? redirectUrl : `${appBaseUrl}${redirectUrl.startsWith('/') ? '' : '/'}${redirectUrl}`;
+    setFullRedirectUrl(fullUrl);
   }, [redirectUrl]);
 
   return (
