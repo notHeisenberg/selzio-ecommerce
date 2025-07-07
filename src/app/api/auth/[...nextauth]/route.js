@@ -144,37 +144,28 @@ export const authOptions = {
       return session;
     },
     async redirect({ url, baseUrl }) {
-      // Handle OAuth callback error case specifically
-      if (url.includes('error=OAuthCallback')) {
-        // Redirect to our custom redirect handler which will use stored redirect URL
-        return `${baseUrl}/api/auth/callback/redirect`;
-      }
+      // Use the configured base URL from environment variables
+      const siteBaseUrl = NEXTAUTH_URL || baseUrl;
       
-      // Check if there's a callback URL in the URL parameters
-      const urlObj = new URL(url, baseUrl);
-      const callbackUrl = urlObj.searchParams.get('callbackUrl');
-      
-      // If we have a callbackUrl parameter and it's not the auth error URL, use it
-      if (callbackUrl && !callbackUrl.includes('error=OAuthCallback')) {
-        return callbackUrl;
-      }
-      
-      // If the URL is relative (starts with /), make it absolute
+      // If the URL is relative, make it absolute using the configured base URL
       if (url.startsWith('/')) {
-        // Use NEXTAUTH_URL from env if available, otherwise use baseUrl
-        const base = NEXTAUTH_URL || baseUrl;
-        return `${base}${url}`;
+        return `${siteBaseUrl}${url}`;
       }
+      
       // If it's already absolute but on the same site, allow it
-      else if (url.startsWith(baseUrl) || 
-              (NEXTAUTH_URL && url.startsWith(NEXTAUTH_URL)) || 
-              (process.env.VERCEL_URL && url.includes(process.env.VERCEL_URL)) ||
-              (process.env.NETLIFY_URL && url.includes(process.env.NETLIFY_URL))) {
+      if (url.startsWith(siteBaseUrl) || 
+          (process.env.VERCEL_URL && url.includes(process.env.VERCEL_URL)) ||
+          (process.env.NETLIFY_URL && url.includes(process.env.NETLIFY_URL))) {
         return url;
       }
       
+      // Default to the checkout page for OAuth callbacks
+      if (url.includes('error=OAuthCallback')) {
+        return `${siteBaseUrl}/checkout`;
+      }
+      
       // Default to the base URL for safety
-      return baseUrl;
+      return siteBaseUrl;
     }
   },
   pages: {

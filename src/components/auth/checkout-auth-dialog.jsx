@@ -70,22 +70,6 @@ const CheckoutAuthDialog = ({
   
   // Handle redirect after authentication state changes
   useEffect(() => {
-    // Check URL for auth_success parameter which indicates successful OAuth login
-    if (typeof window !== 'undefined') {
-      const urlParams = new URLSearchParams(window.location.search);
-      const authSuccess = urlParams.get('auth_success');
-      
-      if (authSuccess === 'true') {
-        // Clear the parameter from the URL to prevent issues on reload
-        const newUrl = new URL(window.location.href);
-        newUrl.searchParams.delete('auth_success');
-        window.history.replaceState({}, document.title, newUrl.toString());
-        
-        // Set processing redirect to true to trigger the redirect flow
-        setProcessingRedirect(true);
-      }
-    }
-    
     if (processingRedirect && isAuthenticated && user) {
       // Ensure coupon data is in sessionStorage
       if (appliedCoupon) {
@@ -165,15 +149,6 @@ const CheckoutAuthDialog = ({
     if (appliedCoupon) {
       sessionStorage.setItem('appliedCoupon', JSON.stringify(appliedCoupon));
     }
-    
-    // Store the full checkout redirect URL for social auth flows
-    sessionStorage.setItem('auth_redirect', fullRedirectUrl);
-    
-    // Also store in a cookie that can be accessed by the server
-    document.cookie = `auth_redirect=${encodeURIComponent(fullRedirectUrl)};path=/;max-age=300;SameSite=Lax${window.location.protocol === 'https:' ? ';Secure' : ''}`;
-    
-    // Also store in a session_redirect cookie for our custom redirect handler
-    document.cookie = `session_redirect=${encodeURIComponent(fullRedirectUrl)};path=/;max-age=300;SameSite=Lax${window.location.protocol === 'https:' ? ';Secure' : ''}`;
     
     // Force refresh the authentication token for API requests
     if (typeof window !== 'undefined') {
