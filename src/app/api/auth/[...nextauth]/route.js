@@ -7,6 +7,61 @@ import { apiBaseUrl } from "@/lib/config";
 // Use the fixed API URL from config.js instead of directly using env variable
 const API_URL = apiBaseUrl;
 
+// Helper function to determine the base URL based on environment
+const getBaseUrl = () => {
+  // For server-side rendering, trust the NEXTAUTH_URL environment variable first
+  if (process.env.NEXTAUTH_URL) {
+    return process.env.NEXTAUTH_URL;
+  }
+  
+  // Check for platform-specific URLs
+  if (process.env.NEXTAUTH_VERCEL_URL) {
+    return process.env.NEXTAUTH_VERCEL_URL;
+  }
+  
+  if (process.env.NEXTAUTH_NETLIFY_URL) {
+    return process.env.NEXTAUTH_NETLIFY_URL;
+  }
+  
+  // For Vercel deployments, use the VERCEL_URL
+  if (process.env.VERCEL_URL) {
+    return `https://${process.env.VERCEL_URL}`;
+  }
+  
+  // For Netlify deployments
+  if (process.env.NETLIFY_URL || process.env.URL) {
+    return process.env.NETLIFY_URL || process.env.URL;
+  }
+  
+  // Fallback for local development
+  return process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000';
+};
+
+// Get list of trusted domains for multi-domain setup (Vercel + Netlify)
+const getTrustedDomains = () => {
+  const trustedDomains = [
+    // Add both Vercel and Netlify URLs as trusted domains
+    'https://selzio-ecommerce.vercel.app',
+    'https://selzio-ecommerce.netlify.app',
+  ];
+  
+  // Add environment-specific URLs if available
+  if (process.env.NEXTAUTH_VERCEL_URL) {
+    trustedDomains.push(process.env.NEXTAUTH_VERCEL_URL);
+  }
+  
+  if (process.env.NEXTAUTH_NETLIFY_URL) {
+    trustedDomains.push(process.env.NEXTAUTH_NETLIFY_URL);
+  }
+  
+  if (process.env.NEXT_PUBLIC_SITE_URL) {
+    trustedDomains.push(process.env.NEXT_PUBLIC_SITE_URL);
+  }
+  
+  // Filter out duplicates and return unique domains
+  return [...new Set(trustedDomains)];
+};
+
 export const authOptions = {
   providers: [
     GoogleProvider({
@@ -129,6 +184,50 @@ export const authOptions = {
       }
       return session;
     },
+    // Fix for callback URL in production
+    async redirect({ url, baseUrl }) {
+      // If the URL is absolute and starts with the baseUrl, allow it
+      if (url.startsWith(baseUrl)) {
+        return url;
+      }
+      
+      // For relative URLs, prefix with baseUrl
+      if (url.startsWith('/')) {
+        return `${baseUrl}${url}`;
+      }
+      
+      // Handle callback URLs from sessionStorage (common pattern in this app)
+      if (url.includes('callbackUrl=')) {
+        try {
+          // Extract the callback URL
+          const callbackParam = new URLSearchParams(url.split('?')[1]).get('callbackUrl');
+          if (callbackParam) {
+            // If it's from the same site or it's a relative URL, use it
+            if (callbackParam.startsWith(baseUrl) || callbackParam.startsWith('/')) {
+              return callbackParam;
+            }
+            
+            // Get our list of trusted domains for multi-platform deployments
+            const trustedDomains = getTrustedDomains();
+            
+            // Check if the callback domain matches any of our trusted domains
+            for (const domain of trustedDomains) {
+              if (callbackParam.startsWith(domain)) {
+                return callbackParam;
+              }
+            }
+            
+            // If we got here, the callback domain isn't in our trusted list
+            console.log("Untrusted callback URL:", callbackParam);
+          }
+        } catch (e) {
+          console.error("Error parsing callback URL:", e);
+        }
+      }
+      
+      // Default to baseUrl if nothing else matches
+      return baseUrl;
+    }
   },
   pages: {
     signIn: "/auth/login",
@@ -138,6 +237,10 @@ export const authOptions = {
     strategy: "jwt",
     maxAge: 30 * 24 * 60 * 60, // 30 days
   },
+  // Use the helper function to get the correct base URL
+  baseUrl: getBaseUrl(),
+  // Critical for production: Set the correct URL
+  url: getBaseUrl(),
   debug: process.env.NODE_ENV === 'development',
   secret: process.env.NEXTAUTH_SECRET,
 };

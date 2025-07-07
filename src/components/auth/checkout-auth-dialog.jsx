@@ -20,6 +20,50 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 
+// Define trusted domains for multi-platform deployment
+const TRUSTED_DOMAINS = [
+  'https://selzio-ecommerce.vercel.app',
+  'https://selzio-ecommerce.netlify.app',
+  // Add localhost for development
+  'http://localhost:3000'
+];
+
+// Helper function to determine the best redirect URL based on current domain
+const getBestRedirectUrl = (redirectUrl) => {
+  if (!redirectUrl) return '/checkout';
+  
+  // If it's already a relative URL, use as is
+  if (redirectUrl.startsWith('/')) return redirectUrl;
+  
+  // If we're in development, use as is
+  if (typeof window !== 'undefined' && window.location.hostname === 'localhost') {
+    return redirectUrl;
+  }
+  
+  // If it's an absolute URL matching the current domain, use as is
+  if (typeof window !== 'undefined' && redirectUrl.startsWith(window.location.origin)) {
+    return redirectUrl;
+  }
+  
+  // If it's from one of our trusted domains but not the current one,
+  // extract the path and append to current domain
+  if (typeof window !== 'undefined') {
+    try {
+      for (const domain of TRUSTED_DOMAINS) {
+        if (redirectUrl.startsWith(domain)) {
+          const url = new URL(redirectUrl);
+          return `${window.location.origin}${url.pathname}${url.search}${url.hash}`;
+        }
+      }
+    } catch (e) {
+      console.error("Error parsing redirect URL:", e);
+    }
+  }
+  
+  // Default fallback
+  return redirectUrl;
+};
+
 const CheckoutAuthDialog = ({
   open,
   onOpenChange,
@@ -89,13 +133,16 @@ const CheckoutAuthDialog = ({
         } else {
           if (onOpenChange) onOpenChange(false);
           
+          // Get the best redirect URL for the current domain
+          const bestRedirectUrl = getBestRedirectUrl(fullRedirectUrl);
+          
           // Handle redirection to the correct URL (full URL or relative path)
-          if (fullRedirectUrl.startsWith('http')) {
+          if (bestRedirectUrl.startsWith('http')) {
             // For absolute URLs, use window.location.href
-            window.location.href = fullRedirectUrl;
+            window.location.href = bestRedirectUrl;
           } else {
             // For relative URLs, use Next.js router
-            router.push(fullRedirectUrl);
+            router.push(bestRedirectUrl);
           }
         }
       }, 1500); // Longer delay to ensure auth state is fully updated
@@ -150,8 +197,13 @@ const CheckoutAuthDialog = ({
       sessionStorage.setItem('appliedCoupon', JSON.stringify(appliedCoupon));
     }
     
-    // Store the full checkout redirect URL for social auth flows
-    sessionStorage.setItem('auth_redirect', fullRedirectUrl);
+    // Store both relative and absolute redirect URLs for more robust handling
+    // The auth hook will prioritize intended_redirect (full URL) over auth_redirect
+    sessionStorage.setItem('intended_redirect', fullRedirectUrl);
+    
+    // Use a relative redirect URL as a fallback
+    const relativeUrl = redirectUrl.startsWith('/') ? redirectUrl : '/checkout';
+    sessionStorage.setItem('auth_redirect', relativeUrl);
     
     // Force refresh the authentication token for API requests
     if (typeof window !== 'undefined') {
@@ -163,7 +215,6 @@ const CheckoutAuthDialog = ({
     
     // Set flag to monitor auth state for redirect
     setProcessingRedirect(true);
-    
   };
   
   // Handle login
@@ -226,11 +277,22 @@ const CheckoutAuthDialog = ({
   // Get the base URL dynamically for proper redirects in production
   useEffect(() => {
     if (typeof window !== 'undefined') {
-      // Use window.location.origin to get the current domain (works in both dev and production)
+      // For NextAuth, we need to use a relative URL for proper handling
+      // We'll still store the full URL for our custom handling after auth
       const baseUrl = window.location.origin;
-      // If the redirectUrl already has a protocol/hostname, use as is, otherwise prepend the baseUrl
-      const fullUrl = redirectUrl.startsWith('http') ? redirectUrl : `${baseUrl}${redirectUrl.startsWith('/') ? '' : '/'}${redirectUrl}`;
+      
+      // Get the best redirect URL for the current domain
+      const bestRedirectUrl = getBestRedirectUrl(redirectUrl);
+      
+      // If it's already an absolute URL, use as is
+      const fullUrl = bestRedirectUrl.startsWith('http') 
+        ? bestRedirectUrl 
+        : `${baseUrl}${bestRedirectUrl.startsWith('/') ? '' : '/'}${bestRedirectUrl}`;
+      
       setFullRedirectUrl(fullUrl);
+      
+      // Always store the intended redirect URL for NextAuth's redirect callback to use
+      window.sessionStorage.setItem('intended_redirect', fullUrl);
     }
   }, [redirectUrl]);
 
@@ -392,10 +454,17 @@ const CheckoutAuthDialog = ({
                   // Set processing state to show loading UI
                   setProcessingRedirect(true);
                   
+                  // Store both the full URL and relative URL for robust redirect handling
+                  sessionStorage.setItem('intended_redirect', fullRedirectUrl);
+                  const relativeUrl = redirectUrl.startsWith('/') ? redirectUrl : '/checkout';
+                  sessionStorage.setItem('auth_redirect', relativeUrl);
+                  
                   // No setTimeout needed - just let the useEffect handle redirection
                   // when auth state changes
                 }}
-                redirectUrl={fullRedirectUrl}
+                // For NextAuth signIn, use a relative URL
+                // The actual full URL is stored in sessionStorage for redirect after auth
+                redirectUrl={redirectUrl.startsWith('/') ? redirectUrl : `/checkout`}
                 className="mb-4"
                 compact={true}
               />

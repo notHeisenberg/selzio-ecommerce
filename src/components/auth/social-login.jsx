@@ -7,6 +7,14 @@ import Image from 'next/image';
 import { signIn } from 'next-auth/react';
 import { useToast } from '@/hooks/use-toast';
 
+// Define trusted domains for multi-platform deployment
+const TRUSTED_DOMAINS = [
+  'https://selzio-ecommerce.vercel.app',
+  'https://selzio-ecommerce.netlify.app',
+  // Add localhost for development
+  'http://localhost:3000'
+];
+
 const SocialLogin = ({ 
   onSuccess, 
   redirectUrl = '/',
@@ -15,46 +23,53 @@ const SocialLogin = ({
 }) => {
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
   const [error, setError] = useState('');
-  const [normalizedRedirectUrl, setNormalizedRedirectUrl] = useState(redirectUrl);
   const { toast } = useToast();
   
-  // Normalize the redirect URL to ensure it works in all environments
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-      // If redirectUrl is already a full URL, use it as is
-      if (redirectUrl.startsWith('http')) {
-        setNormalizedRedirectUrl(redirectUrl);
-      } else {
-        // Otherwise, prepend the current origin
-        const baseUrl = window.location.origin;
-        const fullUrl = `${baseUrl}${redirectUrl.startsWith('/') ? '' : '/'}${redirectUrl}`;
-        setNormalizedRedirectUrl(fullUrl);
-      }
-    }
-  }, [redirectUrl]);
-
+  // Helper function to determine if a URL matches any of our trusted domains
+  const isUrlFromTrustedDomain = (url) => {
+    if (!url.startsWith('http')) return false;
+    return TRUSTED_DOMAINS.some(domain => url.startsWith(domain));
+  };
+  
   const handleGoogleLogin = async () => {
     setIsGoogleLoading(true);
     setError('');
     
     try {
-      // Store the normalized redirect URL in sessionStorage
-      window.sessionStorage.setItem('auth_redirect', normalizedRedirectUrl);
+      // Store the redirect URL in sessionStorage for custom redirect handling
+      if (typeof window !== 'undefined') {
+        // Store raw redirect URL - can be relative or absolute
+        window.sessionStorage.setItem('auth_redirect', redirectUrl);
+        
+        // If we're in production, make sure we're using the correct domain
+        if (window.location.hostname !== 'localhost') {
+          const currentDomain = window.location.origin;
+          
+          // If the redirect URL is absolute but from a different trusted domain,
+          // store the current domain version as well to ensure proper redirect handling
+          if (redirectUrl.startsWith('http') && !redirectUrl.startsWith(currentDomain)) {
+            if (isUrlFromTrustedDomain(redirectUrl)) {
+              // Store the redirect URL with the current domain for post-auth handling
+              const path = new URL(redirectUrl).pathname;
+              window.sessionStorage.setItem('auth_redirect', `${currentDomain}${path}`);
+            }
+          }
+        }
+      }
       
-      // For OAuth flow to work correctly, we need to use a relative URL here
-      // NextAuth will handle the redirecting to the full URL after auth
-      const callbackUrl = redirectUrl.startsWith('http') 
-        ? redirectUrl 
-        : redirectUrl.startsWith('/') ? redirectUrl : `/${redirectUrl}`;
+      // IMPORTANT: Always use relative URLs with NextAuth.js signIn
+      // NextAuth has its own URL handling mechanism
+      const callbackUrl = redirectUrl.startsWith('http')
+        ? '/checkout' // If absolute URL was provided, use a safe relative fallback
+        : redirectUrl;
       
-      // Important: We need to use redirect: true for the OAuth popup to work correctly
+      // Use callbackUrl (not redirect) as parameter for NextAuth
       await signIn('google', { 
         callbackUrl,
         redirect: true
       });
       
-      // Note: The code below won't execute because the page will redirect
-      // The handling of success will happen in the NextAuth callback
+      // Code below won't execute due to the page redirect
     } catch (err) {
       setError(err.message || 'Google login failed. Please try again.');
       console.error('Google login error:', err);

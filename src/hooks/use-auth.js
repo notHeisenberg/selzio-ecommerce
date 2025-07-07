@@ -48,6 +48,48 @@ api.interceptors.response.use(
 
 const AuthContext = createContext();
 
+// Define trusted domains for multi-platform deployment
+const TRUSTED_DOMAINS = [
+  'https://selzio-ecommerce.vercel.app',
+  'https://selzio-ecommerce.netlify.app',
+  // Add localhost for development
+  'http://localhost:3000'
+];
+
+// Helper function to check if a URL is from a trusted domain
+const isUrlFromTrustedDomain = (url) => {
+  if (!url || typeof url !== 'string' || !url.startsWith('http')) return false;
+  return TRUSTED_DOMAINS.some(domain => url.startsWith(domain));
+};
+
+// Helper function to get the correct redirect URL for the current domain
+const getCorrectDomainUrl = (url) => {
+  if (!url || typeof url !== 'string') return url;
+  
+  // If it's a relative URL or we're in development, use as is
+  if (!url.startsWith('http') || (typeof window !== 'undefined' && window.location.hostname === 'localhost')) {
+    return url;
+  }
+  
+  // If we're already on the correct domain, use as is
+  if (typeof window !== 'undefined' && url.startsWith(window.location.origin)) {
+    return url;
+  }
+  
+  // If it's from a trusted domain but not the current one, convert to current domain
+  if (isUrlFromTrustedDomain(url) && typeof window !== 'undefined') {
+    try {
+      const urlObj = new URL(url);
+      return `${window.location.origin}${urlObj.pathname}${urlObj.search}${urlObj.hash}`;
+    } catch (e) {
+      console.error("Error parsing URL:", e);
+      return url;
+    }
+  }
+  
+  return url;
+};
+
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -99,22 +141,37 @@ export const AuthProvider = ({ children }) => {
         setUser(sessionUser);
         setLoading(false);
         
-        // Check if we have a stored redirect destination
+        // Check for stored redirect destinations
+        // First check for an intended_redirect (full URL including domain)
+        const intendedRedirect = sessionStorage.getItem('intended_redirect');
+        // Then check for auth_redirect (might be relative or absolute)
         const storedRedirect = sessionStorage.getItem('auth_redirect');
-        if (storedRedirect) {
+        
+        // Use the intended_redirect (full URL) if available, otherwise fall back to auth_redirect
+        const redirectTarget = intendedRedirect || storedRedirect;
+        
+        if (redirectTarget) {
           // Wait a bit to ensure all auth state is properly set
           setTimeout(() => {
+            // Clean up all stored redirects
             sessionStorage.removeItem('auth_redirect');
+            sessionStorage.removeItem('intended_redirect');
+            
+            // Get the correct URL for the current domain
+            const correctedUrl = getCorrectDomainUrl(redirectTarget);
             
             // Handle redirection to the correct URL (external or internal)
-            if (storedRedirect.startsWith('http')) {
+            if (correctedUrl && correctedUrl.startsWith('http')) {
               // For absolute URLs, use window.location.href for proper navigation
               if (typeof window !== 'undefined') {
-                window.location.href = storedRedirect;
+                window.location.href = correctedUrl;
               }
-            } else {
+            } else if (correctedUrl) {
               // For relative URLs, use Next.js router
-              router.push(storedRedirect);
+              router.push(correctedUrl);
+            } else {
+              // Fallback to dashboard if redirect URL is invalid
+              router.push('/account');
             }
           }, 500);
         }
