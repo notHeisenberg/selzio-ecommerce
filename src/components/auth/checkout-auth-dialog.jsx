@@ -11,7 +11,6 @@ import { Label } from '@/components/ui/label';
 import SocialLogin from '@/components/auth/social-login';
 import { useCart } from '@/hooks/use-cart';
 import { useAuth } from '@/hooks/use-auth';
-import { appBaseUrl } from '@/lib/config';
 import {
   Dialog,
   DialogContent,
@@ -33,7 +32,6 @@ const CheckoutAuthDialog = ({
   const [isCartVisible, setIsCartVisible] = useState(true);
   const [appliedCoupon, setAppliedCoupon] = useState(null);
   const [processingRedirect, setProcessingRedirect] = useState(false);
-  const [fullRedirectUrl, setFullRedirectUrl] = useState(redirectUrl);
 
   const router = useRouter();
   const { cartItems, totalItems, totalPrice } = useCart();
@@ -89,21 +87,13 @@ const CheckoutAuthDialog = ({
           onSuccess();
         } else {
           if (onOpenChange) onOpenChange(false);
-          
-          // Handle redirection to the correct URL (full URL or relative path)
-          if (fullRedirectUrl.startsWith('http')) {
-            // For absolute URLs, use window.location.href
-            window.location.href = fullRedirectUrl;
-          } else {
-            // For relative URLs, use Next.js router
-            router.push(fullRedirectUrl);
-          }
+          router.push(redirectUrl);
         }
       }, 1500); // Longer delay to ensure auth state is fully updated
       
       return () => clearTimeout(redirectTimer);
     }
-  }, [processingRedirect, isAuthenticated, user, onSuccess, onOpenChange, router, fullRedirectUrl, appliedCoupon]);
+  }, [processingRedirect, isAuthenticated, user, onSuccess, onOpenChange, router, redirectUrl, appliedCoupon]);
 
   // Detect when the auth state changes after initial render
   useEffect(() => {
@@ -151,11 +141,8 @@ const CheckoutAuthDialog = ({
       sessionStorage.setItem('appliedCoupon', JSON.stringify(appliedCoupon));
     }
     
-    // Store the full checkout redirect URL for social auth flows
-    sessionStorage.setItem('auth_redirect', fullRedirectUrl);
-    
-    // Also store in a cookie that can be accessed by the server
-    document.cookie = `auth_redirect=${encodeURIComponent(fullRedirectUrl)};path=/;max-age=300;SameSite=Lax${window.location.protocol === 'https:' ? ';Secure' : ''}`;
+    // Also store the checkout redirect URL for social auth flows
+    sessionStorage.setItem('auth_redirect', redirectUrl);
     
     // Force refresh the authentication token for API requests
     if (typeof window !== 'undefined') {
@@ -226,13 +213,6 @@ const CheckoutAuthDialog = ({
       setIsLoading(false);
     }
   };
-
-  // Get the base URL dynamically for proper redirects in production
-  useEffect(() => {
-    // Use appBaseUrl from config to ensure consistent URLs across the app
-    const fullUrl = redirectUrl.startsWith('http') ? redirectUrl : `${appBaseUrl}${redirectUrl.startsWith('/') ? '' : '/'}${redirectUrl}`;
-    setFullRedirectUrl(fullUrl);
-  }, [redirectUrl]);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -395,7 +375,7 @@ const CheckoutAuthDialog = ({
                   // No setTimeout needed - just let the useEffect handle redirection
                   // when auth state changes
                 }}
-                redirectUrl={fullRedirectUrl}
+                redirectUrl={redirectUrl}
                 className="mb-4"
                 compact={true}
               />

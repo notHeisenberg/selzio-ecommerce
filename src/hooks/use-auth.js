@@ -105,22 +105,7 @@ export const AuthProvider = ({ children }) => {
           // Wait a bit to ensure all auth state is properly set
           setTimeout(() => {
             sessionStorage.removeItem('auth_redirect');
-            
-            // Handle redirection to the correct URL (external or internal)
-            if (storedRedirect.startsWith('http')) {
-              // For absolute URLs, use window.location.href for proper navigation
-              if (typeof window !== 'undefined') {
-                window.location.href = storedRedirect;
-              }
-            } else {
-              // For relative URLs, use Next.js router
-              // Make sure to prepend the current domain if we're in production
-              const currentDomain = window.location.origin;
-              const fullUrl = `${currentDomain}${storedRedirect.startsWith('/') ? '' : '/'}${storedRedirect}`;
-              
-              // Use window.location for a full page reload to ensure proper state
-              window.location.href = fullUrl;
-            }
+            router.push(storedRedirect);
           }, 500);
         }
       }

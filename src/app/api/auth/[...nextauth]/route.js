@@ -2,13 +2,10 @@ import NextAuth from "next-auth";
 import GoogleProvider from "next-auth/providers/google";
 import FacebookProvider from "next-auth/providers/facebook";
 import CredentialsProvider from "next-auth/providers/credentials";
-import { apiBaseUrl, appBaseUrl } from "@/lib/config";
+import { apiBaseUrl } from "@/lib/config";
 
 // Use the fixed API URL from config.js instead of directly using env variable
 const API_URL = apiBaseUrl;
-
-// Get the production URL from environment variables or config
-const NEXTAUTH_URL = appBaseUrl || process.env.NEXTAUTH_URL || process.env.VERCEL_URL || '';
 
 export const authOptions = {
   providers: [
@@ -91,12 +88,6 @@ export const authOptions = {
               console.log("Social auth successful:", data.user.email);
               token.accessToken = data.token;
               token.user = data.user;
-              
-              // Store the redirect URL in the token if available
-              const redirectUrl = data.redirectUrl || token.redirectUrl;
-              if (redirectUrl) {
-                token.redirectUrl = redirectUrl;
-              }
             } else {
               console.error("Social auth API error:", data.error);
               // Set token with minimal info to prevent undefined errors
@@ -131,11 +122,6 @@ export const authOptions = {
         session.user = token.user;
         session.accessToken = token.accessToken;
         
-        // Pass the redirect URL to the session if available
-        if (token.redirectUrl) {
-          session.redirectUrl = token.redirectUrl;
-        }
-        
         // Add an error flag if authentication failed
         if (token.user.error) {
           session.error = token.user.error;
@@ -143,34 +129,6 @@ export const authOptions = {
       }
       return session;
     },
-    async redirect({ url, baseUrl }) {
-      // Always use our custom redirect handler for social auth
-      if (url.includes('/api/auth/callback/google') || 
-          url.includes('/api/auth/callback/facebook')) {
-        return '/api/auth/callback';
-      }
-      
-      // For error cases, also use our custom handler
-      if (url.includes('error=')) {
-        return '/api/auth/callback';
-      }
-      
-      // If the URL is relative (starts with /), make it absolute
-      if (url.startsWith('/')) {
-        // Use NEXTAUTH_URL from env if available, otherwise use baseUrl
-        const base = NEXTAUTH_URL || baseUrl;
-        return `${base}${url}`;
-      }
-      // If it's already absolute but on the same site, allow it
-      else if (url.startsWith(baseUrl) || 
-              (NEXTAUTH_URL && url.startsWith(NEXTAUTH_URL)) || 
-              (process.env.VERCEL_URL && url.includes(process.env.VERCEL_URL))) {
-        return url;
-      }
-      
-      // Default to the base URL for safety
-      return baseUrl;
-    }
   },
   pages: {
     signIn: "/auth/login",
