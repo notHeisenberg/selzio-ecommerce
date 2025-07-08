@@ -43,6 +43,6 @@ next-env.d.ts
 ehthumbs.db
 Thumbs.db
 
-/personal files
+#personal files
 products.js
-sample_combos.js
+combos.js

@@ -20,6 +20,8 @@ const nextConfig = {
       }
     ],
   },
+  // Disable trailing slashes to prevent 308 redirects
+  trailingSlash: false,
 };
 
 export default nextConfig;

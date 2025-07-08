@@ -542,7 +542,7 @@ export default function OrdersTab() {
           )}
 
           {orders.length === 0 ? (
-            <div className="text-center py-6">
+            <div key={orders.length} className="text-center py-6">
               <Package className="mx-auto h-10 w-10 text-muted-foreground mb-3" />
               <p className="text-muted-foreground">
                 {filter.status && filter.status !== 'all'
@@ -680,10 +680,10 @@ export default function OrdersTab() {
                       <h4 className="text-sm font-medium mb-2 text-primary">Items</h4>
                       <div className="space-y-3">
                         {order.items.map((item) => (
-                          <div key={item._id} className="flex items-center gap-3 bg-card p-2 rounded-none shadow-sm">
+                          <div key={item.productCode} className="flex items-center gap-3 bg-card p-2 rounded-none shadow-sm">
                             <div className="relative w-14 h-14 rounded-none overflow-hidden border">
                               <Image
-                                src={item.image || null}
+                                src={item.image || "/images/product-placeholder.png"}
                                 alt={item.name}
                                 fill
                                 className="object-cover"
@@ -1018,7 +1018,7 @@ export default function OrdersTab() {
                       <div key={item.id} className="flex flex-col sm:flex-row items-start gap-4 border-b border-border pb-4 hover:bg-muted/30 p-2 rounded-none transition-colors duration-200">
                         <div className="relative w-16 h-16 rounded-none overflow-hidden border border-border flex-shrink-0 mx-auto sm:mx-0 shadow-sm">
                           <Image
-                            src={item.image || null}
+                            src={item.image || "/images/product-placeholder.png"}
                             alt={item.name || "Product"}
                             fill
                             className="object-cover"

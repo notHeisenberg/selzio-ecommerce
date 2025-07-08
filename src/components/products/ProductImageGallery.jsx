@@ -85,6 +85,7 @@ export default function ProductImageGallery({ product }) {
                   src={productImages[selectedImage] || ''}
                   alt={product.name}
                   fill
+                  sizes="(min-width: 1024px) 50vw, 100vw"
                   className={`object-cover transition-transform duration-200 ${
                     isHovering ? 'scale-150' : 'scale-100'
                   }`}
@@ -128,24 +129,24 @@ export default function ProductImageGallery({ product }) {
             </div>
           )}
           {product.discount > 0 && (
-            <div className="absolute top-4 left-4 bg-primary text-white text-sm font-medium px-3 py-1 rounded-full z-10">
+            <div className="absolute top-4 left-4 bg-primary text-white dark:text-black text-sm font-medium px-3 py-1 rounded-full z-10">
               -{product.discount}%
             </div>
           )}
         </motion.div>
         
-        {/* Thumbnail Gallery with horizontal scroll - Separate from main image to prevent fadeout */}
-        <div className="mt-4 z-20 relative bg-background">
+        {/* Thumbnail Gallery with horizontal scroll - Now with proper spacing */}
+        <div className="mt-6 z-20 relative bg-background pb-2">
           <div 
-            className="flex gap-2 overflow-x-auto pb-2 scroll-smooth hide-scrollbar"
+            className="flex gap-3 overflow-x-auto py-2 px-1 scroll-smooth custom-scrollbar"
             ref={thumbnailsRef}
           >
             {productImages.map((image, index) => (
               <motion.button
                 key={index}
                 className={`relative flex-shrink-0 w-20 h-20 rounded-md overflow-hidden ${
-                  selectedImage === index ? 'ring-2 ring-primary' : 'ring-1 ring-border'
-                }`}
+                  selectedImage === index ? 'ring-2 ring-primary shadow-md' : 'ring-1 ring-border hover:ring-gray-400'
+                } transition-all duration-200`}
                 onClick={() => handleThumbnailClick(index)}
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
@@ -158,6 +159,7 @@ export default function ProductImageGallery({ product }) {
                     src={image}
                     alt={`Product view ${index + 1}`}
                     fill
+                    sizes="80px"
                     className="object-cover"
                     unoptimized={image?.includes('image1.jpg')}
                     onError={(e) => {
@@ -186,18 +188,31 @@ export default function ProductImageGallery({ product }) {
 
         {/* Custom scrollbar styling */}
         <style jsx global>{`
-          .hide-scrollbar::-webkit-scrollbar {
-            height: 4px;
+          .custom-scrollbar::-webkit-scrollbar {
+            height: 6px;
           }
-          .hide-scrollbar::-webkit-scrollbar-track {
-            background: transparent;
+          .custom-scrollbar::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 10px;
           }
-          .hide-scrollbar::-webkit-scrollbar-thumb {
-            background: #888;
-            border-radius: 4px;
+          .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #c4c4c4;
+            border-radius: 10px;
+            transition: background 0.3s ease;
           }
-          .hide-scrollbar::-webkit-scrollbar-thumb:hover {
-            background: #555;
+          .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+            background: #a0a0a0;
+          }
+          
+          /* For dark mode */
+          .dark .custom-scrollbar::-webkit-scrollbar-track {
+            background: #1f1f1f;
+          }
+          .dark .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #4a4a4a;
+          }
+          .dark .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+            background: #5a5a5a;
           }
         `}</style>
       </div>
@@ -217,6 +232,7 @@ export default function ProductImageGallery({ product }) {
               src={productImages[selectedImage] || ''}
               alt={product.name}
               fill
+              sizes="100vw"
               className="object-contain"
               unoptimized={productImages[selectedImage]?.includes('image1.jpg')}
             />
@@ -224,7 +240,7 @@ export default function ProductImageGallery({ product }) {
           
           {/* Fullscreen thumbnails */}
           <div className="absolute bottom-8 left-0 right-0">
-            <div className="flex gap-2 justify-center overflow-x-auto pb-2 px-4">
+            <div className="flex gap-2 justify-center overflow-x-auto pb-2 px-4 custom-scrollbar">
               {productImages.map((image, index) => (
                 <button
                   key={index}
@@ -238,6 +254,7 @@ export default function ProductImageGallery({ product }) {
                       src={image}
                       alt={`Product view ${index + 1}`}
                       fill
+                      sizes="64px"
                       className="object-cover"
                       unoptimized={image?.includes('image1.jpg')}
                     />

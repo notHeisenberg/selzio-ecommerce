@@ -54,21 +54,21 @@ export function CombinedCollectionsSection() {
   return (
     <section className="py-10 bg-background overflow-hidden">
       <div className="container mx-auto px-4">
-        <div className="flex justify-between items-center mb-7">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-7">
           <h2 className="text-xl font-medium bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent dark:from-white dark:to-gray-400">
             Featured Collections
           </h2>
-          <div className="flex gap-4">
+          <div className="flex flex-wrap gap-3">
             {featuredCategories.length > 0 && (
               <Link href="/store">
-                <Button variant="outline" size="sm" className="text-sm rounded-none">
+                <Button variant="outline" size="sm" className="text-sm rounded-none whitespace-nowrap">
                   View All Collections
                 </Button>
               </Link>
             )}
             {combos.length > 0 && (
               <Link href="/combos">
-                <Button variant="outline" size="sm" className="text-sm rounded-none">
+                <Button variant="outline" size="sm" className="text-sm rounded-none whitespace-nowrap">
                   View All Combos
                 </Button>
               </Link>

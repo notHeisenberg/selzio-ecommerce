@@ -9,6 +9,7 @@ import gsap from 'gsap';
 import Image from 'next/image';
 import SearchBar from '@/components/search/search-bar';
 import { getProducts, navItems, createSlug } from '@/data/products';
+import { getCombos } from '@/data/combos';
 import { useAuth } from '@/hooks/use-auth';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -18,15 +19,17 @@ const MobileMenu = ({ isOpen, onClose }) => {
   const router = useRouter();
   const { isAuthenticated } = useAuth();
   const [categories, setCategories] = useState([]);
-  const [expandedCategory, setExpandedCategory] = useState(null);
+  const [combos, setCombos] = useState([]);
+  const [expandedCategories, setExpandedCategories] = useState({});
   
-  // Fetch subcategories when the menu opens
+  // Fetch subcategories and combos when the menu opens
   useEffect(() => {
     if (isOpen) {
-      const fetchSubcategories = async () => {
+      const fetchData = async () => {
         try {
           // Fetch products to get all subcategories
           const products = await getProducts();
+          const combosData = await getCombos();
           
           // Group subcategories by category
           const subcategoriesByCategory = {};
@@ -69,18 +72,30 @@ const MobileMenu = ({ isOpen, onClose }) => {
           });
           
           setCategories(categorizedSubcategories);
+          setCombos(combosData);
+          
+          // Initialize all categories as expanded
+          const initialExpandedState = {};
+          categorizedSubcategories.forEach(cat => {
+            initialExpandedState[cat.category] = true;
+          });
+          setExpandedCategories(initialExpandedState);
         } catch (error) {
-          console.error('Failed to fetch subcategories:', error);
+          console.error('Failed to fetch data:', error);
           setCategories([]);
+          setCombos([]);
         }
       };
       
-      fetchSubcategories();
+      fetchData();
     }
   }, [isOpen]);
 
   const toggleCategory = (category) => {
-    setExpandedCategory(expandedCategory === category ? null : category);
+    setExpandedCategories(prev => ({
+      ...prev,
+      [category]: !prev[category]
+    }));
   };
   
   // Animation variants
@@ -298,15 +313,15 @@ const MobileMenu = ({ isOpen, onClose }) => {
                           {categoryGroup.category}
                           <ChevronRight 
                             className={`h-4 w-4 transition-transform duration-200 ${
-                              expandedCategory === categoryGroup.category ? 'rotate-90' : ''
+                              expandedCategories[categoryGroup.category] ? 'rotate-90' : ''
                             }`} 
                           />
                         </button>
                         <AnimatePresence>
-                          {expandedCategory === categoryGroup.category && (
+                          {expandedCategories[categoryGroup.category] && (
                             <motion.div
                               variants={subcategoryVariants}
-                              initial="hidden"
+                              initial="visible"
                               animate="visible"
                               exit="hidden"
                             >
@@ -331,6 +346,50 @@ const MobileMenu = ({ isOpen, onClose }) => {
                         </AnimatePresence>
                       </motion.div>
                     ))}
+                    
+                    {/* Combos Section */}
+                    {combos.length > 0 && (
+                      <motion.div 
+                        className="mt-4"
+                        variants={itemVariants}
+                        custom={navItems.length + categories.length + 1}
+                        initial="hidden"
+                        animate="visible"
+                      >
+                        <div className="px-4 py-2 text-sm font-medium text-primary bg-primary/5 mb-2">
+                          Combos
+                        </div>
+                        <Link
+                          href="/combos"
+                          onClick={onClose}
+                          className={`
+                            block px-6 py-2 text-sm transition-colors duration-200
+                            ${pathname === '/combos' 
+                              ? 'text-primary bg-secondary' 
+                              : 'text-foreground hover:text-primary hover:bg-secondary'
+                            }
+                          `}
+                        >
+                          All Combos
+                        </Link>
+                        {combos.slice(0, 5).map((combo) => (
+                          <Link
+                            key={combo.comboCode}
+                            href={`/combos/${combo.comboCode}`}
+                            onClick={onClose}
+                            className={`
+                              block px-6 py-2 text-sm transition-colors duration-200
+                              ${pathname === `/combos/${combo.comboCode}` 
+                                ? 'text-primary bg-secondary' 
+                                : 'text-foreground hover:text-primary hover:bg-secondary'
+                              }
+                            `}
+                          >
+                            {combo.name}
+                          </Link>
+                        ))}
+                      </motion.div>
+                    )}
                   </div>
                 </div>
               </nav>

@@ -216,9 +216,9 @@ export default function ComboImageGallery({ combo }) {
         </motion.div>
 
         {/* Thumbnails with animation */}
-        <div className="mt-4 z-20 relative bg-background">
+        <div className="mt-6 z-20 relative bg-background pb-2">
           <div 
-            className="flex gap-2 overflow-x-auto pb-2 scroll-smooth hide-scrollbar"
+            className="flex gap-3 overflow-x-auto py-2 px-1 scroll-smooth custom-scrollbar"
             ref={thumbnailsRef}
           >
             {images.map((image, index) => (
@@ -227,7 +227,7 @@ export default function ComboImageGallery({ combo }) {
                 onClick={() => handleThumbnailClick(index)}
                 className={`relative flex-shrink-0 w-20 h-20 rounded-md overflow-hidden transition-all duration-200 ${
                   selectedImage === index 
-                    ? 'ring-2 ring-primary scale-105' 
+                    ? 'ring-2 ring-primary shadow-md scale-105' 
                     : 'ring-1 ring-border hover:ring-gray-400'
                 }`}
                 whileHover={{ scale: 1.05 }}
@@ -263,18 +263,31 @@ export default function ComboImageGallery({ combo }) {
 
         {/* Custom scrollbar styling */}
         <style jsx global>{`
-          .hide-scrollbar::-webkit-scrollbar {
-            height: 4px;
+          .custom-scrollbar::-webkit-scrollbar {
+            height: 6px;
           }
-          .hide-scrollbar::-webkit-scrollbar-track {
-            background: transparent;
+          .custom-scrollbar::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 10px;
           }
-          .hide-scrollbar::-webkit-scrollbar-thumb {
-            background: #888;
-            border-radius: 4px;
+          .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #c4c4c4;
+            border-radius: 10px;
+            transition: background 0.3s ease;
           }
-          .hide-scrollbar::-webkit-scrollbar-thumb:hover {
-            background: #555;
+          .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+            background: #a0a0a0;
+          }
+          
+          /* For dark mode */
+          .dark .custom-scrollbar::-webkit-scrollbar-track {
+            background: #1f1f1f;
+          }
+          .dark .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #4a4a4a;
+          }
+          .dark .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+            background: #5a5a5a;
           }
         `}</style>
       </div>
@@ -337,7 +350,7 @@ export default function ComboImageGallery({ combo }) {
           
           {/* Fullscreen thumbnails */}
           <div className="absolute bottom-8 left-0 right-0">
-            <div className="flex gap-2 justify-center overflow-x-auto pb-2 px-4">
+            <div className="flex gap-2 justify-center overflow-x-auto pb-2 px-4 custom-scrollbar">
               {images.map((image, index) => (
                 <motion.button
                   key={index}

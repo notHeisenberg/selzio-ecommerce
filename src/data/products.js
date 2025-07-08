@@ -76,7 +76,12 @@ export const initializeProducts = async () => {
   
   try {
     // Fetch products from API
-    const response = await fetch('/api/products?limit=100');
+    const response = await fetch('/api/products?limit=100', {
+      credentials: 'same-origin', // Include cookies
+      headers: {
+        'Cache-Control': 'no-store'
+      }
+    });
     
     if (!response.ok) {
       throw new Error(`API error: ${response.status}`);
@@ -167,7 +172,12 @@ export const getFeaturedCategories = async () => {
 // Get top selling products
 export const getTopSellingProducts = async (limit = 4) => {
   try {
-    const response = await fetch(`/api/products?topSelling=true&limit=${limit}`);
+    const response = await fetch(`/api/products?topSelling=true&limit=${limit}`, {
+      credentials: 'same-origin',
+      headers: {
+        'Cache-Control': 'no-store'
+      }
+    });
     
     if (!response.ok) {
       throw new Error(`API error: ${response.status}`);
@@ -195,7 +205,12 @@ export const getProductByCode = async (productCode) => {
     
     const apiUrl = `/api/products/${productCode}`;
     
-    const response = await fetch(apiUrl);
+    const response = await fetch(apiUrl, {
+      credentials: 'same-origin',
+      headers: {
+        'Cache-Control': 'no-store'
+      }
+    });
     
     if (!response.ok) {
       const errorText = await response.text();
@@ -218,7 +233,12 @@ export const getProductByCode = async (productCode) => {
 // Search products
 export const searchProducts = async (query, limit = 10) => {
   try {
-    const response = await fetch(`/api/products?search=${encodeURIComponent(query)}&limit=${limit}`);
+    const response = await fetch(`/api/products?search=${encodeURIComponent(query)}&limit=${limit}`, {
+      credentials: 'same-origin',
+      headers: {
+        'Cache-Control': 'no-store'
+      }
+    });
     
     if (!response.ok) {
       throw new Error(`API error: ${response.status}`);
@@ -252,7 +272,12 @@ export const getRelatedProducts = async (productCode, limit = 4) => {
     const apiUrl = `/api/products?relatedTo=${encodeURIComponent(productCode)}&excludeProductCode=${encodeURIComponent(productCode)}&limit=${limit}`;
 
     
-    const response = await fetch(apiUrl);
+    const response = await fetch(apiUrl, {
+      credentials: 'same-origin',
+      headers: {
+        'Cache-Control': 'no-store'
+      }
+    });
     
     if (!response.ok) {
       throw new Error(`API error: ${response.status}`);
