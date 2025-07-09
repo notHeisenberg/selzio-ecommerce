@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { Navbar } from '@/components/layout/navbar';
 import { Footer } from '@/components/layout/footer';
@@ -11,7 +11,8 @@ import { Search, Package, Truck, CheckCircle, AlertCircle, Clock } from 'lucide-
 import { useToast } from '@/hooks/use-toast';
 import axios from 'axios';
 
-export default function TrackOrderPage() {
+// Create a client component that uses useSearchParams
+function TrackOrderContent() {
   const searchParams = useSearchParams();
   const { toast } = useToast();
   
@@ -250,63 +251,72 @@ export default function TrackOrderPage() {
                     <div className="bg-muted/50 p-3 rounded-lg space-y-1">
                       <div className="flex justify-between">
                         <span>Subtotal:</span>
-                        <span>{order.subtotal} Tk</span>
+                        <span>{order.summary?.subtotal} Tk</span>
                       </div>
                       <div className="flex justify-between">
                         <span>Shipping:</span>
-                        <span>{order.shipping?.price || 0} Tk</span>
+                        <span>{order.summary?.shippingCost} Tk</span>
                       </div>
-                      {order.discount > 0 && (
-                        <div className="flex justify-between">
+                      {order.summary?.discount > 0 && (
+                        <div className="flex justify-between text-green-600">
                           <span>Discount:</span>
-                          <span>-{order.discount} Tk</span>
+                          <span>-{order.summary?.discount} Tk</span>
                         </div>
                       )}
                       <div className="flex justify-between font-medium pt-2 border-t">
                         <span>Total:</span>
-                        <span>{order.total} Tk</span>
+                        <span>{order.summary?.total} Tk</span>
+                      </div>
+                      <div className="text-sm text-muted-foreground pt-1">
+                        Paid via {order.payment?.method || 'N/A'}
                       </div>
                     </div>
                   </div>
                 </div>
 
-                {/* Payment Information */}
-                <div>
-                  <h3 className="font-medium mb-2">Payment Information</h3>
-                  <div className="bg-muted/50 p-3 rounded-lg">
-                    <p>
-                      <span className="font-medium">Payment Method:</span>{' '}
-                      {order.payment?.method === 'cod' 
-                        ? 'Cash on Delivery' 
-                        : order.payment?.method === 'bkash'
-                        ? 'bKash'
-                        : order.payment?.method === 'nagad'
-                        ? 'Nagad'
-                        : order.payment?.method || 'N/A'}
-                    </p>
-                    <p>
-                      <span className="font-medium">Payment Status:</span>{' '}
-                      <span className={`capitalize ${
-                        order.payment?.paymentStatus === 'paid' 
-                          ? 'text-green-600' 
-                          : order.payment?.paymentStatus === 'pending' 
-                          ? 'text-amber-600'
-                          : 'text-muted-foreground'
-                      }`}>
-                        {order.payment?.paymentStatus || 'N/A'}
-                      </span>
-                    </p>
+                {/* Timeline */}
+                {order.timeline && order.timeline.length > 0 && (
+                  <div>
+                    <h3 className="font-medium mb-3">Order Timeline</h3>
+                    <div className="space-y-4">
+                      {order.timeline.map((event, index) => (
+                        <div key={index} className="flex">
+                          <div className="mr-4 relative">
+                            <div className="h-8 w-8 rounded-full bg-primary/10 border-2 border-primary flex items-center justify-center">
+                              {getStatusIcon(event.status)}
+                            </div>
+                            {index < order.timeline.length - 1 && (
+                              <div className="absolute top-8 bottom-0 left-1/2 w-0.5 -ml-px bg-muted-foreground/20 h-full" />
+                            )}
+                          </div>
+                          <div className="pb-6">
+                            <p className="font-medium capitalize">{event.status.replace(/_/g, ' ')}</p>
+                            <p className="text-sm text-muted-foreground">{formatDate(event.timestamp)}</p>
+                            {event.note && <p className="mt-1 text-sm">{event.note}</p>}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
                   </div>
-                </div>
+                )}
 
-                {/* Help Note */}
-                <div className="bg-primary/10 p-4 rounded-lg border-l-4 border-primary">
-                  <h3 className="font-medium mb-1 text-primary">Need Help?</h3>
-                  <p className="text-sm">
-                    If you have any questions about your order, please contact our customer support
-                    with your order ID: <span className="font-bold">{order._id}</span>
-                  </p>
-                </div>
+                {/* Tracking Information */}
+                {order.shipping?.trackingNumber && (
+                  <div className="bg-muted/50 p-4 rounded-lg">
+                    <h3 className="font-medium mb-2">Tracking Information</h3>
+                    <p className="font-medium">Tracking Number: {order.shipping.trackingNumber}</p>
+                    {order.shipping.courier && (
+                      <p className="text-sm">Courier: {order.shipping.courier}</p>
+                    )}
+                    {order.shipping.trackingUrl && (
+                      <Button variant="link" className="px-0 py-1" asChild>
+                        <a href={order.shipping.trackingUrl} target="_blank" rel="noopener noreferrer">
+                          Track with courier
+                        </a>
+                      </Button>
+                    )}
+                  </div>
+                )}
               </CardContent>
             </Card>
           )}
@@ -315,5 +325,27 @@ export default function TrackOrderPage() {
 
       <Footer />
     </div>
+  );
+}
+
+// Main page component with Suspense boundary
+export default function TrackOrderPage() {
+  return (
+    <Suspense fallback={
+      <div className="flex min-h-screen flex-col">
+        <Navbar />
+        <main className="flex-1 container mx-auto px-4 py-8 md:py-12">
+          <div className="max-w-4xl mx-auto text-center">
+            <h1 className="text-3xl font-bold mb-4">Loading...</h1>
+            <div className="flex justify-center">
+              <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
+            </div>
+          </div>
+        </main>
+        <Footer />
+      </div>
+    }>
+      <TrackOrderContent />
+    </Suspense>
   );
 } 
