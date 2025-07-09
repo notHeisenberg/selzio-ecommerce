@@ -52,7 +52,7 @@ export function CombinedCollectionsSection() {
   }
 
   return (
-    <section className="py-10 bg-background overflow-hidden">
+    <section className="py-10 bg-background overflow-hidden mt-[-20px] sm:mt-0">
       <div className="container mx-auto px-4">
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-7">
           <h2 className="text-xl font-medium bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent dark:from-white dark:to-gray-400">

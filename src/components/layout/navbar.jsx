@@ -161,11 +161,24 @@ export function Navbar() {
         <div className="container mx-auto px-4 lg:max-w-[1200px]">
           {/* Top Row - Logo, Navigation, Icons */}
           <div className="flex h-16 md:h-20 items-center justify-between">
-            {/* Logo */}
+            {/* Mobile Menu Button - Only visible on mobile, now on left side */}
+            <div className="md:hidden">
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                className="text-foreground hover:text-primary hover:bg-secondary transition-colors duration-300"
+                onClick={() => setIsMobileMenuOpen(true)}
+                aria-label="Menu"
+              >
+                <Menu className="h-5 w-5" />
+              </Button>
+            </div>
+
+            {/* Logo - Centered on mobile */}
             <Link 
               ref={logoRef}
               href="/" 
-              className="flex items-center"
+              className="flex items-center md:order-first order-none ml-10"
             >
               <div className="relative h-8 w-8 md:h-10 md:w-10 mr-2">
                 <Image 
@@ -273,15 +286,6 @@ export function Navbar() {
               <UserMenu />
               <CartDrawer />
               <ThemeSwitcher />
-              <Button 
-                variant="ghost" 
-                size="icon" 
-                className="md:hidden text-foreground hover:text-primary hover:bg-secondary transition-colors duration-300"
-                onClick={() => setIsMobileMenuOpen(true)}
-                aria-label="Menu"
-              >
-                <Menu className="h-5 w-5" />
-              </Button>
             </div>
           </div>
 

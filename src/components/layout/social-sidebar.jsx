@@ -1,166 +1,101 @@
 "use client";
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { motion, AnimatePresence } from 'framer-motion';
-import { MessageCircle, Instagram, ChevronRight, ChevronLeft } from 'lucide-react';
+import { motion } from 'framer-motion';
+import { Instagram } from 'lucide-react';
+import { SiMessenger, SiFacebook } from 'react-icons/si';
+
+// CSS styles to ensure transparent backgrounds
+const transparentBg = {
+  backgroundColor: 'transparent',
+  background: 'none'
+};
 
 export function SocialSidebar() {
-  const [isExpanded, setIsExpanded] = useState(false);
+  const [mounted, setMounted] = useState(false);
 
-  // Animation variants
-  const sidebarVariants = {
-    collapsed: {
-      width: "48px",
-      opacity: 1,
-      transition: {
-        type: "spring",
-        stiffness: 400,
-        damping: 40
-      }
-    },
-    expanded: {
-      width: "160px",
-      opacity: 1,
-      transition: {
-        type: "spring",
-        stiffness: 300,
-        damping: 30
-      }
-    }
-  };
+  // Avoid hydration mismatch
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
-  const contentVariants = {
-    hidden: {
-      opacity: 0,
-      x: 20,
-      transition: {
-        duration: 0.2
-      }
-    },
-    visible: {
-      opacity: 1,
-      x: 0,
-      transition: {
-        duration: 0.3,
-        staggerChildren: 0.1,
-        delayChildren: 0.1
-      }
-    }
-  };
-
+  // Animation variants - very minimal
   const iconVariants = {
-    hidden: { opacity: 0, scale: 0.8 },
-    visible: { 
-      opacity: 1, 
-      scale: 1,
-      transition: {
-        type: "spring",
-        stiffness: 400
-      }
+    initial: { opacity: 0 },
+    animate: { 
+      opacity: 1,
+      transition: { duration: 0.3 }
     },
     hover: {
       scale: 1.1,
-      y: -2,
-      transition: {
-        type: "spring",
-        stiffness: 400
-      }
+      transition: { duration: 0.2 }
     }
   };
 
+  if (!mounted) return null;
+
   return (
-    <div className="fixed right-0 bottom-20 z-40 flex flex-col">
-      {/* Toggle Button */}
-      <motion.button
-        className="w-12 h-12 border border-border bg-background/80 backdrop-blur-md shadow-md flex items-center justify-center self-end"
-        onClick={() => setIsExpanded(!isExpanded)}
-        whileHover={{ backgroundColor: "rgba(var(--primary), 0.1)" }}
-        whileTap={{ scale: 0.95 }}
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
+    <div className="fixed right-0 top-1/2 -translate-y-1/2 z-40 flex flex-col">
+      {/* Messenger Icon */}
+      <motion.div
+        whileHover="hover"
+        initial="initial"
+        animate="animate"
       >
-        {isExpanded ? (
-          <ChevronRight className="h-5 w-5 text-primary" />
-        ) : (
-          <ChevronLeft className="h-5 w-5 text-primary" />
-        )}
-      </motion.button>
-
-      {/* Social Options Panel */}
-      <AnimatePresence>
-        {isExpanded && (
-          <motion.div
-            className="absolute right-0 bottom-14 bg-background/80 backdrop-blur-md border border-border shadow-lg overflow-hidden"
-            initial="collapsed"
-            animate="expanded"
-            exit="collapsed"
-            variants={sidebarVariants}
+        <Link 
+          href="https://m.me/selziobd" 
+          target="_blank"
+          rel="noopener noreferrer"
+          className="flex items-center justify-center w-10 h-10 hover:bg-white/5 transition-colors"
+        >
+          <motion.div 
+            className="relative"
+            variants={iconVariants}
           >
-            <motion.div
-              className="flex flex-col"
-              variants={contentVariants}
-              initial="hidden"
-              animate="visible"
-              exit="hidden"
-            >
-              <Link 
-                href="https://m.me/selziobd" 
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center gap-3 py-4 px-3 hover:bg-primary/5 transition-colors"
-              >
-                <motion.div
-                  variants={iconVariants}
-                  whileHover="hover"
-                  className="relative"
-                >
-                  <MessageCircle className="h-6 w-6 text-primary" />
-                  <motion.div
-                    className="absolute -top-1 -right-1 h-2 w-2 bg-green-500 rounded-full"
-                    animate={{ 
-                      scale: [1, 1.2, 1],
-                    }}
-                    transition={{
-                      duration: 1.5,
-                      repeat: Infinity,
-                      repeatType: "loop"
-                    }}
-                  />
-                </motion.div>
-                
-                <motion.span
-                  variants={iconVariants}
-                  className="text-sm font-medium whitespace-nowrap"
-                >
-                  Messenger
-                </motion.span>
-              </Link>
-
-              <Link 
-                href="https://instagram.com/selzio_bd" 
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center gap-3 py-4 px-3 hover:bg-primary/5 transition-colors"
-              >
-                <motion.div
-                  variants={iconVariants}
-                  whileHover="hover"
-                >
-                  <Instagram className="h-6 w-6 text-pink-600" />
-                </motion.div>
-                
-                <motion.span
-                  variants={iconVariants}
-                  className="text-sm font-medium whitespace-nowrap"
-                >
-                  Instagram
-                </motion.span>
-              </Link>
-            </motion.div>
+            <SiMessenger className="h-5 w-5 text-blue-600" />
+            <div
+              className="absolute -top-1 -right-1 h-1.5 w-1.5 bg-green-500 rounded-full"
+            />
           </motion.div>
-        )}
-      </AnimatePresence>
+        </Link>
+      </motion.div>
+
+      {/* Facebook Icon */}
+      <motion.div
+        whileHover="hover"
+        initial="initial"
+        animate="animate"
+      >
+        <Link 
+          href="https://facebook.com/selziobd" 
+          target="_blank"
+          rel="noopener noreferrer"
+          className="flex items-center justify-center w-10 h-10 hover:bg-white/5 transition-colors"
+        >
+          <motion.div variants={iconVariants}>
+            <SiFacebook className="h-5 w-5 text-blue-600" />
+          </motion.div>
+        </Link>
+      </motion.div>
+
+      {/* Instagram Icon */}
+      <motion.div
+        whileHover="hover"
+        initial="initial"
+        animate="animate"
+      >
+        <Link 
+          href="https://instagram.com/selzio_bd" 
+          target="_blank"
+          rel="noopener noreferrer"
+          className="flex items-center justify-center w-10 h-10 hover:bg-white/5 transition-colors"
+        >
+          <motion.div variants={iconVariants}>
+            <Instagram className="h-5 w-5 text-pink-600" />
+          </motion.div>
+        </Link>
+      </motion.div>
     </div>
   );
 } 

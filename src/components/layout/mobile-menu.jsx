@@ -100,7 +100,7 @@ const MobileMenu = ({ isOpen, onClose }) => {
   
   // Animation variants
   const menuVariants = {
-    hidden: { x: '100%' },
+    hidden: { x: '-100%' },
     visible: { 
       x: '0%', 
       transition: { 
@@ -110,7 +110,7 @@ const MobileMenu = ({ isOpen, onClose }) => {
       } 
     },
     exit: { 
-      x: '100%', 
+      x: '-100%', 
       transition: { 
         type: "tween", 
         duration: 0.2, 
@@ -173,7 +173,7 @@ const MobileMenu = ({ isOpen, onClose }) => {
         >
           <motion.div 
             ref={menuRef}
-            className="absolute top-0 right-0 h-full w-full sm:w-[400px] bg-card border-l border-border shadow-xl"
+            className="absolute top-0 left-0 h-full w-full sm:w-[400px] bg-card border-r border-border shadow-xl"
             onClick={e => e.stopPropagation()} // Prevent closing when clicking menu
             variants={menuVariants}
             initial="hidden"
