@@ -9,7 +9,6 @@ import { useCart } from '@/hooks/use-cart';
 import { useAuth } from '@/hooks/use-auth';
 import { useTheme } from 'next-themes';
 import { motion, AnimatePresence } from 'framer-motion';
-import CheckoutAuthDialog from '@/components/auth/checkout-auth-dialog';
 import {
   Drawer,
   DrawerClose,
@@ -26,7 +25,6 @@ import { formatPrice, getDiscountedPrice } from '@/lib/utils';
 
 const CartDrawer = () => {
   const [open, setOpen] = useState(false);
-  const [showAuthDialog, setShowAuthDialog] = useState(false);
   const [appliedCoupon, setAppliedCoupon] = useState(null);
   const [couponCode, setCouponCode] = useState('');
   const [couponError, setCouponError] = useState('');
@@ -156,12 +154,8 @@ const CartDrawer = () => {
   const grandTotal = totalPrice - discountAmount;
 
   const handleCheckout = () => {
-    if (isAuthenticated) {
-      router.push('/checkout');
-      setOpen(false);
-    } else {
-      setShowAuthDialog(true);
-    }
+    router.push('/checkout');
+    setOpen(false);
   };
 
   // Animation variants
@@ -609,16 +603,6 @@ const CartDrawer = () => {
           </div>
         </DrawerContent>
       </Drawer>
-
-      {/* Use the shared auth dialog component */}
-      <CheckoutAuthDialog
-        open={showAuthDialog}
-        onOpenChange={setShowAuthDialog}
-        onSuccess={() => {
-          router.push('/checkout');
-          setOpen(false);
-        }}
-      />
     </>
   );
 };

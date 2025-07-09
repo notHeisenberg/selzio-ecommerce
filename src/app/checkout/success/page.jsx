@@ -7,15 +7,17 @@ import { Navbar } from '@/components/layout/navbar';
 import { Footer } from '@/components/layout/footer';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { ShoppingBag, Package, ArrowRight, Check, Clock, Phone } from 'lucide-react';
+import { ShoppingBag, Package, ArrowRight, Check, Clock, Phone, Search } from 'lucide-react';
 import Confetti from 'react-confetti';
 import { useWindowSize } from '@/hooks/use-window-size';
+import { useAuth } from '@/hooks/use-auth';
 
 export default function CheckoutSuccessPage() {
   const router = useRouter();
   const { width, height } = useWindowSize();
+  const { isAuthenticated } = useAuth();
   const [showConfetti, setShowConfetti] = useState(true);
-  const [orderId] = useState(() => 'ORD-' + Math.random().toString(36).substring(2, 10).toUpperCase());
+  const [orderId, setOrderId] = useState('');
   const [paymentMethod, setPaymentMethod] = useState('');
   
   // Stop confetti after a few seconds
@@ -27,7 +29,7 @@ export default function CheckoutSuccessPage() {
     return () => clearTimeout(timer);
   }, []);
   
-  // Get payment method from sessionStorage and clear coupon
+  // Get payment method and order ID from sessionStorage and clear coupon
   useEffect(() => {
     if (typeof window !== 'undefined') {
       // Clear coupon
@@ -39,6 +41,27 @@ export default function CheckoutSuccessPage() {
         setPaymentMethod(method);
         // Clear it after retrieving
         sessionStorage.removeItem('payment_method');
+      }
+      
+      // First try to get the short order ID format
+      const shortOrderId = sessionStorage.getItem('short_order_id');
+      if (shortOrderId) {
+        setOrderId(shortOrderId);
+        // Clear it after retrieving
+        sessionStorage.removeItem('short_order_id');
+      } else {
+        // Try to get the full order ID and convert to short format
+        const fullOrderId = sessionStorage.getItem('last_order_id');
+        if (fullOrderId) {
+          // Format as ORD-XXXXXX where XXXXXX is the last 6 chars of the ObjectID
+          const shortId = 'ORD-' + fullOrderId.slice(-6);
+          setOrderId(shortId);
+          // Clear it after retrieving
+          sessionStorage.removeItem('last_order_id');
+        } else {
+          // Fallback to random ID if not found
+          setOrderId('ORD-' + Math.random().toString(36).substring(2, 8).toUpperCase());
+        }
       }
     }
   }, []);
@@ -78,11 +101,24 @@ export default function CheckoutSuccessPage() {
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
+                {!isAuthenticated && (
+                  <div className="bg-primary/10 rounded-lg p-4 text-left border-l-4 border-primary">
+                    <h3 className="font-medium mb-1 text-primary">Important: Save Your Order ID</h3>
+                    <p className="text-sm">
+                      Please save or write down your order ID: <span className="font-bold">{orderId}</span>
+                    </p>
+                    <p className="text-sm text-muted-foreground mt-2">
+                      You'll need this ID to track your order status since you checked out as a guest.
+                    </p>
+                  </div>
+                )}
+                
                 <div className="bg-muted/50 rounded-lg p-4 text-left">
                   <h3 className="font-medium mb-1">View Your Order Details</h3>
                   <p className="text-sm text-muted-foreground">
-                    You can view all details about your order, including status updates, in your account's Orders tab.
-                    Visit your Orders tab to track delivery progress and manage your purchase.
+                    {isAuthenticated 
+                      ? "You can view all details about your order, including status updates, in your account's Orders tab. Visit your Orders tab to track delivery progress and manage your purchase."
+                      : "You can track your order status using your Order ID. Use the Track Order button below to check your order status anytime."}
                   </p>
                 </div>
                 
@@ -115,17 +151,26 @@ export default function CheckoutSuccessPage() {
                   <div className="flex-1 text-left">
                     <h4 className="font-medium">Track Your Order</h4>
                     <p className="text-sm text-muted-foreground">
-                      You can track your order status from your account dashboard.
+                      {isAuthenticated
+                        ? "You can track your order status from your account dashboard."
+                        : "You can track your order status using the Track Order button below."}
                     </p>
                   </div>
                 </div>
               </CardContent>
               <CardFooter className="flex flex-col sm:flex-row gap-4 mt-auto">
                 <Button className="w-full sm:w-auto bg-primary hover:bg-primary/90 rounded-none" asChild>
-                  <Link href="/account?tab=orders">
-                    View Your Orders
-                    <Package className="ml-2 h-4 w-4" />
-                  </Link>
+                  {isAuthenticated ? (
+                    <Link href="/account?tab=orders">
+                      View Your Orders
+                      <Package className="ml-2 h-4 w-4" />
+                    </Link>
+                  ) : (
+                    <Link href={`/track-order?id=${orderId}`}>
+                      Track Your Order
+                      <Search className="ml-2 h-4 w-4" />
+                    </Link>
+                  )}
                 </Button>
               </CardFooter>
             </Card>
@@ -147,7 +192,8 @@ export default function CheckoutSuccessPage() {
                     Order Cancellation Policy
                   </h3>
                   <p className="text-sm text-muted-foreground">
-                    You can cancel your order within <span className="font-medium">3 hours</span> of placing it through your account dashboard. 
+                    You can cancel your order within <span className="font-medium">3 hours</span> of placing it 
+                    {isAuthenticated ? " through your account dashboard" : " by contacting our customer support with your order ID"}.
                     After this window, cancellation requests will be subject to review.
                   </p>
                 </div>

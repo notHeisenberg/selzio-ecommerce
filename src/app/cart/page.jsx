@@ -16,7 +16,6 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Navbar } from '@/components/layout/navbar';
 import { Footer } from '@/components/layout/footer';
 import { motion, AnimatePresence } from 'framer-motion';
-import CheckoutAuthDialog from '@/components/auth/checkout-auth-dialog';
 
 // Coupon codes - In a real app, these would come from the database
 const VALID_COUPONS = {
@@ -31,7 +30,6 @@ export default function CartPage() {
   const [appliedCoupon, setAppliedCoupon] = useState(null);
   const [couponError, setCouponError] = useState('');
   const [isApplyingCoupon, setIsApplyingCoupon] = useState(false);
-  const [showAuthDialog, setShowAuthDialog] = useState(false);
   
   const router = useRouter();
   const { resolvedTheme } = useTheme();
@@ -164,13 +162,9 @@ export default function CartPage() {
     sessionStorage.removeItem('appliedCoupon');
   };
   
-  // Proceed to checkout handler
+  // Handle checkout button click - direct to checkout without auth
   const handleCheckout = () => {
-    if (isAuthenticated) {
-      router.push('/checkout');
-    } else {
-      setShowAuthDialog(true);
-    }
+    router.push('/checkout');
   };
 
   return (
@@ -664,15 +658,6 @@ export default function CartPage() {
       </main>
       
       <Footer />
-      
-      {/* Auth Dialog for non-authenticated users */}
-      <CheckoutAuthDialog 
-        open={showAuthDialog} 
-        onOpenChange={setShowAuthDialog}
-        onSuccess={() => {
-          router.push('/checkout');
-        }}
-      />
     </div>
   );
 } 

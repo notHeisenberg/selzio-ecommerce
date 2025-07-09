@@ -335,41 +335,53 @@ export async function GET(req) {
 
 export async function POST(req) {
   try {
-    // Try to get session from NextAuth first
-    const session = await getServerSession(authOptions);
-    
-    // Try JWT token from header as backup authentication method
-    const jwtUser = getAuthUser(req);
-    
-    // No authentication at all
-    if (!session && !jwtUser) {
-      console.error('Unauthorized access to orders POST API - no session or JWT token');
-      return NextResponse.json({ error: 'Authentication required to create an order' }, { status: 401 });
-    }
-    
-    // Choose the authenticated user (prefer session, fallback to JWT)
-    const user = session?.user || jwtUser;
-    
-    if (!user) {
-      console.error('Unauthorized access to orders POST API - authenticated but no user data');
-      return NextResponse.json({ error: 'Valid user information required' }, { status: 401 });
-    }
-
-    // Add debugging for auth
-    console.log('Orders API authenticated via:', session ? 'NextAuth session' : 'JWT token', 'User ID:', user.id);
-    
     const orderData = await req.json();
-    const ordersCollection = await getOrdersCollection();
-
-    // Get user ID - store it consistently as a string to match existing orders
-    const userId = user.id.toString();
     
-    // Log the user ID we're using for the order
-    console.log('Creating order for user:', userId);
+    // Check if this is a guest order
+    const isGuestOrder = orderData.isGuestOrder === true;
+    
+    // Only require authentication for non-guest orders
+    if (!isGuestOrder) {
+      // Try to get session from NextAuth first
+      const session = await getServerSession(authOptions);
+      
+      // Try JWT token from header as backup authentication method
+      const jwtUser = getAuthUser(req);
+      
+      // No authentication at all
+      if (!session && !jwtUser) {
+        console.error('Unauthorized access to orders POST API - no session or JWT token');
+        return NextResponse.json({ error: 'Authentication required to create an order' }, { status: 401 });
+      }
+      
+      // Choose the authenticated user (prefer session, fallback to JWT)
+      const user = session?.user || jwtUser;
+      
+      if (!user) {
+        console.error('Unauthorized access to orders POST API - authenticated but no user data');
+        return NextResponse.json({ error: 'Valid user information required' }, { status: 401 });
+      }
+
+      // Add debugging for auth
+      console.log('Orders API authenticated via:', session ? 'NextAuth session' : 'JWT token', 'User ID:', user.id);
+      
+      // Get user ID - store it consistently as a string to match existing orders
+      const userId = user.id.toString();
+      
+      // Log the user ID we're using for the order
+      console.log('Creating order for user:', userId);
+      
+      // Add user ID to order data for authenticated users
+      orderData.user = userId;
+    } else {
+      console.log('Creating guest order - no authentication required');
+      // For guest orders, we don't set a user ID
+    }
+    
+    const ordersCollection = await getOrdersCollection();
 
     const order = {
       ...orderData,
-      user: userId,
       status: orderData.status || 'pending',
       createdAt: new Date(),
       updatedAt: new Date()
