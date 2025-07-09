@@ -251,24 +251,24 @@ function TrackOrderContent() {
                     <div className="bg-muted/50 p-3 rounded-lg space-y-1">
                       <div className="flex justify-between">
                         <span>Subtotal:</span>
-                        <span>{order.summary?.subtotal} Tk</span>
+                        <span>{order.subtotal || order.summary?.subtotal} Tk</span>
                       </div>
                       <div className="flex justify-between">
                         <span>Shipping:</span>
-                        <span>{order.summary?.shippingCost} Tk</span>
+                        <span>{order.shipping?.price || order.summary?.shippingCost || 0} Tk</span>
                       </div>
-                      {order.summary?.discount > 0 && (
+                      {(order.discount > 0 || order.summary?.discount > 0) && (
                         <div className="flex justify-between text-green-600">
                           <span>Discount:</span>
-                          <span>-{order.summary?.discount} Tk</span>
+                          <span>-{order.discount || order.summary?.discount} Tk</span>
                         </div>
                       )}
                       <div className="flex justify-between font-medium pt-2 border-t">
                         <span>Total:</span>
-                        <span>{order.summary?.total} Tk</span>
+                        <span>{order.total || order.summary?.total} Tk</span>
                       </div>
                       <div className="text-sm text-muted-foreground pt-1">
-                        Paid via {order.payment?.method || 'N/A'}
+                        Paid via: <span className="font-medium text-primary uppercase">{order.payment?.method || 'N/A'}</span>
                       </div>
                     </div>
                   </div>
