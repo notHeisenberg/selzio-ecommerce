@@ -68,7 +68,6 @@ export const authOptions = {
         // For social login
         if (account.provider === "google" || account.provider === "facebook") {
           try {
-            console.log("Attempting social login with provider:", account.provider);
             // Call API to create or fetch the user
             const response = await fetch(`${API_URL}/auth/social`, {
               method: "POST",
@@ -85,7 +84,6 @@ export const authOptions = {
             const data = await response.json();
 
             if (response.ok) {
-              console.log("Social auth successful:", data.user.email);
               token.accessToken = data.token;
               token.user = data.user;
             } else {

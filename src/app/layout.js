@@ -27,7 +27,7 @@ export default function RootLayout({ children }) {
             <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
               <AuthProvider>
                 <CartProvider>
-                  <WishlistProvider>
+                  <WishlistProvider shouldFetch={false}>
                     <Providers>
                       {children}
                       <SocialSidebarWrapper />

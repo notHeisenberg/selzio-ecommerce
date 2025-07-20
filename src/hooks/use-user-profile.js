@@ -41,16 +41,46 @@ export function useUserProfile() {
       }
       
       try {
+        // Make sure we have a valid token before making the API call
+        const token = localStorage.getItem('auth_token');
+        if (!token) {
+          console.warn('No auth token available for profile fetch');
+          if (authUser) {
+            return authUser; // Return cached user data if available
+          }
+          throw new Error('Authentication required');
+        }
+        
+        // Set authorization header explicitly for this request
+        const headers = {
+          Authorization: `Bearer ${token}`
+        };
+        
         // Fetch the latest user data from API
-        const response = await api.get('/api/users/profile');
+        const response = await api.get('/api/users/profile', { headers });
         
         // Save to localStorage for persistence
         if (response.data) {
-          localStorage.setItem('user_data', JSON.stringify(response.data));
+          try {
+            localStorage.setItem('user_data', JSON.stringify(response.data));
+          } catch (e) {
+            console.error('Failed to save user data to localStorage:', e);
+          }
         }
         
         return response.data;
       } catch (error) {
+        console.error('Profile fetch error:', error.response?.status, error.message);
+        
+        // Handle 401 errors specifically
+        if (error.response?.status === 401) {
+          console.warn('Authentication token invalid or expired');
+          // Don't throw an error if we have fallback data
+          if (authUser) {
+            return authUser;
+          }
+        }
+        
         // If API call fails but we have auth user, use that
         if (authUser) {
           return authUser;
@@ -70,14 +100,34 @@ export function useUserProfile() {
   // Update user profile
   const updateProfile = useMutation({
     mutationFn: async (profileData) => {
-      const response = await api.put('/api/users/profile', profileData);
-      
-      // Update localStorage with new user data
-      if (response.data && response.data.user) {
-        localStorage.setItem('user_data', JSON.stringify(response.data.user));
+      try {
+        // Make sure we have a valid token
+        const token = localStorage.getItem('auth_token');
+        if (!token) {
+          throw new Error('Authentication required');
+        }
+        
+        // Set headers explicitly for this request
+        const headers = {
+          Authorization: `Bearer ${token}`
+        };
+        
+        const response = await api.put('/api/users/profile', profileData, { headers });
+        
+        // Update localStorage with new user data
+        if (response.data && response.data.user) {
+          try {
+            localStorage.setItem('user_data', JSON.stringify(response.data.user));
+          } catch (e) {
+            console.error('Failed to save user data to localStorage:', e);
+          }
+        }
+        
+        return response.data;
+      } catch (error) {
+        console.error('Profile update error:', error);
+        throw error;
       }
-      
-      return response.data;
     },
     onSuccess: (data) => {
       // Update the query data with the new user data
@@ -91,15 +141,35 @@ export function useUserProfile() {
   // Update password
   const updatePassword = useMutation({
     mutationFn: async (passwordData) => {
-      const response = await api.put('/api/users/profile', passwordData);
-      return response.data;
+      try {
+        // Make sure we have a valid token
+        const token = localStorage.getItem('auth_token');
+        if (!token) {
+          throw new Error('Authentication required');
+        }
+        
+        // Set headers explicitly for this request
+        const headers = {
+          Authorization: `Bearer ${token}`
+        };
+        
+        const response = await api.put('/api/users/profile', passwordData, { headers });
+        return response.data;
+      } catch (error) {
+        console.error('Password update error:', error);
+        throw error;
+      }
     },
     onSuccess: (data) => {
       // Update the query data with the new user data
       if (data.user) {
         queryClient.setQueryData(profileQueryKey, data.user);
         // Update localStorage with new user data
-        localStorage.setItem('user_data', JSON.stringify(data.user));
+        try {
+          localStorage.setItem('user_data', JSON.stringify(data.user));
+        } catch (e) {
+          console.error('Failed to save user data to localStorage:', e);
+        }
       }
       
       // Invalidate query to refetch and ensure we have the latest data
@@ -120,13 +190,31 @@ export function useUserProfile() {
   // Function to force refresh profile data
   const refreshProfile = useCallback(async () => {
     try {
+      // Make sure we have a valid token
+      const token = localStorage.getItem('auth_token');
+      if (!token) {
+        console.warn('No auth token available for profile refresh');
+        return null;
+      }
+
       await queryClient.invalidateQueries({ queryKey: profileQueryKey });
-      return await refetch();
+      
+      try {
+        const result = await refetch();
+        return result.data;
+      } catch (refetchError) {
+        console.error('Error during profile refetch:', refetchError);
+        // If we have user data in context, return that as fallback
+        if (authUser) {
+          return authUser;
+        }
+        return null;
+      }
     } catch (error) {
       console.error('Error refreshing profile:', error);
       return null;
     }
-  }, [queryClient, refetch]);
+  }, [queryClient, refetch, authUser]);
 
   return {
     user: currentUser,

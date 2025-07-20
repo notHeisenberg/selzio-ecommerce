@@ -16,8 +16,6 @@ async function createTestCombo() {
   try {
     // Connect to MongoDB
     await client.connect();
-    console.log('Connected to MongoDB');
-
     // Get database and collection
     const db = client.db("selzio_business");
     const combosCollection = db.collection("combos");
@@ -33,8 +31,6 @@ async function createTestCombo() {
       .toArray();
 
     if (poloProducts.length < 3) {
-      console.log('Not enough polo products found. Adding generic test combo instead.');
-      
       // Create a test combo with mock product codes
       const testCombo = {
         comboCode: 'CMB-TESTPOLO',
@@ -71,7 +67,7 @@ async function createTestCombo() {
 
       // Add to database
       const result = await combosCollection.insertOne(testCombo);
-      console.log(`Created test combo with ID: ${result.insertedId}`);
+      
     } else {
       // Get product codes
       const productCodes = poloProducts.map(p => p.productCode);
@@ -106,15 +102,15 @@ async function createTestCombo() {
 
       // Add to database
       const result = await combosCollection.insertOne(realCombo);
-      console.log(`Created real combo with ID: ${result.insertedId}`);
-      console.log('Using product codes:', productCodes);
+        
+      
     }
 
   } catch (error) {
     console.error('Error creating combo:', error);
   } finally {
     await client.close();
-    console.log('MongoDB connection closed');
+
   }
 }
 

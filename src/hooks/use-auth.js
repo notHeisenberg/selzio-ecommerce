@@ -16,9 +16,21 @@ const api = axios.create({
 // Setup axios interceptor to add auth token to all requests
 api.interceptors.request.use(
   (config) => {
-    const token = localStorage.getItem('auth_token');
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
+    try {
+      const token = localStorage.getItem('auth_token');
+      if (token) {
+        config.headers.Authorization = `Bearer ${token}`;
+      } else {
+        // Check if we have session data available in the window object
+        if (typeof window !== 'undefined' && window.__NEXT_DATA__?.props?.pageProps?.session?.accessToken) {
+          const sessionToken = window.__NEXT_DATA__.props.pageProps.session.accessToken;
+          config.headers.Authorization = `Bearer ${sessionToken}`;
+          // Store it for future use
+          localStorage.setItem('auth_token', sessionToken);
+        }
+      }
+    } catch (error) {
+      console.error('Error setting auth header:', error);
     }
     return config;
   },
@@ -89,8 +101,12 @@ export const AuthProvider = ({ children }) => {
         }
         
         // Save auth data to localStorage
-        localStorage.setItem('auth_token', token);
-        localStorage.setItem('user_data', JSON.stringify(sessionUser));
+        try {
+          localStorage.setItem('auth_token', token);
+          localStorage.setItem('user_data', JSON.stringify(sessionUser));
+        } catch (e) {
+          console.error('Failed to write to localStorage:', e);
+        }
         
         // Set default authorization header for all requests
         api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
@@ -100,11 +116,21 @@ export const AuthProvider = ({ children }) => {
         setLoading(false);
         
         // Check if we have a stored redirect destination
-        const storedRedirect = sessionStorage.getItem('auth_redirect');
+        let storedRedirect;
+        try {
+          storedRedirect = sessionStorage.getItem('auth_redirect');
+        } catch (e) {
+          console.error('Failed to access sessionStorage:', e);
+        }
+        
         if (storedRedirect) {
           // Wait a bit to ensure all auth state is properly set
           setTimeout(() => {
-            sessionStorage.removeItem('auth_redirect');
+            try {
+              sessionStorage.removeItem('auth_redirect');
+            } catch (e) {
+              console.error('Failed to remove from sessionStorage:', e);
+            }
             router.push(storedRedirect);
           }, 500);
         }
@@ -124,8 +150,12 @@ export const AuthProvider = ({ children }) => {
           
           if (sessionUser && token) {
             // Save auth data to localStorage
-            localStorage.setItem('auth_token', token);
-            localStorage.setItem('user_data', JSON.stringify(sessionUser));
+            try {
+              localStorage.setItem('auth_token', token);
+              localStorage.setItem('user_data', JSON.stringify(sessionUser));
+            } catch (e) {
+              console.error('Failed to write to localStorage:', e);
+            }
             
             // Set default authorization header for all requests
             api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
@@ -138,13 +168,23 @@ export const AuthProvider = ({ children }) => {
         }
         
         // Fall back to localStorage check for token
-        const token = localStorage.getItem('auth_token');
+        let token;
+        let userData;
+        
+        try {
+          token = localStorage.getItem('auth_token');
+          userData = localStorage.getItem('user_data');
+        } catch (e) {
+          console.error('Failed to read from localStorage:', e);
+          token = null;
+          userData = null;
+        }
+        
         if (token) {
           // Set default authorization header for all requests
           api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
           
           // Get user info from localStorage
-          const userData = localStorage.getItem('user_data');
           if (userData) {
             try {
               const parsedUser = JSON.parse(userData);
@@ -156,13 +196,21 @@ export const AuthProvider = ({ children }) => {
                 if (response.data) {
                   // Update with latest data
                   setUser(response.data);
-                  localStorage.setItem('user_data', JSON.stringify(response.data));
+                  try {
+                    localStorage.setItem('user_data', JSON.stringify(response.data));
+                  } catch (e) {
+                    console.error('Failed to update localStorage:', e);
+                  }
                 }
               } catch (apiError) {
                 // If API call fails with 401, clear the stored token and user data
                 if (apiError.response && apiError.response.status === 401) {
-                  localStorage.removeItem('auth_token');
-                  localStorage.removeItem('user_data');
+                  try {
+                    localStorage.removeItem('auth_token');
+                    localStorage.removeItem('user_data');
+                  } catch (e) {
+                    console.error('Failed to clear localStorage:', e);
+                  }
                   setUser(null);
                 } else {
                   // For other errors, keep using cached data
@@ -171,7 +219,11 @@ export const AuthProvider = ({ children }) => {
               }
             } catch (parseError) {
               console.error('Error parsing user data:', parseError);
-              localStorage.removeItem('user_data');
+              try {
+                localStorage.removeItem('user_data');
+              } catch (e) {
+                console.error('Failed to remove from localStorage:', e);
+              }
               setUser(null);
             }
           }
@@ -199,17 +251,41 @@ export const AuthProvider = ({ children }) => {
     setLoading(true);
     setError(null);
     
-    try {
+    if (!email || !password) {
+      setError('Email and password are required');
+      setLoading(false);
+      throw new Error('Email and password are required');
+    }
+    
+    try { 
+      // Create request configuration with timeout
+      const config = {
+        timeout: 10000, // 10 second timeout
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      };
+      
       const response = await api.post('/api/auth', { 
         email, 
         password 
-      });
+      }, config);
       
       const data = response.data;
       
+      if (!data.token || !data.user) {
+        console.error('Invalid response from auth API:', data);
+        throw new Error('Invalid response from authentication service');
+      }
+      
       // Save auth data to localStorage
-      localStorage.setItem('auth_token', data.token);
-      localStorage.setItem('user_data', JSON.stringify(data.user));
+      try {
+        localStorage.setItem('auth_token', data.token);
+        localStorage.setItem('user_data', JSON.stringify(data.user));
+      } catch (storageError) {
+        console.error('Failed to save auth data to localStorage:', storageError);
+        // Continue since the data is already in memory
+      }
       
       // Set default authorization header for all requests
       api.defaults.headers.common['Authorization'] = `Bearer ${data.token}`;
@@ -217,11 +293,28 @@ export const AuthProvider = ({ children }) => {
       // Update state
       setUser(data.user);
       
+      
       return data;
     } catch (error) {
-      const errorMessage = error.response?.data?.error || 'Login failed';
-      setError(errorMessage);
-      throw error;
+      console.error('Login error:', error);
+      
+      // Handle different types of errors
+      if (error.response) {
+        // The request was made and the server responded with an error status
+        const errorMessage = error.response.data?.error || `Authentication failed (${error.response.status})`;
+        setError(errorMessage);
+        throw new Error(errorMessage);
+      } else if (error.request) {
+        // The request was made but no response was received
+        const errorMessage = 'No response from authentication service. Please try again later.';
+        setError(errorMessage);
+        throw new Error(errorMessage);
+      } else {
+        // Something else caused the error
+        const errorMessage = error.message || 'Login failed';
+        setError(errorMessage);
+        throw error;
+      }
     } finally {
       setLoading(false);
     }
@@ -343,7 +436,7 @@ export const AuthProvider = ({ children }) => {
     // Helper function to store intended redirect destination
     storeRedirectDestination: (destination) => {
       if (typeof window !== 'undefined') {
-        console.log('Storing redirect destination:', destination);
+        
         sessionStorage.setItem('auth_redirect', destination);
       }
     },
@@ -353,7 +446,6 @@ export const AuthProvider = ({ children }) => {
       if (typeof window !== 'undefined') {
         const destination = sessionStorage.getItem('auth_redirect');
         sessionStorage.removeItem('auth_redirect');
-        console.log('Retrieved redirect destination:', destination);
         return destination;
       }
       return null;

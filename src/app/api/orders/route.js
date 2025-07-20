@@ -27,8 +27,6 @@ export async function GET(req) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
     
-    // Add debugging for auth
-    console.log('Orders API authenticated via:', session ? 'NextAuth session' : 'JWT token');
 
     // Check if user is admin for different behavior
     const isAdmin = user && (
@@ -86,7 +84,6 @@ export async function GET(req) {
       // Step 1: First search the users collection for matching users
       const usersCollection = await getUsersCollection();
       
-      console.log('Search term:', searchTerm);
       
       // Look for users matching the search term (name, email, phone)
       const userQuery = {
@@ -97,14 +94,10 @@ export async function GET(req) {
         ]
       };
       
-      console.log('User search query:', JSON.stringify(userQuery));
       
       const matchingUsers = await usersCollection.find(userQuery).toArray();
       
-      console.log(`Found ${matchingUsers.length} users matching search term: ${searchTerm}`);
-      if (matchingUsers.length > 0) {
-        console.log('Matching users:', matchingUsers.map(u => ({ id: u._id.toString(), name: u.name, email: u.email })));
-      }
+      
       
       // Step 2: Check if we need to search by order ID or user info
       if (matchingUsers.length > 0 || searchTerm.length >= 1) {
@@ -127,7 +120,7 @@ export async function GET(req) {
             userIds.push(u._id.toString());
           });
           
-          console.log('Searching for orders with user IDs:', userIds.map(id => id.toString()));
+          
           
           // Create a user query that handles both ObjectId and string formats
           searchConditions.push({ user: { $in: userIds } });
@@ -171,13 +164,13 @@ export async function GET(req) {
         // Add all search conditions to the query
         if (searchConditions.length > 0) {
           query.$or = searchConditions;
-          console.log('Final search conditions:', JSON.stringify(query.$or));
+          
         }
       }
     }
     
     // Log the query for debugging
-    console.log('Orders API query:', JSON.stringify(query));
+    
     
     // Pagination
     const skip = (page - 1) * limit;
@@ -189,7 +182,7 @@ export async function GET(req) {
     const ordersCollection = await getOrdersCollection();
     
     // For debugging, log the query
-    console.log('Orders fetch query:', JSON.stringify(query));
+    
     
     // Get total count for pagination
     const total = await ordersCollection.countDocuments(query);
@@ -202,12 +195,12 @@ export async function GET(req) {
       .limit(limit)
       .toArray();
     
-    console.log('Found orders:', orders.length);
+    
     
     // Check for orders with missing user field and log them
     const ordersWithMissingUser = orders.filter(order => !order.user).length;
     if (ordersWithMissingUser > 0) {
-      console.log(`Warning: ${ordersWithMissingUser} orders have missing/null user field`);
+      
     }
     
     // If admin, populate user details for each order
@@ -363,18 +356,18 @@ export async function POST(req) {
       }
 
       // Add debugging for auth
-      console.log('Orders API authenticated via:', session ? 'NextAuth session' : 'JWT token', 'User ID:', user.id);
+      
       
       // Get user ID - store it consistently as a string to match existing orders
       const userId = user.id.toString();
       
       // Log the user ID we're using for the order
-      console.log('Creating order for user:', userId);
+      
       
       // Add user ID to order data for authenticated users
       orderData.user = userId;
     } else {
-      console.log('Creating guest order - no authentication required');
+      
       // For guest orders, we don't set a user ID
     }
     
@@ -400,15 +393,15 @@ export async function POST(req) {
 // Handle saving admin notes
 export async function PUT(req) {
   try {
-    console.log('💎 PUT request received on /api/orders main endpoint');
+    
     
     // Try to get session from NextAuth first
     const session = await getServerSession(authOptions);
-    console.log('💎 Session:', session ? 'Found' : 'Not found');
+    
     
     // Try JWT token from header as backup authentication method
     const jwtUser = getAuthUser(req);
-    console.log('💎 JWT user:', jwtUser ? 'Found' : 'Not found');
+    
     
     // No authentication at all
     if (!session && !jwtUser) {
@@ -426,7 +419,7 @@ export async function PUT(req) {
     
     // Only admins can update orders
     const isAdmin = user.role === 'admin' || user.isAdmin === true || user.admin === true;
-    console.log('💎 Is admin:', isAdmin);
+    
     
     if (!isAdmin) {
       console.error('🔴 User is not admin', { userId: user.id, role: user.role });
@@ -437,11 +430,11 @@ export async function PUT(req) {
     let data;
     try {
       const bodyText = await req.text();
-      console.log('💎 Raw request body:', bodyText);
+      
       
       if (bodyText.trim()) {
         data = JSON.parse(bodyText);
-        console.log('💎 Parsed request data:', data);
+        
       } else {
         console.error('🔴 Empty request body');
         return NextResponse.json({ error: 'Empty request body' }, { status: 400 });
@@ -481,11 +474,11 @@ export async function PUT(req) {
     
     // Add status if provided
     if (status !== undefined) {
-      console.log('💎 Updating status to:', status);
+      
       updateFields.status = status;
     }
     
-    console.log('💎 Update fields:', updateFields);
+    
     
     // Update the order
     const result = await ordersCollection.findOneAndUpdate(
@@ -499,7 +492,7 @@ export async function PUT(req) {
       return NextResponse.json({ error: 'Order not found' }, { status: 404 });
     }
     
-    console.log('💎 Order updated successfully');
+    
     return NextResponse.json({ 
       success: true,
       order: result.value,
@@ -517,7 +510,7 @@ export async function PUT(req) {
 // Handle deleting orders (admin only)
 export async function DELETE(req) {
   try {
-    console.log('🗑️ DELETE request received on /api/orders endpoint');
+    
     
     // Get the order ID from the URL parameters
     const url = new URL(req.url);
@@ -556,7 +549,7 @@ export async function DELETE(req) {
     
     // Only admins can delete orders
     const isAdmin = user.role === 'admin' || user.isAdmin === true || user.admin === true;
-    console.log('🗑️ User attempting to delete:', { userId: user.id, isAdmin });
+    
     
     if (!isAdmin) {
       console.error('🔴 Non-admin user attempting to delete order');
@@ -577,7 +570,6 @@ export async function DELETE(req) {
     const result = await ordersCollection.deleteOne({ _id: new ObjectId(orderId) });
     
     if (result.deletedCount === 1) {
-      console.log('✅ Order deleted successfully:', orderId);
       return NextResponse.json({ 
         success: true, 
         message: 'Order deleted successfully',

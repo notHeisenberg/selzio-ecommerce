@@ -66,7 +66,7 @@ export default function WishlistTab() {
   const [forceLoaded, setForceLoaded] = useState(false);
   const router = useRouter();
   const { resolvedTheme } = useTheme();
-  const { wishlistItems, removeFromWishlist, totalItems, isLoading, refetchWishlist } = useWishlist();
+  const { wishlistItems, removeFromWishlist, totalItems, isLoading, loadWishlist } = useWishlist();
   const { addToCart } = useCart();
   const { toast } = useToast();
   const [error, setError] = useState(null);
@@ -83,25 +83,25 @@ export default function WishlistTab() {
           
         setForceLoaded(true);
       }
-    }, 3000); // 3 seconds timeout
+    }, 1000); // 10 seconds timeout
     
     return () => clearTimeout(timer);
   }, [isLoading]);
   
-  // Refetch wishlist data when component mounts
+  // Load wishlist data when component mounts
   useEffect(() => {
     if (mounted) {
       try {
-        refetchWishlist().catch(err => {
-          console.error("Error refetching wishlist:", err);
+        loadWishlist().catch(err => {
+          console.error("Error loading wishlist:", err);
           setError("Failed to load wishlist");
         });
       } catch (err) {
-        console.error("Error in refetch call:", err);
+        console.error("Error in loadWishlist call:", err);
         setError("Failed to load wishlist");
       }
     }
-  }, [mounted, refetchWishlist]);
+  }, [mounted, loadWishlist]);
 
   // Add debug logging for wishlist items
   useEffect(() => {
@@ -172,7 +172,7 @@ export default function WishlistTab() {
         });
         
         // Immediately refetch to update UI
-        refetchWishlist();
+        loadWishlist();
       } catch (removeError) {
         console.error("Error removing item from wishlist:", removeError);
         // Still show success for cart addition but warn about wishlist
@@ -217,7 +217,7 @@ export default function WishlistTab() {
       await removeFromWishlist(stringItemId);
       
       // Immediately refetch to update UI
-      refetchWishlist();
+      loadWishlist();
 
     } catch (error) {
       console.error("Error removing item from wishlist:", error);
@@ -259,7 +259,7 @@ export default function WishlistTab() {
             <Button 
               onClick={() => {
                 setError(null);
-                refetchWishlist();
+                loadWishlist();
               }}
               variant="outline"
             >

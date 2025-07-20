@@ -48,50 +48,64 @@ export function useOrders() {
   } = useQuery({
     queryKey: ['orders', pagination.page, pagination.limit, filter, isAdmin, isAuthenticated],
     queryFn: async () => {
-      if (!isAuthenticated) {
-        console.error('User is not authenticated');
-        throw new Error('Authentication required');
-      }
-      
-      // Build query string for filtering and pagination
-      const params = new URLSearchParams();
-      params.append('page', pagination.page);
-      params.append('limit', pagination.limit);
-      
-      if (filter.status && filter.status !== 'all') {
-        params.append('status', filter.status);
-      }
-      
-      // Admin-specific filters
-      if (isAdmin && filter.userId && filter.userId !== 'all') {
-        params.append('userId', filter.userId);
-      }
-      
-      if (filter.searchTerm) {
-        params.append('search', filter.searchTerm);
-      }
-      
-      params.append('sortBy', filter.sortBy);
-      params.append('sortOrder', filter.sortOrder);
-      
-      // Determine the endpoint based on user role
-      const endpoint = `/api/orders?${params.toString()}`;
-      
-      console.log('Fetching orders from endpoint:', endpoint);
-      
       try {
+        if (!isAuthenticated) {
+          console.error('User is not authenticated');
+          throw new Error('Authentication required');
+        }
+        
+        // Build query string for filtering and pagination
+        const params = new URLSearchParams();
+        params.append('page', pagination.page);
+        params.append('limit', pagination.limit);
+        
+        if (filter.status && filter.status !== 'all') {
+          params.append('status', filter.status);
+        }
+        
+        // Admin-specific filters
+        if (isAdmin && filter.userId && filter.userId !== 'all') {
+          params.append('userId', filter.userId);
+        }
+        
+        if (filter.searchTerm) {
+          params.append('search', filter.searchTerm);
+        }
+        
+        params.append('sortBy', filter.sortBy);
+        params.append('sortOrder', filter.sortOrder);
+        
+        // Determine the endpoint based on user role
+        const endpoint = `/api/orders?${params.toString()}`;
+        
+
         // Get authentication data from multiple sources
-        let token = localStorage.getItem('auth_token');
+        let token;
+        try {
+          token = localStorage.getItem('auth_token');
+        } catch (e) {
+          console.error('Cannot access localStorage:', e);
+          token = null;
+        }
+        
         const sessionToken = session?.accessToken;
         
         // Use session token if available as it's more likely to be current
         if (sessionToken) {
           token = sessionToken;
           // Update localStorage with current session token
-          localStorage.setItem('auth_token', sessionToken);
+          try {
+            localStorage.setItem('auth_token', sessionToken);
+          } catch (e) {
+            console.error('Cannot write to localStorage:', e);
+          }
         }
         
-        console.log('Auth token status:', token ? 'Present' : 'Missing');
+        
+        if (!token) {
+          
+          throw new Error('Authentication token required');
+        }
         
         // Make sure we have proper auth headers
         const headers = {
@@ -107,7 +121,6 @@ export function useOrders() {
           headers,
           withCredentials: true // This enables sending cookies with the request
         });
-
         
         // Update pagination state
         setPagination(prev => ({
@@ -122,11 +135,11 @@ export function useOrders() {
         
         // If unauthorized, try to refresh the auth state
         if (error.response?.status === 401) {
-          console.log('Unauthorized error - attempting to resolve auth issues');
+          
           
           // Verify if we still have a valid session
           if (session && session.accessToken) {
-            console.log('Found session with token - updating local storage');
+            
             localStorage.setItem('auth_token', session.accessToken);
             
             // Attempt one more request with the session token
@@ -138,8 +151,6 @@ export function useOrders() {
                 },
                 withCredentials: true
               });
-              
-              console.log('Retry succeeded with session token');
               return retryResponse.data;
             } catch (retryError) {
               console.error('Retry failed with session token:', retryError);

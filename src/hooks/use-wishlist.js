@@ -10,7 +10,7 @@ import { useSession } from 'next-auth/react';
 
 const WishlistContext = createContext();
 
-export const WishlistProvider = ({ children }) => {
+export const WishlistProvider = ({ children, shouldFetch = false }) => {
   const [wishlistItems, setWishlistItems] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const { toast } = useToast();
@@ -80,7 +80,7 @@ export const WishlistProvider = ({ children }) => {
   
   // Function to fetch wishlist from API
   const { data: wishlistData, refetch: refetchWishlist, isSuccess } = useQuery({
-    queryKey: ['wishlist', user?.id, isAuthenticated],
+    queryKey: ['wishlist', user?.id, isAuthenticated, shouldFetch],
     queryFn: async () => {
       // For non-authenticated users, return empty array (guest users cannot have wishlist)
       if (!isAuthenticated || !user) {
@@ -104,7 +104,7 @@ export const WishlistProvider = ({ children }) => {
         const response = await axios.get('/api/wishlist', {
           headers: createHeaders(),
           withCredentials: true,
-          timeout: 8000 // Increased timeout to 8 seconds
+          timeout: 100 // 8 seconds timeout
         });
         
         return response.data.wishlist || [];
@@ -113,9 +113,6 @@ export const WishlistProvider = ({ children }) => {
         
         // Handle authentication errors
         if (error.response && error.response.status === 401) {
-          // Try to refresh the token or session
-          console.log('Authentication error fetching wishlist, attempting to refresh session');
-          
           // Clear stale token
           localStorage.removeItem('auth_token');
           
@@ -135,7 +132,7 @@ export const WishlistProvider = ({ children }) => {
         return [];
       }
     },
-    enabled: isAuthenticated && !!user, // Only enable if user is authenticated
+    enabled: isAuthenticated && !!user && shouldFetch, // Only enable if user is authenticated AND shouldFetch is true
     staleTime: 30 * 1000, // Consider data fresh for 30 seconds
     retry: (failureCount, error) => {
       // Don't retry on authentication errors
@@ -300,7 +297,7 @@ export const WishlistProvider = ({ children }) => {
         const response = await axios.delete(`/api/wishlist?productId=${encodeURIComponent(stringProductCode)}`, {
           headers: createHeaders(),
           withCredentials: true,
-          timeout: 8000 // 8 second timeout
+          timeout: 8000 // 8 seconds timeout
         });
         
         return { productCode: stringProductCode, response: response.data };
@@ -463,9 +460,7 @@ export const WishlistProvider = ({ children }) => {
     return new Promise((resolve, reject) => {
       // Make sure productCode is a string
       const stringProductCode = String(productCode);
-      
-      console.log(`removeFromWishlist called with productCode: ${stringProductCode}`);
-      
+
       // Check if user is authenticated
       if (!isAuthenticated || !user) {
         toast({
@@ -613,39 +608,19 @@ export const WishlistProvider = ({ children }) => {
     }
   };
   
-  // Monitor authentication status and refresh wishlist when auth changes
-  useEffect(() => {
-    // If user becomes authenticated, refresh the wishlist
-    if (isAuthenticated && user) {
-      refetchWishlist();
-    }
-  }, [isAuthenticated, user, refetchWishlist]);
+  // Monitor authentication status and refresh wishlist when auth changes - REMOVED
   
-  // Monitor session changes to refresh token
-  useEffect(() => {
-    if (session?.accessToken) {
-      // If session has a token but localStorage doesn't, update localStorage
-      const localToken = localStorage.getItem('auth_token');
-      if (!localToken && session.accessToken) {
-        localStorage.setItem('auth_token', session.accessToken);
-        // Refresh wishlist with new token
-        refetchWishlist();
-      }
-    }
-  }, [session, refetchWishlist]);
+  // Monitor session changes to refresh token - REMOVED
   
-  // Check for auth refresh flag
+  // Check for auth refresh flag - MODIFIED
   useEffect(() => {
     const needsRefresh = sessionStorage.getItem('auth_needs_refresh');
     if (needsRefresh === 'true' && isAuthenticated && user) {
       // Clear the flag
       sessionStorage.removeItem('auth_needs_refresh');
-      // Refresh wishlist
-      setTimeout(() => {
-        refetchWishlist();
-      }, 1000); // Small delay to ensure token is refreshed
+      // No automatic refetching
     }
-  }, [isAuthenticated, user, refetchWishlist]);
+  }, [isAuthenticated, user]);
   
   const value = {
     wishlistItems,
@@ -656,7 +631,13 @@ export const WishlistProvider = ({ children }) => {
     isInWishlist,
     clearWishlist,
     totalItems: wishlistItems.length,
-    refetchWishlist
+    refetchWishlist,
+    loadWishlist: () => {
+      if (isAuthenticated && user) {
+        return refetchWishlist();
+      }
+      return Promise.resolve({ data: [] });
+    }
   };
   
   return <WishlistContext.Provider value={value}>{children}</WishlistContext.Provider>;

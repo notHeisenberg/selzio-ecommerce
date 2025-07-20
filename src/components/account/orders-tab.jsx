@@ -443,7 +443,7 @@ export default function OrdersTab() {
                 <SelectContent>
                   <SelectItem value="all">All statuses</SelectItem>
                   {Object.entries(extendedOrderStatuses).map(([value, { label }]) => (
-                    <SelectItem key={value} value={value}>{label}</SelectItem>
+                    <SelectItem key={`status-${value}`} value={value}>{label}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
@@ -476,7 +476,7 @@ export default function OrdersTab() {
                   <SelectContent>
                     <SelectItem value="all">All customers</SelectItem>
                     {usersWithOrders.map(user => (
-                      <SelectItem key={user._id} value={user._id}>
+                      <SelectItem key={user._id || `user-${Math.random().toString(36).substr(2, 9)}`} value={user._id}>
                         {user.name || user.email}
                       </SelectItem>
                     ))}
@@ -680,11 +680,11 @@ export default function OrdersTab() {
                       <h4 className="text-sm font-medium mb-2 text-primary">Items</h4>
                       <div className="space-y-3">
                         {order.items.map((item) => (
-                          <div key={item.productCode} className="flex items-center gap-3 bg-card p-2 rounded-none shadow-sm">
+                          <div key={item.productCode || `item-${Math.random().toString(36).substr(2, 9)}`} className="flex items-center gap-3 bg-card p-2 rounded-none shadow-sm">
                             <div className="relative w-14 h-14 rounded-none overflow-hidden border">
                               <Image
                                 src={item.image || "/images/product-placeholder.png"}
-                                alt={item.name}
+                                alt={item.name || "Product"}
                                 fill
                                 className="object-cover"
                               />
@@ -760,9 +760,9 @@ export default function OrdersTab() {
                           (p >= pagination.page - 1 && p <= pagination.page + 1)
                         )
                         .map((p, i, arr) => (
-                          <React.Fragment key={p}>
+                          <React.Fragment key={`page-${p}`}>
                             {i > 0 && arr[i - 1] !== p - 1 && (
-                              <span className="px-2">...</span>
+                              <span key={`ellipsis-${p}`} className="px-2">...</span>
                             )}
                             <Button
                               variant={pagination.page === p ? "default" : "outline"}
@@ -850,7 +850,7 @@ export default function OrdersTab() {
               </SelectTrigger>
               <SelectContent>
                 {Object.entries(extendedOrderStatuses).map(([value, { label }]) => (
-                  <SelectItem key={value} value={value}>
+                  <SelectItem key={`dialog-status-${value}`} value={value}>
                     {label}
                   </SelectItem>
                 ))}
@@ -901,7 +901,7 @@ export default function OrdersTab() {
               <Label className="text-base">Reason for cancellation</Label>
               <RadioGroup value={cancellationReason} onValueChange={setCancellationReason} className="space-y-2">
                 {cancellationReasons.map(reason => (
-                  <div key={reason} className="flex items-center space-x-2">
+                  <div key={reason.replace(/\s+/g, '-').toLowerCase()} className="flex items-center space-x-2">
                     <RadioGroupItem value={reason} id={reason.replace(/\s+/g, '-').toLowerCase()} />
                     <Label htmlFor={reason.replace(/\s+/g, '-').toLowerCase()}>{reason}</Label>
                   </div>
@@ -1015,7 +1015,7 @@ export default function OrdersTab() {
                   <h3 className="text-lg font-semibold p-4 border-b border-border text-primary">Items</h3>
                   <div className="p-4 space-y-4">
                     {orderDetails.items.map((item) => (
-                      <div key={item.id} className="flex flex-col sm:flex-row items-start gap-4 border-b border-border pb-4 hover:bg-muted/30 p-2 rounded-none transition-colors duration-200">
+                      <div key={item.id || item.productCode || `detail-${Math.random().toString(36).substr(2, 9)}`} className="flex flex-col sm:flex-row items-start gap-4 border-b border-border pb-4 hover:bg-muted/30 p-2 rounded-none transition-colors duration-200">
                         <div className="relative w-16 h-16 rounded-none overflow-hidden border border-border flex-shrink-0 mx-auto sm:mx-0 shadow-sm">
                           <Image
                             src={item.image || "/images/product-placeholder.png"}
@@ -1049,12 +1049,12 @@ export default function OrdersTab() {
                       {orderDetails.items
                         .filter(item => item.isCombo)
                         .map((combo, comboIndex) => (
-                          <div key={`combo-${comboIndex}`} className="border border-border p-4 rounded-none">
+                          <div key={`combo-${comboIndex}-${combo.id || ''}`} className="border border-border p-4 rounded-none">
                             <div className="flex items-center gap-3 mb-3 pb-2 border-b border-border">
                               <div className="relative w-12 h-12 rounded-none overflow-hidden border border-border flex-shrink-0">
                                 <Image
-                                  src={combo.image || '/images/product-placeholder.jpg'}
-                                  alt={combo.name}
+                                  src={combo.image || '/images/product-placeholder.png'}
+                                  alt={combo.name || "Combo product"}
                                   fill
                                   className="object-cover"
                                 />
@@ -1073,11 +1073,11 @@ export default function OrdersTab() {
                                 <p className="text-sm font-medium text-primary mb-2">Products in this combo:</p>
                                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
                                   {combo.products.map((comboProduct, productIndex) => (
-                                    <div key={`combo-product-${productIndex}`} className="flex items-center gap-2 bg-muted/30 p-2 rounded-none">
+                                    <div key={`combo-product-${productIndex}-${combo.id || comboIndex}`} className="flex items-center gap-2 bg-muted/30 p-2 rounded-none">
                                       <div className="relative w-10 h-10 rounded-none overflow-hidden border border-border flex-shrink-0">
                                         <Image
-                                          src={comboProduct.image || '/images/product-placeholder.jpg'}
-                                          alt={comboProduct.name}
+                                          src={comboProduct.image || '/images/product-placeholder.png'}
+                                          alt={comboProduct.name || "Product"}
                                           fill
                                           className="object-cover"
                                         />
@@ -1124,7 +1124,7 @@ export default function OrdersTab() {
                         <p className="font-medium mb-2">Payment Screenshot:</p>
                         <div className="relative w-full h-48 rounded-none overflow-hidden border border-border shadow-sm">
                           <Image
-                            src={orderDetails.payment?.paymentScreenshot || null}
+                            src={orderDetails.payment.paymentScreenshot || "/images/product-placeholder.png"}
                             alt="Payment Screenshot"
                             fill
                             className="object-contain"

@@ -20,7 +20,7 @@ import {
 
 export function ProductCard({ product, index = 0, animationEnabled = true }) {
   const { addToCart } = useCart();
-  const { toggleWishlist, isInWishlist, addToWishlist, removeFromWishlist, refetchWishlist, wishlistItems } = useWishlist();
+  const { toggleWishlist, isInWishlist, addToWishlist, removeFromWishlist, loadWishlist, wishlistItems } = useWishlist();
   const { toast } = useToast();
   const router = useRouter();
   const productUrl = getProductUrl(product);
@@ -62,7 +62,7 @@ export function ProductCard({ product, index = 0, animationEnabled = true }) {
       if (!productId) return;
 
       // Refetch wishlist data to get latest state
-      await refetchWishlist();
+      await loadWishlist();
 
       // Check if product is in wishlist
       const inWishlist = wishlistItems.some(item =>

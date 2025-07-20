@@ -1,7 +1,12 @@
 import jwt from 'jsonwebtoken';
 
 // JWT Secret from environment variables
-const JWT_SECRET = process.env.JWT_SECRET;
+const JWT_SECRET = process.env.JWT_SECRET || 'development-fallback-secret-do-not-use-in-production';
+
+// Log a warning if using the fallback secret
+if (!process.env.JWT_SECRET) {
+  console.warn('WARNING: Using fallback JWT secret. Set JWT_SECRET in your environment variables for production.');
+}
 
 // Default token expiration (7 days)
 const DEFAULT_EXPIRATION = '7d';
@@ -14,11 +19,12 @@ const DEFAULT_EXPIRATION = '7d';
  * @returns {string} The JWT token
  */
 export function generateToken(payload, expiresIn = DEFAULT_EXPIRATION) {
-  if (!JWT_SECRET) {
-    throw new Error('JWT_SECRET environment variable is not defined');
+  try {
+    return jwt.sign(payload, JWT_SECRET, { expiresIn });
+  } catch (error) {
+    console.error('Error generating JWT token:', error);
+    throw new Error('Authentication token generation failed');
   }
-
-  return jwt.sign(payload, JWT_SECRET, { expiresIn });
 }
 
 /**
@@ -28,8 +34,9 @@ export function generateToken(payload, expiresIn = DEFAULT_EXPIRATION) {
  * @returns {Object|null} Decoded token payload or null if invalid
  */
 export function verifyToken(token) {
-  if (!JWT_SECRET) {
-    throw new Error('JWT_SECRET environment variable is not defined');
+  if (!token) {
+    
+    return null;
   }
 
   try {
@@ -51,28 +58,28 @@ export function extractTokenFromHeader(req) {
     // Get authorization header
     const authHeader = req.headers.get('Authorization') || req.headers.get('authorization');
     
-    console.log('Auth header:', authHeader ? `Found (${authHeader.substring(0, 15)}...)` : 'Not found');
+    
     
     // Check if header exists and has proper format
     if (!authHeader) {
-      console.log('No Authorization header found');
+      
       return null;
     }
     
     // Handle Bearer token format
     if (authHeader.startsWith('Bearer ')) {
       const token = authHeader.split(' ')[1];
-      console.log('Found Bearer token:', token ? `${token.substring(0, 10)}...` : 'Invalid token');
+      
       return token;
     }
     
     // Handle direct token format (no Bearer prefix)
     if (authHeader.length > 20) {
-      console.log('Found direct token:', `${authHeader.substring(0, 10)}...`);
+      
       return authHeader;
     }
     
-    console.log('Invalid Authorization header format');
+    
     return null;
   } catch (error) {
     console.error('Error extracting token:', error);
@@ -90,7 +97,7 @@ export function getAuthUser(req) {
   const token = extractTokenFromHeader(req);
   
   if (!token) {
-    console.log('No token found in request');
+    
     return null;
   }
   
@@ -98,11 +105,9 @@ export function getAuthUser(req) {
     const decoded = verifyToken(token);
     
     if (!decoded) {
-      console.log('Token verification failed');
+      
       return null;
     }
-    
-    console.log('Successfully authenticated user:', decoded.email || decoded.id);
     return decoded;
   } catch (error) {
     console.error('Error verifying token:', error);
