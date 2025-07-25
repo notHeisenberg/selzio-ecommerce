@@ -18,7 +18,6 @@ const nextConfig = {
   },
   // Disable trailing slashes to prevent 308 redirects
   trailingSlash: false,
-  output: 'export',
 };
 
 export default nextConfig;

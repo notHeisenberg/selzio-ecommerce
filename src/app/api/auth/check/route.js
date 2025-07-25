@@ -2,6 +2,9 @@ import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '../[...nextauth]/route';
 
+// Configure route as dynamic since it relies on server functionality
+export const dynamic = 'force-dynamic';
+
 // Simple endpoint to check authentication status
 export async function GET(req) {
   try {
