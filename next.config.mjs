@@ -12,16 +12,13 @@ const nextConfig = {
       },
       {
         protocol: 'http',
-        hostname: 'image1.jpg',
-      },
-      {
-        protocol: 'http',
         hostname: '**', // Allow all test hostnames during development
       }
     ],
   },
   // Disable trailing slashes to prevent 308 redirects
   trailingSlash: false,
+  output: 'export',
 };
 
 export default nextConfig;
