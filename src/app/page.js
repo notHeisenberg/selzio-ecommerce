@@ -15,7 +15,7 @@ export default function Home() {
       <SocialSidebar />
       <Hero />
       <CombinedCollectionsSection />
-      <RichTextSection />
+      {/* <RichTextSection /> */}
       <TopSellingSection/>
       <Testimonials />
       <Services />

@@ -39,7 +39,7 @@ const getDisplayImage = (result) => {
   return '/images/product-placeholder.jpg';
 };
 
-const SearchBar = () => {
+const SearchBar = ({ onResultClick }) => {
   const router = useRouter();
   const [isSearching, setIsSearching] = useState(false);
   const [searchResults, setSearchResults] = useState([]);
@@ -103,6 +103,11 @@ const SearchBar = () => {
     }
     setIsFocused(false);
     setSearchQuery(''); // Clear search after navigating
+    
+    // Call the onResultClick prop if provided
+    if (onResultClick) {
+      onResultClick();
+    }
   };
 
   useEffect(() => {

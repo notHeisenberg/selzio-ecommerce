@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Menu, ChevronDown, LogIn } from 'lucide-react';
+import { Menu, ChevronDown, LogIn, Search, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useScrollDirection } from '@/hooks/use-scroll-direction';
 import { cn } from '@/lib/utils';
@@ -16,12 +16,14 @@ import ThemeSwitcher from '@/components/theme/theme-switcher';
 import MobileMenu from './mobile-menu';
 import { getProducts, navItems, createSlug } from '@/data/products';
 import { useAuth } from '@/hooks/use-auth';
+import { motion, AnimatePresence } from 'framer-motion';
 
 export function Navbar() {
   const { isVisible, scrollY } = useScrollDirection({ isNavbar: true });
   const pathname = usePathname();
   const [isCategoryOpen, setIsCategoryOpen] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [isSearchOpen, setIsSearchOpen] = useState(false);
   const logoRef = useRef(null);
   const navRef = useRef(null);
   const searchRef = useRef(null);
@@ -281,11 +283,25 @@ export function Navbar() {
               <SearchBar />
             </div>
 
-            {/* Right Side Icons */}
+            {/* Icons Section */}
             <div ref={iconsRef} className="flex items-center gap-2 md:gap-4">
               <UserMenu />
               <CartDrawer />
-              <ThemeSwitcher />
+              {/* Search icon on small screens, ThemeSwitcher on larger screens */}
+              <div className="md:hidden">
+                <Button 
+                  variant="ghost" 
+                  size="icon" 
+                  className="text-foreground hover:text-primary hover:bg-secondary transition-colors duration-300"
+                  onClick={() => setIsSearchOpen(true)}
+                  aria-label="Search"
+                >
+                  <Search className="h-5 w-5" />
+                </Button>
+              </div>
+              <div className="hidden md:block">
+                <ThemeSwitcher />
+              </div>
             </div>
           </div>
 
@@ -301,6 +317,32 @@ export function Navbar() {
         isOpen={isMobileMenuOpen} 
         onClose={() => setIsMobileMenuOpen(false)} 
       />
+
+      {/* Mobile Search Overlay */}
+      <AnimatePresence>
+        {isSearchOpen && (
+          <motion.div
+            className="fixed inset-0 z-50 bg-background/90 backdrop-blur-md flex flex-col p-4"
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -20 }}
+            transition={{ duration: 0.2 }}
+          >
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-lg font-medium">Search</h2>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setIsSearchOpen(false)}
+                className="text-muted-foreground hover:text-foreground"
+              >
+                <X className="h-5 w-5" />
+              </Button>
+            </div>
+            <SearchBar onResultClick={() => setIsSearchOpen(false)} />
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Empty div with navbar's height to prevent content from hiding under fixed navbar */}
       <div className="h-16 md:h-20"></div>

@@ -4,6 +4,7 @@ import { createContext, useContext, useState, useEffect } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
 import { ShoppingCart } from 'lucide-react';
+import { getDiscountedPrice } from '@/lib/utils';
 
 const CartContext = createContext();
 
@@ -319,8 +320,15 @@ export const CartProvider = ({ children }) => {
   // Calculate total quantity
   const totalItems = cartItems.reduce((sum, item) => sum + item.quantity, 0);
   
-  // Calculate total price
-  const totalPrice = cartItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+  // Calculate total price with discounts
+  const totalPrice = cartItems.reduce((sum, item) => {
+    // Apply discount if available
+    let itemPrice = item.price;
+    if (item.discount && item.discount > 0) {
+      itemPrice = getDiscountedPrice(itemPrice, item.discount);
+    }
+    return sum + (itemPrice * item.quantity);
+  }, 0);
   
   const value = {
     cartItems,

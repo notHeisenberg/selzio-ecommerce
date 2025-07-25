@@ -250,7 +250,7 @@ export function ProductCard({ product, index = 0, animationEnabled = true }) {
                 alt={product.name}
                 fill
                 sizes="(min-width: 1200px) 267px, (min-width: 990px) calc((100vw - 130px) / 4), (min-width: 750px) calc((100vw - 120px) / 3), calc((100vw - 35px) / 2)"
-                className="object-contain transition-opacity duration-300"
+                className="object-cover transition-opacity duration-300"
                 unoptimized={product.image[hoveredImage]?.includes('image1.jpg')}
                 onError={(e) => {
                   console.error("Image failed to load:", product.image);
@@ -279,13 +279,13 @@ export function ProductCard({ product, index = 0, animationEnabled = true }) {
             </div>
           )}
 
-          {/* Action buttons - visible by default with fade-in effect */}
-          <div className="absolute top-3 right-3 flex gap-2 z-10 transition-opacity duration-500 opacity-70 group-hover:opacity-100">
+          {/* Action buttons - Hidden by default, visible on hover */}
+          <div className="absolute top-3 right-3 flex gap-1.5 sm:gap-2 z-10 transition-all duration-300 opacity-0 group-hover:opacity-100">
             {/* Wishlist button */}
             <Button
               variant="ghost"
               size="sm"
-              className={`w-9 h-9 p-0 rounded-md transition-all duration-300 hover:scale-105 group/btn
+              className={`w-7 h-7 sm:w-8 sm:h-8 md:w-9 md:h-9 p-0 rounded-md transition-all duration-300 hover:scale-105 group/btn
                 ${mounted && resolvedTheme === 'dark'
                   ? isWishlisted
                     ? 'bg-red-500/20 text-red-400 hover:bg-transparent hover:border-2 hover:border-red-500'
@@ -297,7 +297,7 @@ export function ProductCard({ product, index = 0, animationEnabled = true }) {
               onClick={handleWishlistToggle}
               title={isWishlisted ? "Remove from Wishlist" : "Add to Wishlist"}
             >
-              <Heart className={`h-5 w-5 transition-colors duration-300
+              <Heart className={`h-3.5 w-3.5 sm:h-4 sm:w-4 md:h-5 md:w-5 transition-colors duration-300
                 ${mounted && resolvedTheme === 'dark'
                   ? isWishlisted 
                     ? 'fill-red-500 text-red-500' 
@@ -315,7 +315,7 @@ export function ProductCard({ product, index = 0, animationEnabled = true }) {
                   ref={popoverTriggerRef}
                   variant="ghost"
                   size="sm"
-                  className={`w-9 h-9 p-0 rounded-md transition-all duration-300 hover:scale-105 group/cart
+                  className={`w-7 h-7 sm:w-8 sm:h-8 md:w-9 md:h-9 p-0 rounded-md transition-all duration-300 hover:scale-105 group/cart
                     ${mounted && resolvedTheme === 'dark'
                       ? 'bg-gray-800/60 text-white hover:bg-transparent hover:border-2 hover:border-white'
                       : 'bg-white/80 text-slate-700 hover:bg-transparent hover:border-2 hover:border-black'
@@ -323,7 +323,7 @@ export function ProductCard({ product, index = 0, animationEnabled = true }) {
                   onClick={handleAddToCart}
                   title={product.sizes && product.sizes.length > 0 ? "Select Size & Add to Cart" : "Add to Cart"}
                 >
-                  <ShoppingCart className={`h-5 w-5 transition-colors duration-300
+                  <ShoppingCart className={`h-3.5 w-3.5 sm:h-4 sm:w-4 md:h-5 md:w-5 transition-colors duration-300
                     ${mounted && resolvedTheme === 'dark'
                       ? 'text-gray-200 group-hover/cart:text-white'
                       : 'text-slate-700 group-hover/cart:text-black'

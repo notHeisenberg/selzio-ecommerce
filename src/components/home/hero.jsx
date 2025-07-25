@@ -45,7 +45,7 @@ export function Hero() {
           src="/images/Banner.jpg"
           alt="Hero background"
           fill
-          className="sm:object-cover object-contain h-full w-full"
+          className="sm:object-cover object-cover h-full w-full"
           priority
         />
       </div>

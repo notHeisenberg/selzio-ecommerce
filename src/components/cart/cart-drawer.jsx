@@ -311,6 +311,11 @@ const CartDrawer = () => {
                             </Link>
                             <span className="ml-4">
                               {formatPrice(calculateItemTotal(item))}
+                              {item.discount && item.discount > 0 && (
+                                <span className="block text-xs text-muted-foreground line-through">
+                                  {formatPrice(item.price * item.quantity)}
+                                </span>
+                              )}
                             </span>
                           </div>
                           {item.selectedSize && (

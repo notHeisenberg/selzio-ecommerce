@@ -16,6 +16,7 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Navbar } from '@/components/layout/navbar';
 import { Footer } from '@/components/layout/footer';
 import { motion, AnimatePresence } from 'framer-motion';
+import { formatPrice, getDiscountedPrice } from "@/lib/utils";
 
 // Coupon codes - In a real app, these would come from the database
 const VALID_COUPONS = {
@@ -280,7 +281,22 @@ export default function CartPage() {
                                     <p className="text-muted-foreground text-sm mb-4">No description available</p>
                                   )}
                                   
-                                  <div className="text-primary font-semibold text-lg mb-2">{item.price.toFixed(2)} BDT</div>
+                                  {/* Display price with discount if available */}
+                                  {item.discount && item.discount > 0 ? (
+                                    <div className="mb-2">
+                                      <div className="text-primary font-semibold text-lg">
+                                        {getDiscountedPrice(item.price, item.discount).toFixed(2)} BDT
+                                      </div>
+                                      <div className="text-muted-foreground text-sm line-through">
+                                        {item.price.toFixed(2)} BDT
+                                      </div>
+                                      <div className="text-sm text-green-600 dark:text-green-400">
+                                        You save {item.discount}% ({(item.price - getDiscountedPrice(item.price, item.discount)).toFixed(2)} BDT)
+                                      </div>
+                                    </div>
+                                  ) : (
+                                    <div className="text-primary font-semibold text-lg mb-2">{item.price.toFixed(2)} BDT</div>
+                                  )}
                                   
                                   {/* Display size if available */}
                                   {item.selectedSize && (

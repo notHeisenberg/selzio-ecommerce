@@ -2,6 +2,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { motion } from 'framer-motion';
+import { getDiscountedPrice } from '@/lib/utils';
 
 export const ReviewSection = ({
   cartItems,
@@ -9,6 +10,7 @@ export const ReviewSection = ({
   subtotal,
   shippingPrice,
   discountAmount,
+  totalProductDiscount = 0,
   total,
   watch,
   setValue,
@@ -19,6 +21,17 @@ export const ReviewSection = ({
   setShowReturnPolicyDialog,
   selectedShipping
 }) => {
+  // Only calculate if not provided as prop
+  const calculatedProductDiscount = totalProductDiscount === 0 ? 
+    cartItems.reduce((sum, item) => {
+      if (item.discount && item.discount > 0) {
+        const originalPrice = item.price * item.quantity;
+        const discountedPrice = getDiscountedPrice(item.price, item.discount) * item.quantity;
+        return sum + (originalPrice - discountedPrice);
+      }
+      return sum;
+    }, 0) : totalProductDiscount;
+  
   return (
     <div id="review-section">
       <h2 className="text-lg font-semibold mb-4">3. Review and Place Order</h2>
@@ -35,9 +48,20 @@ export const ReviewSection = ({
                 <span>{subtotal.toFixed(2)} Tk</span>
               </div>
               {cartItems.slice(0, 2).map((item) => (
-                <div key={item._id} className="flex items-center justify-between text-xs text-muted-foreground">
+                <div key={item._id || item.productCode} className="flex items-center justify-between text-xs text-muted-foreground">
                   <span className="truncate max-w-[70%]">{item.quantity}x {item.name}</span>
-                  <span>{(item.price * item.quantity).toFixed(2)} Tk</span>
+                  {item.discount && item.discount > 0 ? (
+                    <div className="text-right">
+                      <span className="text-green-600 dark:text-green-400">
+                        {(getDiscountedPrice(item.price, item.discount) * item.quantity).toFixed(2)} Tk
+                      </span>
+                      <span className="block line-through">
+                        {(item.price * item.quantity).toFixed(2)} Tk
+                      </span>
+                    </div>
+                  ) : (
+                    <span>{(item.price * item.quantity).toFixed(2)} Tk</span>
+                  )}
                 </div>
               ))}
               {cartItems.length > 2 && (
@@ -83,16 +107,38 @@ export const ReviewSection = ({
               <span className="text-muted-foreground">Subtotal</span>
               <span>{subtotal.toFixed(2)} Tk</span>
             </div>
+            
+            {/* Product Discounts */}
+            {calculatedProductDiscount > 0 && (
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-muted-foreground">Product Discounts</span>
+                <span className="text-green-600 dark:text-green-400">-{calculatedProductDiscount.toFixed(2)} Tk</span>
+              </div>
+            )}
+            
             <div className="flex items-center justify-between text-sm">
               <span className="text-muted-foreground">Shipping</span>
               <span>{shippingPrice.toFixed(2)} Tk</span>
             </div>
+            
+            {/* Coupon Discount */}
             {discountAmount > 0 && (
               <div className="flex items-center justify-between text-sm">
-                <span className="text-muted-foreground">Discount</span>
-                <span className="text-green-600">-{discountAmount.toFixed(2)} Tk</span>
+                <span className="text-muted-foreground">Coupon Discount</span>
+                <span className="text-green-600 dark:text-green-400">-{discountAmount.toFixed(2)} Tk</span>
               </div>
             )}
+            
+            {/* Total Savings */}
+            {(calculatedProductDiscount > 0 || discountAmount > 0) && (
+              <div className="flex items-center justify-between text-sm bg-green-50 dark:bg-green-900/20 p-1.5 rounded-sm">
+                <span className="font-medium text-green-700 dark:text-green-400">Total Savings</span>
+                <span className="font-medium text-green-700 dark:text-green-400">
+                  -{(calculatedProductDiscount + discountAmount).toFixed(2)} Tk
+                </span>
+              </div>
+            )}
+            
             <div className="flex items-center justify-between font-medium border-t pt-2 mt-2">
               <span>Total Amount</span>
               <span className="text-lg font-bold text-primary">{total.toFixed(2)} Tk</span>

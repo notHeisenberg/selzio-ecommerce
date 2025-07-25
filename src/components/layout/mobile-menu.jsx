@@ -12,6 +12,7 @@ import { getProducts, navItems, createSlug } from '@/data/products';
 import { getCombos } from '@/data/combos';
 import { useAuth } from '@/hooks/use-auth';
 import { motion, AnimatePresence } from 'framer-motion';
+import ThemeSwitcher from '@/components/theme/theme-switcher';
 
 const MobileMenu = ({ isOpen, onClose }) => {
   const menuRef = useRef(null);
@@ -217,44 +218,10 @@ const MobileMenu = ({ isOpen, onClose }) => {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.3 }}
               >
-                <SearchBar />
+                <SearchBar onResultClick={onClose} />
               </motion.div>
 
-              {/* Authentication Buttons - Only when not logged in */}
-              {!isAuthenticated && (
-                <motion.div 
-                  className="p-4 flex flex-col gap-2 border-b border-border"
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  transition={{ delay: 0.4 }}
-                >
-                  <motion.div variants={itemVariants} custom={0} initial="hidden" animate="visible">
-                    <Button 
-                      className="w-full justify-start"
-                      variant="outline"
-                      onClick={() => {
-                        router.push('/auth/login');
-                        onClose();
-                      }}
-                    >
-                      <LogIn className="mr-2 h-4 w-4" />
-                      Login
-                    </Button>
-                  </motion.div>
-                  <motion.div variants={itemVariants} custom={1} initial="hidden" animate="visible">
-                    <Button 
-                      className="w-full justify-start"
-                      onClick={() => {
-                        router.push('/auth/register');
-                        onClose();
-                      }}
-                    >
-                      <UserPlus className="mr-2 h-4 w-4" />
-                      Sign Up
-                    </Button>
-                  </motion.div>
-                </motion.div>
-              )}
+              {/* Remove auth buttons here since we'll move them to the bottom */}
 
               {/* Navigation */}
               <nav className="flex-1 overflow-y-auto p-4">
@@ -391,6 +358,60 @@ const MobileMenu = ({ isOpen, onClose }) => {
                       </motion.div>
                     )}
                   </div>
+
+                  {/* Theme Switcher Section */}
+                  <motion.div
+                    className="border-t border-border pt-4"
+                    variants={itemVariants}
+                    custom={navItems.length + categories.length + (combos.length > 0 ? 2 : 1)}
+                    initial="hidden"
+                    animate="visible"
+                  >
+                    <div className="px-4 py-2 text-sm font-medium text-muted-foreground uppercase tracking-wider">
+                      Theme Settings
+                    </div>
+                    <div className="px-4 py-2">
+                      <ThemeSwitcher isMobile={true} />
+                    </div>
+                  </motion.div>
+
+                  {/* Authentication Buttons - At the bottom and only when not logged in */}
+                  {!isAuthenticated && (
+                    <motion.div 
+                      className="border-t border-border pt-4"
+                      variants={itemVariants}
+                      custom={navItems.length + categories.length + (combos.length > 0 ? 3 : 2)}
+                      initial="hidden"
+                      animate="visible"
+                    >
+                      <div className="px-4 py-2 text-sm font-medium text-muted-foreground uppercase tracking-wider">
+                        Account
+                      </div>
+                      <div className="flex flex-col gap-2 px-4 py-2">
+                        <Button 
+                          className="w-full justify-start"
+                          variant="outline"
+                          onClick={() => {
+                            router.push('/auth/login');
+                            onClose();
+                          }}
+                        >
+                          <LogIn className="mr-2 h-4 w-4" />
+                          Login
+                        </Button>
+                        <Button 
+                          className="w-full justify-start"
+                          onClick={() => {
+                            router.push('/auth/register');
+                            onClose();
+                          }}
+                        >
+                          <UserPlus className="mr-2 h-4 w-4" />
+                          Sign Up
+                        </Button>
+                      </div>
+                    </motion.div>
+                  )}
                 </div>
               </nav>
             </div>

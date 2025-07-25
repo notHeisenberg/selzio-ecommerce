@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { useTheme } from 'next-themes';
 import gsap from 'gsap';
 
-const ThemeSwitcher = () => {
+const ThemeSwitcher = ({ isMobile = false }) => {
   const [mounted, setMounted] = useState(false);
   const { theme, setTheme, resolvedTheme } = useTheme();
   const buttonRef = useRef(null);
@@ -102,6 +102,41 @@ const ThemeSwitcher = () => {
       return <Laptop className="h-5 w-5" />;
     }
   };
+
+  // Mobile view displays all options as buttons in a row
+  if (isMobile) {
+    return (
+      <div className="flex items-center gap-2">
+        <Button
+          variant={theme === 'light' ? 'default' : 'outline'}
+          size="sm"
+          className={`flex-1 ${theme === 'light' ? 'bg-primary text-primary-foreground' : ''}`}
+          onClick={() => setTheme('light')}
+        >
+          <Sun className="h-4 w-4 mr-2" />
+          Light
+        </Button>
+        <Button
+          variant={theme === 'dark' ? 'default' : 'outline'}
+          size="sm"
+          className={`flex-1 ${theme === 'dark' ? 'bg-primary text-primary-foreground' : ''}`}
+          onClick={() => setTheme('dark')}
+        >
+          <Moon className="h-4 w-4 mr-2" />
+          Dark
+        </Button>
+        <Button
+          variant={theme === 'system' ? 'default' : 'outline'}
+          size="sm"
+          className={`flex-1 ${theme === 'system' ? 'bg-primary text-primary-foreground' : ''}`}
+          onClick={() => setTheme('system')}
+        >
+          <Laptop className="h-4 w-4 mr-2" />
+          System
+        </Button>
+      </div>
+    );
+  }
 
   return (
     <div className="relative">

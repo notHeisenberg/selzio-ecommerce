@@ -1,9 +1,10 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
-import { Shield, Tag } from 'lucide-react';
+import { Shield, Tag, Percent } from 'lucide-react';
 import { motion } from 'framer-motion';
 import Image from 'next/image';
 import Link from 'next/link';
+import { getDiscountedPrice } from '@/lib/utils';
 
 export const OrderSummary = ({ 
   cartItems, 
@@ -15,6 +16,19 @@ export const OrderSummary = ({
   total,
   isMobile = false 
 }) => {
+  // Calculate total product discount
+  const totalProductDiscount = cartItems.reduce((sum, item) => {
+    if (item.discount && item.discount > 0) {
+      const originalPrice = item.price * item.quantity;
+      const discountedPrice = getDiscountedPrice(item.price, item.discount) * item.quantity;
+      return sum + (originalPrice - discountedPrice);
+    }
+    return sum;
+  }, 0);
+
+  // Calculate total savings (product discounts + coupon discount)
+  const totalSavings = totalProductDiscount + discountAmount;
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
@@ -67,7 +81,18 @@ export const OrderSummary = ({
                         </div>
                       )}
                       
-                      <p className="text-sm font-semibold">{(item.price * item.quantity).toFixed(2)} Tk</p>
+                      {item.discount && item.discount > 0 ? (
+                        <div>
+                          <p className="text-sm font-semibold">
+                            {(getDiscountedPrice(item.price, item.discount) * item.quantity).toFixed(2)} Tk
+                          </p>
+                          <p className="text-xs text-muted-foreground line-through">
+                            {(item.price * item.quantity).toFixed(2)} Tk
+                          </p>
+                        </div>
+                      ) : (
+                        <p className="text-sm font-semibold">{(item.price * item.quantity).toFixed(2)} Tk</p>
+                      )}
                     </div>
                   </div>
                 ))
@@ -88,13 +113,23 @@ export const OrderSummary = ({
               <span>{subtotal.toFixed(2)} Tk</span>
             </div>
 
+            {totalProductDiscount > 0 && (
+              <div className="flex justify-between text-sm text-primary">
+                <span className="flex items-center">
+                  <Percent className="h-3 w-3 mr-1" />
+                  Product Discounts
+                </span>
+                <span>-{totalProductDiscount.toFixed(2)} Tk</span>
+              </div>
+            )}
+
             {appliedCoupon && (
               <div className="flex justify-between text-sm text-primary">
                 <span className="flex items-center">
                   <Tag className="h-3 w-3 mr-1" />
                   {appliedCoupon.type === 'percentage'
-                    ? `Discount (${appliedCoupon.discount * 100}%)`
-                    : 'Discount'}
+                    ? `Coupon (${appliedCoupon.discount * 100}%)`
+                    : 'Coupon Discount'}
                 </span>
                 <span>-{discountAmount.toFixed(2)} Tk</span>
               </div>
@@ -104,6 +139,17 @@ export const OrderSummary = ({
               <span className="text-muted-foreground">Shipping</span>
               <span>{shippingPrice.toFixed(2)} Tk</span>
             </div>
+            
+            {/* Total Savings */}
+            {totalSavings > 0 && (
+              <div className="flex justify-between text-xs bg-green-50 dark:bg-green-900/20 p-1.5 rounded-sm">
+                <span className="font-medium text-green-700 dark:text-green-400">Total Savings</span>
+                <span className="font-medium text-green-700 dark:text-green-400">
+                  -{totalSavings.toFixed(2)} Tk
+                </span>
+              </div>
+            )}
+            
             <Separator className="my-2" />
             <div className="flex justify-between">
               <span className="font-medium">Total</span>

@@ -24,12 +24,12 @@ export function Services() {
       description: "100% secure and encrypted payment methods",
       icon: Shield,
     },
-    {
-      id: 4,
-      title: "Easy Returns",
-      description: "30-day money-back guarantee",
-      icon: RefreshCcw,
-    },
+    // {
+    //   id: 4,
+    //   title: "Easy Returns",
+    //   description: "30-day money-back guarantee",
+    //   icon: RefreshCcw,
+    // },
   ];
 
   return (

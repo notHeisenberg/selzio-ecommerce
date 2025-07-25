@@ -41,7 +41,7 @@ export function TopSellingSection() {
   );
 
   return (
-    <section className="py-20 bg-secondary/30 overflow-hidden">
+    <section className="py-5 bg-secondary/30 overflow-hidden">
       <div className="container mx-auto px-4">
         <div className="text-start mx-auto">
           <h2 className="text-xl font-medium mb-7 bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent dark:from-white dark:to-gray-400">

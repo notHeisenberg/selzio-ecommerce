@@ -11,6 +11,7 @@ import { useAuth } from '@/hooks/use-auth';
 import { useToast } from '@/hooks/use-toast';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useForm } from 'react-hook-form';
+import { getDiscountedPrice } from '@/lib/utils';
 
 // Import components from checkout component library
 import {
@@ -130,6 +131,20 @@ export default function CheckoutPage() {
   };
 
   const discountAmount = appliedCoupon ? getDiscountAmount() : 0;
+
+  // Calculate total product discount (separate from coupon discounts)
+  const calculateTotalProductDiscount = () => {
+    return cartItems.reduce((sum, item) => {
+      if (item.discount && item.discount > 0) {
+        const originalPrice = item.price * item.quantity;
+        const discountedPrice = getDiscountedPrice(item.price, item.discount) * item.quantity;
+        return sum + (originalPrice - discountedPrice);
+      }
+      return sum;
+    }, 0);
+  };
+  
+  const totalProductDiscount = calculateTotalProductDiscount();
 
   // Redirect if cart is empty
   useEffect(() => {
@@ -478,6 +493,7 @@ export default function CheckoutPage() {
                   subtotal={subtotal}
                   shippingPrice={shippingPrice}
                   discountAmount={discountAmount}
+                  totalProductDiscount={totalProductDiscount}
                   total={total}
                   watch={watch}
                   setValue={setValue}
