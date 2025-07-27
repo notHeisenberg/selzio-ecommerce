@@ -419,7 +419,7 @@ export default function OrdersTab() {
       </Card>
     );
   }
-
+console.log(orders)
   return (
     <>
       <Card>

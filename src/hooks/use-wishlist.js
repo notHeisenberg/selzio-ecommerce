@@ -104,7 +104,7 @@ export const WishlistProvider = ({ children, shouldFetch = false }) => {
         const response = await axios.get('/api/wishlist', {
           headers: createHeaders(),
           withCredentials: true,
-          timeout: 100 // 8 seconds timeout
+          timeout: 5000 // 5 seconds timeout
         });
         
         return response.data.wishlist || [];
@@ -133,7 +133,7 @@ export const WishlistProvider = ({ children, shouldFetch = false }) => {
       }
     },
     enabled: isAuthenticated && !!user && shouldFetch, // Only enable if user is authenticated AND shouldFetch is true
-    staleTime: 30 * 1000, // Consider data fresh for 30 seconds
+    staleTime: 60 * 1000, // Consider data fresh for 60 seconds
     retry: (failureCount, error) => {
       // Don't retry on authentication errors
       if (error.response && error.response.status === 401) {

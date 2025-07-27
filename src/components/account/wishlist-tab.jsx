@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
-import { Trash2, ShoppingCart, Heart, ArrowRight } from 'lucide-react';
+import { Trash2, ShoppingCart, Heart, ArrowRight, Star } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { getProductUrl } from '@/data/products';
@@ -92,10 +92,15 @@ export default function WishlistTab() {
   useEffect(() => {
     if (mounted) {
       try {
-        loadWishlist().catch(err => {
-          console.error("Error loading wishlist:", err);
-          setError("Failed to load wishlist");
-        });
+        // Set a short delay to allow the UI to render first
+        const loadTimer = setTimeout(() => {
+          loadWishlist().catch(err => {
+            console.error("Error loading wishlist:", err);
+            setError("Failed to load wishlist");
+          });
+        }, 100);
+        
+        return () => clearTimeout(loadTimer);
       } catch (err) {
         console.error("Error in loadWishlist call:", err);
         setError("Failed to load wishlist");
@@ -306,8 +311,7 @@ export default function WishlistTab() {
         {/* Wishlist items or empty state */}
         {!error && (!isLoading || forceLoaded) && (
           <>
-            {/* Debug info in development */}
-            {process.env.NODE_ENV === 'development' && wishlistItems.length > 0 && (
+            {/* {process.env.NODE_ENV === 'development' && wishlistItems.length > 0 && (
               <div className="mb-6 p-4 bg-gray-100 dark:bg-gray-800 rounded-md">
                 <details>
                   <summary className="cursor-pointer font-medium">Debug: Wishlist Raw Data ({wishlistItems.length} items)</summary>
@@ -316,182 +320,155 @@ export default function WishlistTab() {
                   </pre>
                 </details>
               </div>
-            )}
+            )} */}
           
             {wishlistItems.length > 0 ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
                 {wishlistItems.map((item) => (
-                  <Card 
-                    key={item.id} 
-                    className={`overflow-hidden ${mounted && resolvedTheme === 'dark' ? 'border-gray-800' : ''}`}
+                  <div 
+                    key={item.id}
+                    className="group h-full relative cursor-pointer"
+                    onClick={() => router.push(safeGetProductUrl(item))}
                   >
-                    <CardContent className="p-0">
-                      {/* Product Image with Badge */}
-                      <div className="relative">
-                        <div 
-                          className="relative aspect-video cursor-pointer"
-                          onClick={() => router.push(safeGetProductUrl(item))}
-                        >
-                          {(item.image && isValidImageUrl(item.image)) ? (
-                            <Image
-                              src={getPrimaryImage(item)}
-                              alt={item.name}
-                              fill
-                              className="object-cover hover:scale-105 transition-transform duration-300"
-                              onError={(e) => {
-                                console.error("Image failed to load:", item.image);
-                                // Replace with a div instead of trying to set src
-                                const parent = e.target.parentNode;
-                                if (parent) {
-                                  // Create replacement div
-                                  const placeholderDiv = document.createElement('div');
-                                  placeholderDiv.className = "w-full h-full bg-secondary/30 flex items-center justify-center";
-                                  placeholderDiv.innerHTML = `<span class="text-muted-foreground">${item.name || 'Product'}</span>`;
-                                  
-                                  // Replace the img with the div
-                                  parent.replaceChild(placeholderDiv, e.target);
-                                }
-                              }}
-                            />
-                          ) : (
-                            <div className="w-full h-full bg-secondary/30 flex items-center justify-center">
-                              <span className="text-muted-foreground">{item.name || 'Product'}</span>
+                    <div className="card relative w-full bg-transparent dark:bg-transparent overflow-hidden">
+                      {/* Brand/Logo at top */}
+                      <div className="absolute top-2 left-0 right-0 flex justify-center z-10">
+                        <span className="text-xs font-medium text-neutral-700 dark:text-neutral-200">SELZIO</span>
+                      </div>
+
+                      {/* Product Image Container */}
+                      <div className="relative aspect-square w-full overflow-hidden bg-white dark:bg-neutral-800">
+                        {/* Product Image */}
+                        {(item.image && isValidImageUrl(item.image)) ? (
+                          <Image
+                            src={getPrimaryImage(item)}
+                            alt={item.name}
+                            fill
+                            sizes="(min-width: 1200px) 267px, (min-width: 990px) calc((100vw - 130px) / 4), (min-width: 750px) calc((100vw - 120px) / 3), calc((100vw - 35px) / 2)"
+                            className="object-cover transition-opacity duration-300"
+                            onError={(e) => {
+                              console.error("Image failed to load:", item.image);
+                              const parent = e.target.parentNode;
+                              if (parent) {
+                                const placeholderDiv = document.createElement('div');
+                                placeholderDiv.className = "w-full h-full bg-secondary/30 flex items-center justify-center";
+                                placeholderDiv.innerHTML = `<span class="text-muted-foreground">${item.name || 'Product'}</span>`;
+                                parent.replaceChild(placeholderDiv, e.target);
+                              }
+                            }}
+                          />
+                        ) : (
+                          <div className="w-full h-full bg-secondary/30 flex items-center justify-center">
+                            <span className="text-muted-foreground">{item.name || 'Product'}</span>
+                          </div>
+                        )}
+
+                        {/* Sale Badge */}
+                        {item.discount > 0 && (
+                          <div className="absolute bottom-3 left-2 z-10">
+                            <div className="bg-black/70 text-white text-xs font-medium px-3 py-1.5 shadow-sm">
+                              -{item.discount}% OFF
                             </div>
-                          )}
-                          
-                          {/* Discount Badge */}
-                          {item.discount > 0 && (
-                            <div className="absolute top-2 left-2 bg-primary text-white text-xs font-bold px-2 py-1 rounded-md">
-                              {item.discount}% OFF
-                            </div>
-                          )}
-                        </div>
-                        
-                        {/* Action Buttons */}
-                        <div className="absolute bottom-0 right-0 flex p-2 gap-2">
+                          </div>
+                        )}
+
+                        {/* Action buttons */}
+                        <div className="absolute top-3 right-3 flex gap-1.5 sm:gap-2 z-10 transition-all duration-300 opacity-0 group-hover:opacity-100">
+                          {/* Remove button */}
                           <Button
-                            variant="secondary"
-                            size="icon"
-                            className={`rounded-full shadow-lg hover:scale-110 transition-transform
+                            variant="ghost"
+                            size="sm"
+                            className={`w-7 h-7 sm:w-8 sm:h-8 md:w-9 md:h-9 p-0 rounded-md transition-all duration-300 hover:scale-105
                               ${mounted && resolvedTheme === 'dark'
-                                ? 'bg-gray-800/90 hover:bg-gray-700 text-gray-200'
-                                : 'bg-white/90 hover:bg-white text-rose-500'
+                                ? 'bg-gray-800/60 text-white hover:bg-transparent hover:border-2 hover:border-red-500'
+                                : 'bg-white/80 text-slate-700 hover:bg-transparent hover:border-2 hover:border-rose-500'
                               }`}
-                            onClick={() => handleRemoveFromWishlist(item.id, item.name)}
-                            title="Remove from wishlist"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              e.preventDefault();
+                              handleRemoveFromWishlist(item.id, item.name);
+                            }}
+                            title="Remove from Wishlist"
                           >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                          
-                          <Button
-                            variant="secondary"
-                            size="icon"
-                            className={`rounded-full shadow-lg hover:scale-110 transition-transform
+                            <Trash2 className={`h-3.5 w-3.5 sm:h-4 sm:w-4 md:h-5 md:w-5 transition-colors duration-300
                               ${mounted && resolvedTheme === 'dark'
-                                ? 'bg-blue-600/90 hover:bg-blue-700 text-white'
-                                : 'bg-primary/90 hover:bg-primary text-white'
+                                ? 'text-gray-200 hover:text-red-500' 
+                                : 'text-slate-700 hover:text-rose-500'
+                              }`} />
+                          </Button>
+
+                          {/* Add to Cart button */}
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className={`w-7 h-7 sm:w-8 sm:h-8 md:w-9 md:h-9 p-0 rounded-md transition-all duration-300 hover:scale-105 group/cart
+                              ${mounted && resolvedTheme === 'dark'
+                                ? 'bg-gray-800/60 text-white hover:bg-transparent hover:border-2 hover:border-white'
+                                : 'bg-white/80 text-slate-700 hover:bg-transparent hover:border-2 hover:border-black'
                               }`}
-                            onClick={() => handleMoveToCart(item)}
-                            title="Add to cart"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              e.preventDefault();
+                              handleMoveToCart(item);
+                            }}
+                            title="Add to Cart"
                             disabled={!item.inStock}
                           >
-                            <ShoppingCart className="h-4 w-4" />
+                            <ShoppingCart className={`h-3.5 w-3.5 sm:h-4 sm:w-4 md:h-5 md:w-5 transition-colors duration-300
+                              ${mounted && resolvedTheme === 'dark'
+                                ? 'text-gray-200 group-hover/cart:text-white'
+                                : 'text-slate-700 group-hover/cart:text-black'
+                              }`} />
                           </Button>
                         </div>
                       </div>
-                      
-                      <div className="p-4">
-                        {/* Product Name */}
-                        <h3 
-                          className="font-medium text-lg mb-1 hover:text-primary cursor-pointer line-clamp-2"
-                          onClick={() => router.push(safeGetProductUrl(item))}
-                        >
+
+                      {/* Product Info */}
+                      <div className="p-3 text-start mt-4 bg-transparent">
+                        <h3 className="text-sm font-medium text-neutral-900 dark:text-white group-hover:underline transition-all duration-200">
                           {item.name}
                         </h3>
-                        
-                        {/* Rating display */}
-                        {item.rating > 0 && (
-                          <div className="flex items-center mt-1 mb-2">
-                            <div className="flex text-amber-500">
-                              {[...Array(5)].map((_, i) => (
-                                <span key={i}>
-                                  {i < Math.floor(item.rating) ? (
-                                    <span>★</span>
-                                  ) : i < Math.floor(item.rating) + 0.5 ? (
-                                    <span>⭐</span>
-                                  ) : (
-                                    <span className="text-gray-300 dark:text-gray-600">☆</span>
-                                  )}
-                                </span>
-                              ))}
-                            </div>
-                            <span className="text-xs text-muted-foreground ml-1">
-                              ({item.rating.toFixed(1)})
+
+                        <div className="flex justify-between gap-2">
+                          {/* Price information */}
+                          <div className="flex items-center gap-2 mt-2">
+                            <span className="text-sm font-medium">
+                              {item.price ? `Tk ${item.price}` : 'Price not available'}
                             </span>
+
+                            {item.discount > 0 && (
+                              <span className="text-xs line-through text-neutral-500 dark:text-neutral-400">
+                                Tk {(item.price * (100 / (100 - item.discount))).toFixed(2)}
+                              </span>
+                            )}
                           </div>
-                        )}
-                        
-                        {/* Price with discount display */}
-                        <div className="flex items-center mt-2">
-                          {item.discount > 0 ? (
-                            <>
-                              <p className="text-primary font-semibold">
-                                {(item.price * (1 - item.discount / 100)).toFixed(2)} BDT
-                              </p>
-                              <p className="text-muted-foreground line-through ml-2 text-sm">
-                                {item.price.toFixed(2)} BDT
-                              </p>
-                            </>
-                          ) : (
-                            <p className="text-primary font-semibold">{item.price.toFixed(2)} BDT</p>
+
+                          {/* Rating */}
+                          {item.rating > 0 && (
+                            <div className="flex items-center gap-1 mt-1">
+                              <Star className="h-3 w-3 fill-yellow-400 text-yellow-400" />
+                              <span className="text-xs text-neutral-500 dark:text-neutral-400">
+                                {item.rating} {item.reviewCount && `(${item.reviewCount})`}
+                              </span>
+                            </div>
                           )}
                         </div>
-                        
-                        {/* Stock status */}
-                        <div className="mt-3">
+
+                        {/* Stock status - as a small badge */}
+                        <div className="mt-2">
                           {item.inStock ? (
-                            <span className="text-xs px-2 py-1 bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400 rounded-full">
-                              In Stock ({item.stock} available)
+                            <span className="text-xs px-1.5 py-0.5 bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400 rounded-sm">
+                              In Stock
                             </span>
                           ) : (
-                            <span className="text-xs px-2 py-1 bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400 rounded-full">
+                            <span className="text-xs px-1.5 py-0.5 bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400 rounded-sm">
                               Out of Stock
                             </span>
                           )}
                         </div>
-                        
-                        {/* Category and Added Date */}
-                        <div className="flex flex-wrap justify-between items-center mt-4">
-                          <div className="flex flex-wrap gap-2 items-center">
-                            <span className="text-xs px-2 py-1 bg-secondary rounded-full">
-                              {item.category}
-                            </span>
-                            {item.subcategory && (
-                              <span className="text-xs px-2 py-1 bg-secondary/60 rounded-full">
-                                {item.subcategory}
-                              </span>
-                            )}
-                          </div>
-                          
-                          {/* Added to wishlist date */}
-                          <div className="text-xs text-muted-foreground mt-2">
-                            Added {new Date(item.addedToWishlistAt).toLocaleDateString()}
-                          </div>
-                        </div>
-                        
-                        {/* View Item Button */}
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="group w-full mt-4 border-primary/20 hover:bg-primary/5 hover:border-primary"
-                          onClick={() => router.push(safeGetProductUrl(item))}
-                        >
-                          View Details
-                          <ArrowRight className="ml-1 h-4 w-4 transition-transform duration-200 group-hover:translate-x-1" />
-                        </Button>
                       </div>
-                    </CardContent>
-                  </Card>
+                    </div>
+                  </div>
                 ))}
               </div>
             ) : (

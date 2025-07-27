@@ -61,8 +61,10 @@ export function ProductCard({ product, index = 0, animationEnabled = true }) {
       const productId = getProductId();
       if (!productId) return;
 
-      // Refetch wishlist data to get latest state
-      await loadWishlist();
+      // Only refetch wishlist data if necessary
+      if (wishlistItems.length === 0) {
+        await loadWishlist();
+      }
 
       // Check if product is in wishlist
       const inWishlist = wishlistItems.some(item =>
