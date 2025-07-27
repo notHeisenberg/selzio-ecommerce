@@ -266,24 +266,24 @@ export default function OrdersTab() {
     if (order.status !== 'pending') {
       return false;
     }
-    
+
     // Must be within time window
     if (!isWithinCancellationWindow(order.createdAt)) {
       return false;
     }
-    
+
     // Check if it ever had a cancellation request before
     if (order.cancellationRequestedAt || order.cancellationResponded) {
       return false;
     }
-    
+
     return true;
   };
 
   // Add this function to handle cancellation request
   const handleCancellationRequest = async () => {
     if (!selectedOrder) return;
-    
+
     // Validate reason
     if (!cancellationReason || (cancellationReason === "Other (please specify)" && !otherReason.trim())) {
       toast({
@@ -293,20 +293,20 @@ export default function OrdersTab() {
       });
       return;
     }
-    
+
     setSubmittingCancellation(true);
-    
+
     try {
       // Format the final reason text
-      const finalReason = cancellationReason === "Other (please specify)" 
-        ? otherReason.trim() 
+      const finalReason = cancellationReason === "Other (please specify)"
+        ? otherReason.trim()
         : cancellationReason;
-        
+
       // Get auth token from localStorage
       const token = localStorage.getItem('auth_token');
-      
+
       // Call API to update order status to cancellation_requested with reason
-      const response = await axios.put(`/api/orders/${selectedOrder._id}`, 
+      const response = await axios.put(`/api/orders/${selectedOrder._id}`,
         {
           status: "cancellation_requested",
           cancellationReason: finalReason,
@@ -320,14 +320,14 @@ export default function OrdersTab() {
           withCredentials: true
         }
       );
-      
+
       if (response.data && response.data.success) {
         toast({
           title: "Success",
           description: "Cancellation request submitted successfully",
           variant: "success"
         });
-        
+
         setCancellationDialogOpen(false);
         refetch();
       } else {
@@ -348,22 +348,22 @@ export default function OrdersTab() {
   // Add this function to handle admin approval/rejection of cancellation
   const handleCancellationResponse = async (approved) => {
     if (!selectedOrder) return;
-    
+
     setUpdatingStatus(true);
-    
+
     try {
       const newStatus = approved ? "cancelled" : "pending"; // Always return to pending if rejected
-      
+
       // Get auth token from localStorage
       const token = localStorage.getItem('auth_token');
       // Use axios instead of fetch for better header handling
-      const response = await axios.put(`/api/orders/${selectedOrder._id}`, 
+      const response = await axios.put(`/api/orders/${selectedOrder._id}`,
         {
           status: newStatus,
           cancellationResponded: true,
           cancellationApproved: approved,
           cancellationRespondedAt: new Date().toISOString()
-        }, 
+        },
         {
           headers: {
             'Content-Type': 'application/json',
@@ -372,17 +372,17 @@ export default function OrdersTab() {
           withCredentials: true
         }
       );
-      
-      
+
+
       if (response.data && response.data.success) {
         toast({
           title: "Success",
-          description: approved 
-            ? "Order cancellation approved" 
+          description: approved
+            ? "Order cancellation approved"
             : "Order cancellation rejected",
           variant: "success"
         });
-        
+
         setDetailsDialogOpen(false);
         refetch();
       } else {
@@ -419,7 +419,7 @@ export default function OrdersTab() {
       </Card>
     );
   }
-console.log(orders)
+
   return (
     <>
       <Card>
@@ -690,9 +690,16 @@ console.log(orders)
                               />
                             </div>
                             <div className="flex-1">
-                              <p className="text-sm font-medium">{item.name}</p>
+                              <p className="text-sm font-medium">{item.name} {item?.selectedSize && `(${item?.selectedSize})`} </p>
                               <p className="text-xs text-muted-foreground">
-                                Qty: {item.quantity} × {item.price !== undefined ? item.price.toFixed(2) : '0.00'} Tk
+                                Qty: {item.quantity} × {
+                                  item.discount > 0 
+                                    ? <span>
+                                        <span className="text-primary font-medium">{(item.price * (1 - item.discount / 100)).toFixed(2)}</span>
+                                        <span className="line-through ml-1">{item.price.toFixed(2)}</span>
+                                      </span>
+                                    : item.price !== undefined ? item.price.toFixed(2) : '0.00'
+                                } Tk
                               </p>
                             </div>
                           </div>
@@ -895,7 +902,7 @@ console.log(orders)
               You can only request cancellation within 6 hours of placing an order. Please provide a reason for your cancellation request.
             </DialogDescription>
           </DialogHeader>
-          
+
           <div className="py-4 space-y-4 max-h-[60vh] overflow-y-auto">
             <div className="space-y-2">
               <Label className="text-base">Reason for cancellation</Label>
@@ -908,13 +915,13 @@ console.log(orders)
                 ))}
               </RadioGroup>
             </div>
-            
+
             {cancellationReason === "Other (please specify)" && (
               <div className="space-y-2">
                 <Label htmlFor="other-reason">Please specify your reason</Label>
-                <Textarea 
-                  id="other-reason" 
-                  value={otherReason} 
+                <Textarea
+                  id="other-reason"
+                  value={otherReason}
                   onChange={(e) => setOtherReason(e.target.value)}
                   placeholder="Please provide details about why you want to cancel this order..."
                   className="min-h-[100px]"
@@ -922,7 +929,7 @@ console.log(orders)
               </div>
             )}
           </div>
-          
+
           <DialogFooter className="flex-col space-y-2 sm:flex-row sm:space-y-0 sm:space-x-2">
             <Button variant="outline" onClick={() => setCancellationDialogOpen(false)}
               className="hover:bg-slate-100 transition-colors duration-200 w-full sm:w-auto">
@@ -1028,19 +1035,33 @@ console.log(orders)
                           <p className="font-medium">{item.name}</p>
                           <div className="flex flex-col sm:flex-row sm:justify-between text-sm text-muted-foreground">
                             <p>Quantity: {item.quantity}</p>
-                            <p>Price: {item.price !== undefined ? item.price.toFixed(2) : '0.00'} Tk</p>
+                            <p>Price: {
+                              item.discount > 0 
+                                ? <span>
+                                    <span className="text-primary font-medium">{(item.price * (1 - item.discount / 100)).toFixed(2)}</span>
+                                    <span className="line-through ml-1">{item.price.toFixed(2)}</span>
+                                  </span>
+                                : item.price !== undefined ? item.price.toFixed(2) : '0.00'
+                            } Tk</p>
                           </div>
                           {item.size && <p className="text-sm">Size: {item.size}</p>}
                           {item.color && <p className="text-sm">Color: {item.color}</p>}
                         </div>
                         <div className="font-medium w-full sm:w-auto text-center sm:text-right mt-2 sm:mt-0 text-primary">
-                          {(item.quantity && item.price) ? (item.quantity * item.price).toFixed(2) : '0.00'} Tk
+                          {item.discount > 0
+                            ? (item.quantity && item.price) 
+                              ? (item.quantity * item.price * (1 - item.discount / 100)).toFixed(2) 
+                              : '0.00'
+                            : (item.quantity && item.price) 
+                              ? (item.quantity * item.price).toFixed(2) 
+                              : '0.00'
+                          } Tk
                         </div>
                       </div>
                     ))}
                   </div>
                 </div>
-                
+
                 {/* Combo Items - Display if any combo products exist in the order */}
                 {orderDetails.items.some(item => item.isCombo) && (
                   <div className="bg-card border border-border rounded-none shadow-sm">
@@ -1064,10 +1085,20 @@ console.log(orders)
                                 <p className="text-sm text-muted-foreground">Quantity: {combo.quantity}</p>
                               </div>
                               <div className="ml-auto font-medium text-primary">
-                                {combo.price ? (combo.price * combo.quantity).toFixed(2) : '0.00'} Tk
+                                {combo.discount > 0
+                                  ? <div className="text-right">
+                                      <span className="text-primary font-medium">
+                                        {(combo.price * combo.quantity * (1 - combo.discount / 100)).toFixed(2)} Tk
+                                      </span>
+                                      <div className="text-xs line-through text-muted-foreground">
+                                        {(combo.price * combo.quantity).toFixed(2)} Tk
+                                      </div>
+                                    </div>
+                                  : combo.price ? (combo.price * combo.quantity).toFixed(2) + ' Tk' : '0.00 Tk'
+                                }
                               </div>
                             </div>
-                            
+
                             {combo.products && combo.products.length > 0 && (
                               <div className="pl-4 space-y-3">
                                 <p className="text-sm font-medium text-primary mb-2">Products in this combo:</p>

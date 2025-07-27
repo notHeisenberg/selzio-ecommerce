@@ -114,8 +114,14 @@ export function ProductCard({ product, index = 0, animationEnabled = true }) {
       return;
     }
 
-    // If no sizes, add directly to cart
-    addToCart(product);
+    // If no sizes, add directly to cart with the correct price
+    const productToAdd = {
+      ...product,
+      displayPrice: product.price,  // Keep original price for reference
+      price: product.discount > 0 ? Number(discountedPrice) : product.price // Use discounted price if applicable
+    };
+    
+    addToCart(productToAdd);
 
     // Show success toast
     toast({
@@ -148,18 +154,25 @@ export function ProductCard({ product, index = 0, animationEnabled = true }) {
       return;
     }
 
+    // Get base size price (or use product price if not specified)
+    let sizePrice = sizeInfo?.price || product.price;
+    
+    // Apply discount if it exists
+    const discountedSizePrice = product.discount > 0 
+      ? sizePrice * (1 - product.discount / 100)
+      : sizePrice;
+
     // Create product with selected size
-    const sizePrice = sizeInfo?.price || product.price;
     const productWithSize = {
       ...product,
       selectedSize,
-      price: sizePrice
+      displayPrice: sizePrice, // Original size price for reference
+      price: discountedSizePrice // Discounted price (or original if no discount)
     };
 
     // Add to cart and close popover
     addToCart(productWithSize);
     setSizePopoverOpen(false);
-
   };
 
   // Handle wishlist toggle
@@ -229,10 +242,17 @@ export function ProductCard({ product, index = 0, animationEnabled = true }) {
   // Calculate original price from discount
   const calculateOriginalPrice = () => {
     if (!product.discount || product.discount <= 0) return null;
-    return (product.price * (100 / (100 - product.discount))).toFixed(2);
+    return product.price;
+  };
+
+  // Calculate discounted price
+  const calculateDiscountedPrice = () => {
+    if (!product.discount || product.discount <= 0) return product.price;
+    return (product.price * (1 - product.discount / 100)).toFixed(2);
   };
 
   const originalPrice = calculateOriginalPrice();
+  const discountedPrice = calculateDiscountedPrice();
 
   const cardContent = (
     <div className="card-wrapper cursor-pointer w-full h-full" onClick={handleCardClick}>
@@ -407,13 +427,18 @@ export function ProductCard({ product, index = 0, animationEnabled = true }) {
           <div className="flex justify-between gap-2">
             {/* Price information */}
             <div className="flex items-center gap-2 mt-2">
-              <span className="text-sm font-medium">
-                {product.price ? `Tk ${product.price}` : 'Price not available'}
-              </span>
-
-              {originalPrice && (
-                <span className="text-xs line-through text-neutral-500 dark:text-neutral-400">
-                  Tk {originalPrice}
+              {product.discount > 0 ? (
+                <>
+                  <span className="text-sm font-medium text-primary">
+                    Tk {discountedPrice}
+                  </span>
+                  <span className="text-xs line-through text-neutral-500 dark:text-neutral-400">
+                    Tk {originalPrice}
+                  </span>
+                </>
+              ) : (
+                <span className="text-sm font-medium">
+                  {product.price ? `Tk ${product.price}` : 'Price not available'}
                 </span>
               )}
             </div>

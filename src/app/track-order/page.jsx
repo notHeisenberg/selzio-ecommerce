@@ -209,27 +209,83 @@ function TrackOrderContent() {
                   <h3 className="font-medium mb-3">Order Items</h3>
                   <div className="space-y-3">
                     {order.items.map((item, index) => (
-                      <div key={index} className="flex items-center border-b pb-3 last:border-0">
-                        <div className="h-16 w-16 bg-muted rounded-md overflow-hidden mr-4">
-                          {item.image ? (
-                            <img 
-                              src={item.image} 
-                              alt={item.name} 
-                              className="h-full w-full object-cover"
-                            />
-                          ) : (
-                            <div className="h-full w-full flex items-center justify-center bg-muted">
-                              <Package className="h-8 w-8 text-muted-foreground" />
+                      <div key={index} className="border rounded-md p-3 mb-3">
+                        <div className="flex items-center pb-3">
+                          <div className="h-16 w-16 bg-muted rounded-md overflow-hidden mr-4">
+                            {item.image ? (
+                              <img 
+                                src={item.image} 
+                                alt={item.name} 
+                                className="h-full w-full object-cover"
+                                onError={(e) => {
+                                  e.target.src = "/images/product-placeholder.png";
+                                }}
+                              />
+                            ) : (
+                              <div className="h-full w-full flex items-center justify-center bg-muted">
+                                <Package className="h-8 w-8 text-muted-foreground" />
+                              </div>
+                            )}
+                          </div>
+                          <div className="flex-1">
+                            <p className="font-medium">{item.name} {item?.selectedSize && `(${item?.selectedSize})`}</p>
+                            <div className="flex justify-between text-sm text-muted-foreground">
+                              <p>Qty: {item.quantity}</p>
+                              <div>
+                                {item.discount > 0 ? (
+                                  <div className="text-right">
+                                    <span className="text-primary font-medium">
+                                      {(item.price * (1 - item.discount / 100)).toFixed(2)} Tk
+                                    </span>
+                                    <span className="ml-2 line-through text-muted-foreground">
+                                      {item.price} Tk
+                                    </span>
+                                  </div>
+                                ) : (
+                                  <p>{item.price} Tk</p>
+                                )}
+                              </div>
                             </div>
-                          )}
-                        </div>
-                        <div className="flex-1">
-                          <p className="font-medium">{item.name}</p>
-                          <div className="flex justify-between text-sm text-muted-foreground">
-                            <p>Qty: {item.quantity}</p>
-                            <p>{item.price} Tk</p>
                           </div>
                         </div>
+
+                        {/* Show combo products if this is a combo */}
+                        {item.isCombo && item.products && item.products.length > 0 && (
+                          <div className="mt-2 pl-4 border-t pt-3">
+                            <p className="text-sm font-medium mb-2">Combo Contains:</p>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                              {item.products.map((comboProduct, productIndex) => (
+                                <div 
+                                  key={`combo-${index}-product-${productIndex}`}
+                                  className="flex items-center bg-muted/30 p-2 rounded-md"
+                                >
+                                  <div className="h-8 w-8 bg-muted rounded-md overflow-hidden mr-2">
+                                    {comboProduct.image ? (
+                                      <img 
+                                        src={comboProduct.image} 
+                                        alt={comboProduct.name} 
+                                        className="h-full w-full object-cover"
+                                        onError={(e) => {
+                                          e.target.src = "/images/product-placeholder.png";
+                                        }}
+                                      />
+                                    ) : (
+                                      <div className="h-full w-full flex items-center justify-center bg-muted">
+                                        <Package className="h-4 w-4 text-muted-foreground" />
+                                      </div>
+                                    )}
+                                  </div>
+                                  <div className="flex-1">
+                                    <p className="text-xs font-medium">{comboProduct.name}</p>
+                                    {comboProduct?.size && (
+                                      <p className="text-xs text-muted-foreground">Size: {comboProduct.size}</p>
+                                    )}
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
                       </div>
                     ))}
                   </div>

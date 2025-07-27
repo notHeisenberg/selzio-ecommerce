@@ -332,9 +332,9 @@ export default function WishlistTab() {
                   >
                     <div className="card relative w-full bg-transparent dark:bg-transparent overflow-hidden">
                       {/* Brand/Logo at top */}
-                      <div className="absolute top-2 left-0 right-0 flex justify-center z-10">
+                      {/* <div className="absolute top-2 left-0 right-0 flex justify-center z-10">
                         <span className="text-xs font-medium text-neutral-700 dark:text-neutral-200">SELZIO</span>
-                      </div>
+                      </div> */}
 
                       {/* Product Image Container */}
                       <div className="relative aspect-square w-full overflow-hidden bg-white dark:bg-neutral-800">

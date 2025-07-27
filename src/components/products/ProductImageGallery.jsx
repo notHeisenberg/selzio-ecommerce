@@ -66,7 +66,7 @@ export default function ProductImageGallery({ product }) {
 
   return (
     <>
-      <div className="lg:w-1/2 lg:sticky lg:top-36 lg:self-start max-h-screen md:mb-14 lg:mb-0" data-gallery-container>
+      <div className="lg:w-1/2 lg:sticky lg:top-20 lg:self-start max-h-screen md:mb-14 lg:mb-0" data-gallery-container>
         {/* Main Image */}
         <motion.div 
           className="relative aspect-square w-full overflow-hidden rounded-lg bg-card shadow-sm cursor-zoom-in"
@@ -122,6 +122,16 @@ export default function ProductImageGallery({ product }) {
               >
                 {isFullscreen ? <ZoomOut size={20} /> : <ZoomIn size={20} />}
               </button>
+              
+              {/* Zoom hint overlay */}
+              {!isHovering && !isFullscreen && (
+                <div className="absolute inset-0 bg-black/0 hover:bg-black/10 flex items-center justify-center transition-all duration-200 opacity-0 hover:opacity-100">
+                  <div className="bg-black/60 text-white px-3 py-2 rounded-full flex items-center gap-2 transform translate-y-1 hover:translate-y-0 transition-transform duration-300">
+                    <ZoomIn size={16} />
+                    <span className="text-sm font-medium">Hover to zoom</span>
+                  </div>
+                </div>
+              )}
             </>
           ) : (
             <div className="w-full h-full bg-secondary/30 flex items-center justify-center">

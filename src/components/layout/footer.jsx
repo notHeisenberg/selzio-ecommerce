@@ -69,6 +69,12 @@ export function Footer() {
                   </Link>
                 </li>
                 <li>
+                  <Link href="/track-order" className="text-muted-foreground hover:text-foreground transition-colors flex items-center">
+                    <span className="h-1.5 w-1.5 rounded-full bg-primary/50 mr-2"></span>
+                    Track Order
+                  </Link>
+                </li>
+                <li>
                   <Link href="/faq" className="text-muted-foreground hover:text-foreground transition-colors flex items-center">
                     <span className="h-1.5 w-1.5 rounded-full bg-primary/50 mr-2"></span>
                     FAQ
