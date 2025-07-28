@@ -23,6 +23,7 @@ Before you begin, ensure you have:
 5. Facebook Developer account
 6. Cloudinary account (for image uploads)
 
+
 ## Environment Setup
 
 Create a `.env.local` file in the root directory with the following variables:
