@@ -5,15 +5,51 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { motion } from 'framer-motion';
 import { shippingMethods } from './ShippingMethods';
+import { useState } from 'react';
+import { Combobox } from '@/components/ui/combobox';
 
-export const ShippingSection = ({ 
-  register, 
-  errors, 
-  watch, 
-  setValue, 
-  isAuthenticated 
+// Bangladesh cities list
+const bangladeshCities = [
+  { value: "dhaka", label: "Dhaka" },
+  { value: "chittagong", label: "Chittagong" },
+  { value: "khulna", label: "Khulna" },
+  { value: "rajshahi", label: "Rajshahi" },
+  { value: "sylhet", label: "Sylhet" },
+  { value: "barishal", label: "Barishal" },
+  { value: "rangpur", label: "Rangpur" },
+  { value: "comilla", label: "Comilla" },
+  { value: "narayanganj", label: "Narayanganj" },
+  { value: "gazipur", label: "Gazipur" },
+  { value: "mymensingh", label: "Mymensingh" },
+  { value: "savar", label: "Savar" },
+  { value: "tongi", label: "Tongi" },
+  { value: "bogura", label: "Bogura" },
+  { value: "dinajpur", label: "Dinajpur" },
+  { value: "cox_bazar", label: "Cox's Bazar" },
+  { value: "jessore", label: "Jessore" },
+  { value: "tangail", label: "Tangail" },
+  { value: "kushtia", label: "Kushtia" },
+  { value: "pabna", label: "Pabna" },
+];
+
+export const ShippingSection = ({
+  register,
+  errors,
+  watch,
+  setValue,
+  isAuthenticated
 }) => {
   const selectedShippingMethod = watch('shippingMethod');
+  const [cityValue, setCityValue] = useState("");
+
+  // Handle city selection
+  const handleCityChange = (value) => {
+    setCityValue(value);
+    // Find the label for the selected city
+    const selectedCity = bangladeshCities.find(city => city.value === value);
+    // Update the form value with the city label
+    setValue('city', selectedCity?.label || value);
+  };
 
   return (
     <div id="shipping-section">
@@ -92,12 +128,19 @@ export const ShippingSection = ({
 
             <div className="space-y-2">
               <Label htmlFor="city">City <span className="text-destructive">*</span></Label>
-              <Input
-                id="city"
-                placeholder="Enter your city"
-                className="rounded-none"
-                {...register('city', { required: 'City is required' })}
+              <Combobox
+                options={bangladeshCities}
+                value={cityValue}
+                onValueChange={handleCityChange}
+                placeholder="Select or search your city..."
+                searchPlaceholder="Type to search cities..."
+                emptyMessage="No city found, try a different search."
+                buttonClassName="border-input bg-transparent"
+                popoverClassName="w-full"
+                title="Select Your City"
               />
+              {/* Hidden input to store the city value for the form */}
+              <input type="hidden" {...register('city', { required: 'City is required' })} />
               {errors.city && (
                 <p className="text-sm text-destructive">{errors.city.message}</p>
               )}
@@ -107,9 +150,9 @@ export const ShippingSection = ({
           {/* Save Information - only shown for authenticated users */}
           {isAuthenticated && (
             <div className="flex items-center space-x-2">
-              <Checkbox 
-                id="saveInfo" 
-                {...register('saveInfo')} 
+              <Checkbox
+                id="saveInfo"
+                {...register('saveInfo')}
                 className="rounded-none"
               />
               <label
@@ -147,8 +190,8 @@ export const ShippingSection = ({
                       id={`shipping-${method.id}`}
                       checked={selectedShippingMethod === method.id}
                       onChange={() => setValue('shippingMethod', method.id)}
-                      className="h-4 w-4 rounded-full border-gray-400 text-black focus:ring-black dark:border-gray-600 dark:text-white dark:focus:ring-white accent-black"
-                      style={{ accentColor: 'black' }}
+                      className="h-4 w-4 rounded-full border-gray-400 text-blue-600 focus:ring-blue-500 dark:border-gray-600 dark:text-blue-400 dark:focus:ring-blue-500 accent-blue-600"
+                      style={{ accentColor: '#2563eb' }}
                       {...register('shippingMethod')}
                     />
                     <Label

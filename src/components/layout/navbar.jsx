@@ -197,7 +197,7 @@ export function Navbar() {
             </Link>
 
             {/* Navigation Items */}
-            <div ref={navRef} className="hidden md:flex items-center space-x-8">
+            <div ref={navRef} className="hidden md:flex items-center space-x-8 z-20">
               {navItems.map((item) => (
                 <Link 
                   key={item.href}
@@ -219,7 +219,7 @@ export function Navbar() {
               <div
                 onMouseEnter={() => setIsCategoryOpen(true)}
                 onMouseLeave={() => setIsCategoryOpen(false)}
-                className="relative"
+                className="relative z-[200]"
               >
                 <button 
                   onMouseEnter={handleNavHover}
@@ -241,7 +241,7 @@ export function Navbar() {
                 {/* Dropdown Content */}
                 <div
                   className={cn(
-                    "absolute top-full left-0 w-72 bg-card border border-border rounded-md shadow-lg transition-all duration-300 max-h-[80vh] overflow-y-auto",
+                    "absolute top-full left-0 w-72 bg-card border border-border rounded-md shadow-lg transition-all duration-300 max-h-[80vh] overflow-y-auto z-[100]",
                     "opacity-0 invisible translate-y-2",
                     isCategoryOpen && "opacity-100 visible translate-y-0"
                   )}
@@ -279,7 +279,7 @@ export function Navbar() {
             </div>
 
             {/* Search Bar - Only visible on large screens */}
-            <div ref={searchRef} className="hidden lg:flex flex-1 max-w-md mx-8">
+            <div ref={searchRef} className="hidden lg:flex flex-1 max-w-md mx-8 z-10">
               <SearchBar />
             </div>
 

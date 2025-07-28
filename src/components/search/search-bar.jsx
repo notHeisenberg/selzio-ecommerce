@@ -253,7 +253,7 @@ const SearchBar = ({ onResultClick }) => {
 
       {/* Search Results Dropdown */}
       {isFocused && searchResults.length > 0 && (
-        <div className="absolute top-full left-0 right-0 mt-1 bg-card/95 backdrop-blur-sm rounded-none shadow-lg border border-border max-h-96 overflow-y-auto z-50">
+        <div className="absolute top-full left-0 right-0 mt-1 bg-card/95 backdrop-blur-sm rounded-none shadow-lg border border-border max-h-96 overflow-y-auto z-10">
           {searchResults.map((result) => (
             <div
               key={result.isCombo ? `combo-${result.comboCode}` : `product-${result.productCode}`}

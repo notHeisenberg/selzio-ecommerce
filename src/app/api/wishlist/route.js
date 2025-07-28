@@ -7,14 +7,33 @@ import { ObjectId } from 'mongodb';
 // GET /api/wishlist - Get user's wishlist
 export async function GET(request) {
   try {
-    // Get authenticated user from session
+    // First try NextAuth session
+    let userId = null;
+    let authenticated = false;
+    
+    // Try to get session from NextAuth
+    const { getServerSession } = await import('next-auth');
+    const { authOptions } = await import('@/app/api/auth/[...nextauth]/route');
     const session = await getServerSession(authOptions);
     
-    if (!session || !session.user) {
-      return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
+    if (session && session.user && session.user.id) {
+      userId = session.user.id;
+      authenticated = true;
+    } else {
+      // Fallback to custom JWT
+      const { getAuthUser } = await import('@/lib/jwt');
+      const jwtUser = getAuthUser(request);
+      
+      if (jwtUser && jwtUser.id) {
+        userId = jwtUser.id;
+        authenticated = true;
+        console.log("Wishlist API: Using JWT auth for user", userId);
+      }
     }
     
-    const userId = session.user.id;
+    if (!authenticated || !userId) {
+      return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
+    }
     
     // Get the wishlist collection
     const wishlistCollection = await getWishlistCollection();

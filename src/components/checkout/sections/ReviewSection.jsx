@@ -49,7 +49,7 @@ export const ReviewSection = ({
               </div>
               {cartItems.slice(0, 2).map((item) => (
                 <div key={item._id || item.productCode} className="flex items-center justify-between text-xs text-muted-foreground">
-                  <span className="truncate max-w-[70%]">{item.quantity}x {item.name}</span>
+                  <span className="truncate max-w-[70%]">{item.quantity}x {item.name} ({item?.selectedSize})</span>
                   {item.discount && item.discount > 0 ? (
                     <div className="text-right">
                       <span className="text-green-600 dark:text-green-400">

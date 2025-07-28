@@ -693,11 +693,11 @@ export default function OrdersTab() {
                               <p className="text-sm font-medium">{item.name} {item?.selectedSize && `(${item?.selectedSize})`} </p>
                               <p className="text-xs text-muted-foreground">
                                 Qty: {item.quantity} × {
-                                  item.discount > 0 
+                                  item.discount > 0
                                     ? <span>
-                                        <span className="text-primary font-medium">{(item.price * (1 - item.discount / 100)).toFixed(2)}</span>
-                                        <span className="line-through ml-1">{item.price.toFixed(2)}</span>
-                                      </span>
+                                      <span className="text-primary font-medium">{(item.price * (1 - item.discount / 100)).toFixed(2)}</span>
+                                      <span className="line-through ml-1">{item.price.toFixed(2)}</span>
+                                    </span>
                                     : item.price !== undefined ? item.price.toFixed(2) : '0.00'
                                 } Tk
                               </p>
@@ -1032,15 +1032,15 @@ export default function OrdersTab() {
                           />
                         </div>
                         <div className="flex-grow w-full text-center sm:text-left">
-                          <p className="font-medium">{item.name}</p>
+                          <p className="font-medium">{item.name} {item?.selectedSize && `(${item?.selectedSize})`} </p>
                           <div className="flex flex-col sm:flex-row sm:justify-between text-sm text-muted-foreground">
                             <p>Quantity: {item.quantity}</p>
                             <p>Price: {
-                              item.discount > 0 
+                              item.discount > 0
                                 ? <span>
-                                    <span className="text-primary font-medium">{(item.price * (1 - item.discount / 100)).toFixed(2)}</span>
-                                    <span className="line-through ml-1">{item.price.toFixed(2)}</span>
-                                  </span>
+                                  <span className="text-primary font-medium">{(item.price * (1 - item.discount / 100)).toFixed(2)}</span>
+                                  <span className="line-through ml-1">{item.price.toFixed(2)}</span>
+                                </span>
                                 : item.price !== undefined ? item.price.toFixed(2) : '0.00'
                             } Tk</p>
                           </div>
@@ -1049,11 +1049,11 @@ export default function OrdersTab() {
                         </div>
                         <div className="font-medium w-full sm:w-auto text-center sm:text-right mt-2 sm:mt-0 text-primary">
                           {item.discount > 0
-                            ? (item.quantity && item.price) 
-                              ? (item.quantity * item.price * (1 - item.discount / 100)).toFixed(2) 
+                            ? (item.quantity && item.price)
+                              ? (item.quantity * item.price * (1 - item.discount / 100)).toFixed(2)
                               : '0.00'
-                            : (item.quantity && item.price) 
-                              ? (item.quantity * item.price).toFixed(2) 
+                            : (item.quantity && item.price)
+                              ? (item.quantity * item.price).toFixed(2)
                               : '0.00'
                           } Tk
                         </div>
@@ -1087,13 +1087,13 @@ export default function OrdersTab() {
                               <div className="ml-auto font-medium text-primary">
                                 {combo.discount > 0
                                   ? <div className="text-right">
-                                      <span className="text-primary font-medium">
-                                        {(combo.price * combo.quantity * (1 - combo.discount / 100)).toFixed(2)} Tk
-                                      </span>
-                                      <div className="text-xs line-through text-muted-foreground">
-                                        {(combo.price * combo.quantity).toFixed(2)} Tk
-                                      </div>
+                                    <span className="text-primary font-medium">
+                                      {(combo.price * combo.quantity * (1 - combo.discount / 100)).toFixed(2)} Tk
+                                    </span>
+                                    <div className="text-xs line-through text-muted-foreground">
+                                      {(combo.price * combo.quantity).toFixed(2)} Tk
                                     </div>
+                                  </div>
                                   : combo.price ? (combo.price * combo.quantity).toFixed(2) + ' Tk' : '0.00 Tk'
                                 }
                               </div>

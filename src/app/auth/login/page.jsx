@@ -22,6 +22,7 @@ import { Loader2, Mail, Lock, ArrowRight } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import SocialLogin from '@/components/auth/social-login';
 import { motion } from 'framer-motion';
+import { signIn } from 'next-auth/react';
 
 const loginSchema = z.object({
   email: z.string().email('Please enter a valid email'),
@@ -48,8 +49,16 @@ export default function LoginPage() {
     setServerError('');
     
     try {
-      // Call the login function from our auth hook
-      await login(values.email, values.password);
+      // Use NextAuth's signIn instead of custom login
+      const result = await signIn('credentials', {
+        email: values.email,
+        password: values.password,
+        redirect: false,
+      });
+      
+      if (result.error) {
+        throw new Error(result.error);
+      }
       
       // Show success toast
       toast({

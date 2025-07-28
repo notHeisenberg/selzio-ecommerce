@@ -1,43 +1,59 @@
 import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
-import { authOptions } from '../[...nextauth]/route';
+import { authOptions } from '@/app/api/auth/[...nextauth]/route';
 
-// Configure route as dynamic since it relies on server functionality
-export const dynamic = 'force-dynamic';
-
-// Simple endpoint to check authentication status
-export async function GET(req) {
+export async function GET(request) {
   try {
-    // Get the session
+    // Get session from NextAuth
     const session = await getServerSession(authOptions);
+    
+    const cookieHeader = request.headers.get('cookie') || '';
+    const cookies = cookieHeader.split(';').map(c => c.trim());
+    const sessionCookies = cookies.filter(c => c.startsWith('next-auth.session-token') || c.includes('session'));
+    
+    // Create a safe response object
+    const response = {
+      authenticated: !!session && !!session.user,
+      hasSession: !!session,
+      hasUser: session ? !!session.user : false,
+      hasId: session?.user?.id ? true : false,
+      hasCookies: sessionCookies.length > 0,
+      cookieCount: cookies.length,
+      sessionCookieCount: sessionCookies.length,
+    };
     
     if (!session) {
       return NextResponse.json({
-        authenticated: false,
-        message: 'No session found'
+        ...response,
+        error: 'No session found',
+        status: 'unauthenticated'
       }, { status: 401 });
     }
     
-    // Check session validity
-    const userInfo = {
-      authenticated: true,
+    if (!session.user) {
+      return NextResponse.json({
+        ...response,
+        error: 'No user in session',
+        status: 'incomplete'
+      }, { status: 401 });
+    }
+    
+    // User is authenticated
+    return NextResponse.json({
+      ...response,
+      status: 'authenticated',
       user: {
         id: session.user.id,
         email: session.user.email,
-        role: session.user.role,
-        isAdmin: session.user.role === 'admin' || 
-                 session.user.isAdmin === true || 
-                 session.user.admin === true
-      },
-      hasToken: !!session.accessToken
-    };
-    
-    return NextResponse.json(userInfo);
+        name: session.user.name
+      }
+    });
   } catch (error) {
     console.error('Auth check error:', error);
     return NextResponse.json({
       authenticated: false,
-      error: error.message
+      error: error.message,
+      status: 'error'
     }, { status: 500 });
   }
 } 

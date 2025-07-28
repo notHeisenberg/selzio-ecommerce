@@ -54,8 +54,8 @@ export const PaymentSection = ({
                   value={method.id}
                   checked={selectedPaymentMethod === method.id}
                   onChange={() => setValue('paymentMethod', method.id)}
-                  className="h-4 w-4 rounded-full border-gray-400 text-black focus:ring-black dark:border-gray-600 dark:text-white dark:focus:ring-white accent-black"
-                  style={{ accentColor: 'black' }}
+                  className="h-4 w-4 rounded-full border-gray-400 text-blue-600 focus:ring-blue-500 dark:border-gray-600 dark:text-blue-400 dark:focus:ring-blue-500 accent-blue-600"
+                  style={{ accentColor: '#2563eb' }}
                   {...register('paymentMethod')}
                 />
                 <Label

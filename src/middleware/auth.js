@@ -4,18 +4,39 @@ import { ObjectId } from 'mongodb';
 
 /**
  * Middleware to require authentication for API routes
+ * Checks both NextAuth session and JWT tokens
  * 
  * @param {Request} req - Next.js request object
  * @returns {Object|Response} The user data or an error response
  */
 export async function requireAuth(req) {
-  const user = getAuthUser(req);
-  
-  if (!user) {
-    return authError('Authentication required');
+  // First try to get NextAuth session
+  try {
+    const { getServerSession } = await import('next-auth');
+    const { authOptions } = await import('@/app/api/auth/[...nextauth]/route');
+    
+    const session = await getServerSession(authOptions);
+    if (session && session.user) {
+      return {
+        ...session.user,
+        source: 'next-auth'
+      };
+    }
+  } catch (error) {
+    console.error('Error checking NextAuth session:', error);
   }
   
-  return user;
+  // If no NextAuth session, try JWT
+  const user = getAuthUser(req);
+  if (user) {
+    return {
+      ...user,
+      source: 'jwt'
+    };
+  }
+  
+  // No authentication found
+  return authError('Authentication required');
 }
 
 /**
