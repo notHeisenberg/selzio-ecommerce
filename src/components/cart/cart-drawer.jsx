@@ -400,7 +400,7 @@ const CartDrawer = () => {
                       animate={{ opacity: 1 }}
                       className="font-medium text-foreground"
                     >
-                      {totalPrice.toFixed(2)} BDT
+                      {totalPrice % 1 === 0 ? Math.round(totalPrice) : totalPrice.toFixed(2)} BDT
                     </motion.span>
                   </div>
 
@@ -416,7 +416,7 @@ const CartDrawer = () => {
                           <Tag className="h-4 w-4 mr-1" />
                           Discount ({appliedCoupon.discount * 100}%)
                         </span>
-                        <span>-{discountAmount.toFixed(2)} BDT</span>
+                        <span>-{discountAmount % 1 === 0 ? Math.round(discountAmount) : discountAmount.toFixed(2)} BDT</span>
                       </motion.div>
                     )}
                   </AnimatePresence>
@@ -433,7 +433,7 @@ const CartDrawer = () => {
                           <Tag className="h-4 w-4 mr-1" />
                           Discount
                         </span>
-                        <span>-{discountAmount.toFixed(2)} BDT</span>
+                        <span>-{discountAmount % 1 === 0 ? Math.round(discountAmount) : discountAmount.toFixed(2)} BDT</span>
                       </motion.div>
                     )}
                   </AnimatePresence>
@@ -456,7 +456,7 @@ const CartDrawer = () => {
                       animate={{ scale: 1 }}
                       className="text-primary"
                     >
-                      {grandTotal.toFixed(2)} BDT
+                      {grandTotal % 1 === 0 ? Math.round(grandTotal) : grandTotal.toFixed(2)} BDT
                     </motion.span>
                   </div>
 

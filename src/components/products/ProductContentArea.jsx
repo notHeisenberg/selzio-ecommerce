@@ -52,11 +52,11 @@ export default function ProductContentArea({
     // Add to cart with selected size
     const addToCartWithSize = () => {
         // Only add the selected size to the product, preserving all other information
-        // Do not modify or remove any existing data
+        // Use original price - the cart hook will apply discounts during total calculation
         const productWithSize = {
             ...product,
             selectedSize,
-            price: currentPrice
+            price: currentPrice // Always use original price, discount will be applied in cart calculation
         };
         
         // Call the handleAddToCart function with the customized product
@@ -66,11 +66,11 @@ export default function ProductContentArea({
     // Buy now with selected size
     const buyNowWithSize = () => {
         // Only add the selected size to the product, preserving all other information
-        // Do not modify or remove any existing data
+        // Use original price - the cart hook will apply discounts during total calculation
         const productWithSize = {
             ...product,
             selectedSize,
-            price: currentPrice
+            price: currentPrice // Always use original price, discount will be applied in cart calculation
         };
         
         // Call the handleBuyNow function with the customized product

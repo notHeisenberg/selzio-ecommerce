@@ -9,6 +9,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useCart } from '@/hooks/use-cart';
 import { useWishlist } from '@/hooks/use-wishlist';
 import Link from 'next/link';
+import { formatPrice, getDiscountedPrice } from '@/lib/utils';
 import { getProductByCode } from '@/data/products';
 
 import ProductImageGallery from './ProductImageGallery';
@@ -84,15 +85,7 @@ export default function ProductDetail({ productCode }) {
     }
   };
 
-  // Calculate discounted price
-  const getDiscountedPrice = (price, discount) => {
-    return price - (price * (discount / 100));
-  };
 
-  // Format price with BDT
-  const formatPrice = (price) => {
-    return `${price.toFixed(2)} BDT`;
-  };
 
   // Loading skeleton
   if (loading) {

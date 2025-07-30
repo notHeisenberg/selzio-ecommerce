@@ -6,10 +6,19 @@ export function cn(...inputs) {
 }
 
 export function formatPrice(price) {
+  // Check if price is a whole number
+  if (price % 1 === 0) {
+    return `${Math.round(price)} BDT`;
+  }
   return `${price.toFixed(2)} BDT`;
 }
 
 // Calculate discounted price
 export function getDiscountedPrice(price, discount) {
-  return price - (price * (discount / 100));
+  const discountedPrice = price - (price * (discount / 100));
+  // If the original price was a whole number, round the discounted price to whole number
+  if (price % 1 === 0) {
+    return Math.round(discountedPrice);
+  }
+  return discountedPrice;
 }

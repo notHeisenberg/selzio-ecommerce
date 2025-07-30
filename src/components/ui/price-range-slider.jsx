@@ -16,10 +16,6 @@ export function PriceRangeSlider({
   const [minInputValue, setMinInputValue] = useState(value[0].toString());
   const [maxInputValue, setMaxInputValue] = useState(value[1].toString());
   
-  // Format price with BDT currency
-  const formatPrice = (price) => {
-    return `${price.toLocaleString('en-US')} BDT`;
-  };
   
   // Default max value is 10000 as specified
   const maxValue = 10000;

@@ -114,11 +114,12 @@ export function ProductCard({ product, index = 0, animationEnabled = true }) {
       return;
     }
 
-    // If no sizes, add directly to cart with the correct price
+    // If no sizes, add directly to cart with the original price
+    // The cart hook will apply the discount during total calculation
     const productToAdd = {
       ...product,
       displayPrice: product.price,  // Keep original price for reference
-      price: product.discount > 0 ? Number(discountedPrice) : product.price // Use discounted price if applicable
+      price: product.price // Always use original price, discount will be applied in cart calculation
     };
     
     addToCart(productToAdd);
@@ -157,17 +158,13 @@ export function ProductCard({ product, index = 0, animationEnabled = true }) {
     // Get base size price (or use product price if not specified)
     let sizePrice = sizeInfo?.price || product.price;
     
-    // Apply discount if it exists
-    const discountedSizePrice = product.discount > 0 
-      ? sizePrice * (1 - product.discount / 100)
-      : sizePrice;
-
-    // Create product with selected size
+    // Create product with selected size - use original price
+    // The cart hook will apply the discount during total calculation
     const productWithSize = {
       ...product,
       selectedSize,
       displayPrice: sizePrice, // Original size price for reference
-      price: discountedSizePrice // Discounted price (or original if no discount)
+      price: sizePrice // Always use original price, discount will be applied in cart calculation
     };
 
     // Add to cart and close popover
@@ -248,7 +245,12 @@ export function ProductCard({ product, index = 0, animationEnabled = true }) {
   // Calculate discounted price
   const calculateDiscountedPrice = () => {
     if (!product.discount || product.discount <= 0) return product.price;
-    return (product.price * (1 - product.discount / 100)).toFixed(2);
+    const discountedPrice = product.price * (1 - product.discount / 100);
+    // If original price was whole number, round the discounted price to whole number
+    if (product.price % 1 === 0) {
+      return Math.round(discountedPrice);
+    }
+    return parseFloat(discountedPrice.toFixed(2));
   };
 
   const originalPrice = calculateOriginalPrice();
@@ -448,7 +450,7 @@ export function ProductCard({ product, index = 0, animationEnabled = true }) {
               <div className="flex items-center gap-1 mt-1">
                 <Star className="h-3 w-3 fill-yellow-400 text-yellow-400" />
                 <span className="text-xs text-neutral-500 dark:text-neutral-400">
-                  {product.rating} {product.reviewCount && `(${product.reviewCount})`}
+                  {product.rating} {product.reviews && `(${product.reviews})`}
                 </span>
               </div>
             )}

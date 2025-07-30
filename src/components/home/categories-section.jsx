@@ -3,13 +3,15 @@
 import Image from 'next/image';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
-import { getFeaturedCategories } from '@/data/products';
+import { getFeaturedCategories, getProducts } from '@/data/products';
 import { useState, useEffect } from 'react';
+import { Badge } from '../ui/badge';
 
 export function CategoriesSection() {
   const [featuredCategories, setFeaturedCategories] = useState([]);
   const [loading, setLoading] = useState(true);
   const [imageErrors, setImageErrors] = useState({});
+  const [categoryDiscounts, setCategoryDiscounts] = useState({});
 
   // Handle image error by setting a flag
   const handleImageError = (categoryId) => {
@@ -19,12 +21,43 @@ export function CategoriesSection() {
     }));
   };
 
+  // Calculate discount information for each category
+  const calculateCategoryDiscounts = async (categories, products) => {
+    const discounts = {};
+    
+    categories.forEach(category => {
+      // Get products in this category/subcategory
+      const categoryProducts = products.filter(product => 
+        product.subcategory === category.name && product.discount > 0
+      );
+      
+      if (categoryProducts.length > 0) {
+        // Calculate the maximum discount in this category
+        const maxDiscount = Math.max(...categoryProducts.map(p => p.discount));
+        // Round to nearest 5 for cleaner display (e.g., 23% becomes 25%)
+        const roundedDiscount = Math.round(maxDiscount / 5) * 5;
+        discounts[category.name] = Math.min(roundedDiscount, 50); // Cap at 50%
+      }
+    });
+    
+    return discounts;
+  };
+
   // Fetch featured subcategories
   useEffect(() => {
     const fetchSubcategories = async () => {
       try {
-        const subcategories = await getFeaturedCategories();
+        const [subcategories, productsData] = await Promise.all([
+          getFeaturedCategories(),
+          getProducts()
+        ]);
+        
         setFeaturedCategories(subcategories);
+        
+        // Calculate discount information for categories
+        const discounts = await calculateCategoryDiscounts(subcategories, productsData);
+        setCategoryDiscounts(discounts);
+        
       } catch (error) {
         console.error('Failed to fetch featured subcategories:', error);
         setFeaturedCategories([]);
@@ -67,6 +100,15 @@ export function CategoriesSection() {
                   <div className="card-wrapper">
                     <div className="card group">
                       <div className="relative overflow-hidden min-h-[300px] bg-white dark:bg-gray-800">
+                        {/* Discount Badge */}
+                        {categoryDiscounts[category.name] && (
+                          <div className="absolute top-3 right-3 z-10">
+                            <Badge className="bg-red-500 text-white text-xs px-2 py-1 font-semibold shadow-md">
+                              Up to {categoryDiscounts[category.name]}% OFF
+                            </Badge>
+                          </div>
+                        )}
+                        
                         {/* Card Media with stable dimensions */}
                         <div className="card__media h-[300px] w-full relative">
                           {imageErrors[category.id] ? (

@@ -285,17 +285,17 @@ export default function CartPage() {
                                   {item.discount && item.discount > 0 ? (
                                     <div className="mb-2">
                                       <div className="text-primary font-semibold text-lg">
-                                        {getDiscountedPrice(item.price, item.discount).toFixed(2)} BDT
+                                        {getDiscountedPrice(item.price, item.discount) % 1 === 0 ? Math.round(getDiscountedPrice(item.price, item.discount)) : getDiscountedPrice(item.price, item.discount).toFixed(2)} BDT
                                       </div>
                                       <div className="text-muted-foreground text-sm line-through">
                                         {item.price.toFixed(2)} BDT
                                       </div>
                                       <div className="text-sm text-green-600 dark:text-green-400">
-                                        You save {item.discount}% ({(item.price - getDiscountedPrice(item.price, item.discount)).toFixed(2)} BDT)
+                                        You save {item.discount}% ({(item.price - getDiscountedPrice(item.price, item.discount)) % 1 === 0 ? Math.round(item.price - getDiscountedPrice(item.price, item.discount)) : (item.price - getDiscountedPrice(item.price, item.discount)).toFixed(2)} BDT)
                                       </div>
                                     </div>
                                   ) : (
-                                    <div className="text-primary font-semibold text-lg mb-2">{item.price.toFixed(2)} BDT</div>
+                                    <div className="text-primary font-semibold text-lg mb-2">{item.price % 1 === 0 ? Math.round(item.price) : item.price.toFixed(2)} BDT</div>
                                   )}
                                   
                                   {/* Display size if available */}
@@ -384,7 +384,7 @@ export default function CartPage() {
                                       </Button>
                                     </motion.div>
                                     <span className="text-sm text-muted-foreground ml-2">
-                                      {(item.price * item.quantity).toFixed(2)} BDT
+                                      {(item.price * item.quantity) % 1 === 0 ? Math.round(item.price * item.quantity) : (item.price * item.quantity).toFixed(2)} BDT
                                     </span>
                                   </div>
                                   <motion.div 
@@ -459,7 +459,7 @@ export default function CartPage() {
                           animate={{ opacity: 1 }}
                           className="font-medium"
                         >
-                          {totalPrice.toFixed(2)} BDT
+                          {totalPrice % 1 === 0 ? Math.round(totalPrice) : totalPrice.toFixed(2)} BDT
                         </motion.span>
                       </div>
                       
@@ -478,7 +478,7 @@ export default function CartPage() {
                                 ? `Discount (${appliedCoupon.discount * 100}%)` 
                                 : 'Discount'}
                             </span>
-                            <span>-{discountAmount.toFixed(2)} BDT</span>
+                            <span>-{discountAmount % 1 === 0 ? Math.round(discountAmount) : discountAmount.toFixed(2)} BDT</span>
                           </motion.div>
                         )}
                       </AnimatePresence>
@@ -489,7 +489,7 @@ export default function CartPage() {
                         {shippingCost === 0 ? (
                           <span className="text-slate-400">Calculated at checkout</span>
                         ) : (
-                          <span>{shippingCost.toFixed(2)} BDT</span>
+                          <span>{shippingCost % 1 === 0 ? Math.round(shippingCost) : shippingCost.toFixed(2)} BDT</span>
                         )}
                       </div>
                       
@@ -502,7 +502,7 @@ export default function CartPage() {
                             animate={{ scale: 1 }}
                             className="text-lg text-primary"
                           >
-                            {(grandTotal + shippingCost).toFixed(2)} BDT
+                            {(grandTotal + shippingCost) % 1 === 0 ? Math.round(grandTotal + shippingCost) : (grandTotal + shippingCost).toFixed(2)} BDT
                           </motion.span>
                         </div>
                         
@@ -540,7 +540,7 @@ export default function CartPage() {
                           <Alert variant="info" className="bg-primary/5 text-xs">
                             <AlertTitle className="text-sm">Free Shipping Available</AlertTitle>
                             <AlertDescription>
-                              Add <span className="font-medium text-primary">{(freeShippingThreshold - totalPrice).toFixed(2)} BDT</span> more to qualify for free shipping!
+                              Add <span className="font-medium text-primary">{(freeShippingThreshold - totalPrice) % 1 === 0 ? Math.round(freeShippingThreshold - totalPrice) : (freeShippingThreshold - totalPrice).toFixed(2)} BDT</span> more to qualify for free shipping!
                             </AlertDescription>
                           </Alert>
                         </motion.div>

@@ -4,6 +4,8 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
 import { useState } from 'react';
+import { formatPrice, getDiscountedPrice } from '@/lib/utils';
+import { Badge } from '@/components/ui/badge';
 
 export function ComboCard({ combo, index }) {
   const [imageError, setImageError] = useState(false);
@@ -12,6 +14,7 @@ export function ComboCard({ combo, index }) {
   const handleImageError = () => {
     setImageError(true);
   };
+  console.log(combo)
 
   if (!combo) return null;
 
@@ -75,6 +78,29 @@ export function ComboCard({ combo, index }) {
                     </span>
                   </span>
                 </h3>
+                
+                {/* Price and Discount */}
+                {combo.price && (
+                  <div className="mt-2 flex items-baseline gap-2 flex-wrap">
+                    {combo.discount > 0 ? (
+                      <>
+                        <span className="text-sm line-through text-muted-foreground font-medium">
+                          {formatPrice(combo.price)}
+                        </span>
+                        <span className="text-lg font-medium text-primary">
+                          {formatPrice(getDiscountedPrice(combo.price, combo.discount))}
+                        </span>
+                        <Badge variant="secondary" className="text-xs px-2 py-0.5 bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-400">
+                          {combo.discount}% OFF
+                        </Badge>
+                      </>
+                    ) : (
+                      <span className="text-lg font-medium">
+                        {formatPrice(combo.price)}
+                      </span>
+                    )}
+                  </div>
+                )}
               </div>
             </div>
           </div>
