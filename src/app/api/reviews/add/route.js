@@ -1,8 +1,9 @@
 import { NextResponse } from 'next/server';
-import { getReviewsCollection, getProductsCollection } from '@/lib/mongodb';
+import { getReviewsCollection } from '@/lib/mongodb';
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/app/api/auth/[...nextauth]/route';
 import { v2 as cloudinary } from 'cloudinary';
+import { calculateAndUpdateProductRating } from '@/utils/ratingUtils';
 
 // Configure Cloudinary
 cloudinary.config({
@@ -76,32 +77,14 @@ export async function POST(request) {
       }
     }
 
-    // Get MongoDB collections
+    // Get MongoDB collection
     const reviewsCollection = await getReviewsCollection();
-    const productsCollection = await getProductsCollection();
     
     // Insert review into database
     await reviewsCollection.insertOne(review);
     
-    // Update product's average rating
-    const allProductReviews = await reviewsCollection
-      .find({ productCode })
-      .toArray();
-    
-    const averageRating = 
-      allProductReviews.reduce((acc, curr) => acc + curr.rating, 0) / 
-      allProductReviews.length;
-    
-    // Update product with new average rating and review count
-    await productsCollection.updateOne(
-      { productCode },
-      { 
-        $set: { 
-          rating: parseFloat(averageRating.toFixed(1)),
-          reviews: allProductReviews.length 
-        } 
-      }
-    );
+    // Update product's average rating using utility function
+    await calculateAndUpdateProductRating(productCode);
     
     return NextResponse.json(
       { message: 'Review submitted successfully' },

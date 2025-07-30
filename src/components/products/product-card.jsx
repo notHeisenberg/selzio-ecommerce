@@ -17,6 +17,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
+import { useProductReviews } from '@/hooks/use-product-reviews';
 
 export function ProductCard({ product, index = 0, animationEnabled = true }) {
   const { addToCart } = useCart();
@@ -31,6 +32,25 @@ export function ProductCard({ product, index = 0, animationEnabled = true }) {
   const [selectedSize, setSelectedSize] = useState('');
   const [sizePopoverOpen, setSizePopoverOpen] = useState(false);
   const popoverTriggerRef = useRef(null);
+
+  // ----- DYNAMIC REVIEWS/RATING -----
+  const {
+    ratingDistribution,
+    pagination
+  } = useProductReviews(product.productCode);
+
+  // Calculate average rating and review count
+  const dynamicReviewCount = pagination?.total || 0;
+  let dynamicAverageRating = 0;
+  if (ratingDistribution && ratingDistribution.length > 0) {
+    const total = ratingDistribution.reduce((sum, item) => sum + item.count, 0);
+    if (total > 0) {
+      const weightedSum = ratingDistribution.reduce(
+        (sum, item) => sum + (item.rating * item.count), 0
+      );
+      dynamicAverageRating = parseFloat((weightedSum / total).toFixed(1));
+    }
+  }
 
   // Get product ID consistently
   const getProductId = () => {
@@ -446,11 +466,14 @@ export function ProductCard({ product, index = 0, animationEnabled = true }) {
             </div>
 
             {/* Rating */}
-            {product.rating && (
+            {(dynamicAverageRating > 0 || dynamicReviewCount > 0) && (
               <div className="flex items-center gap-1 mt-1">
                 <Star className="h-3 w-3 fill-yellow-400 text-yellow-400" />
                 <span className="text-xs text-neutral-500 dark:text-neutral-400">
-                  {product.rating} {product.reviews && `(${product.reviews})`}
+                  {dynamicAverageRating > 0
+                    ? `${dynamicAverageRating}`
+                    : '0.0'}
+                  {dynamicReviewCount > 0 && ` (${dynamicReviewCount})`}
                 </span>
               </div>
             )}

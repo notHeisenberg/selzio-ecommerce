@@ -21,6 +21,8 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
+import axios from 'axios';
+import Image from "next/image";
 
 // More realistic testimonials with verified purchase status
 const testimonials = [
@@ -106,7 +108,30 @@ export function Testimonials() {
   const [email, setEmail] = useState('');
   const [reviewText, setReviewText] = useState('');
   const [rating, setRating] = useState(0);
-  const [localTestimonials, setLocalTestimonials] = useState([...testimonials]);
+  const [localTestimonials, setLocalTestimonials] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  // Fetch testimonials from API
+  useEffect(() => {
+    const fetchTestimonials = async () => {
+      try {
+        const response = await axios.get('/api/testimonials?limit=12');
+        if (response.data && response.data.testimonials) {
+          setLocalTestimonials(response.data.testimonials);
+        } else {
+          setError('Could not fetch testimonials.');
+        }
+      } catch (err) {
+        console.error("Error fetching testimonials:", err);
+        setError(err.message || 'An unknown error occurred.');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    
+    fetchTestimonials();
+  }, []);
 
   // Mark component as mounted (client-side only)
   useEffect(() => {
@@ -266,7 +291,15 @@ export function Testimonials() {
             </p>
           </div>
           <div className="w-full max-w-6xl mx-auto min-h-[400px] flex items-center justify-center">
-            <div className="animate-pulse bg-secondary/50 w-full h-96 rounded-lg" />
+            {isLoading ? (
+              <div className="animate-pulse bg-secondary/50 w-full h-96 rounded-lg" />
+            ) : error ? (
+              <div className="text-red-500 bg-red-100 dark:bg-red-900/20 p-4 rounded-lg">
+                <p>Could not load testimonials. Please try again later.</p>
+              </div>
+            ) : (
+              <div className="animate-pulse bg-secondary/50 w-full h-96 rounded-lg" />
+            )}
           </div>
         </div>
       </section>
@@ -379,6 +412,19 @@ export function Testimonials() {
                     <div className="mb-4 mt-1 pl-0 transition-all group-hover:pl-2 duration-300 flex-grow">
                       <p className="text-muted-foreground">{testimonial.text}</p>
                     </div>
+                    
+                    {/* Review image if provided */}
+                    {testimonial.image && (
+                      <div className="my-4 flex justify-center sm:justify-start">
+                        <Image
+                          src={testimonial.image}
+                          alt={`Review by ${testimonial.name}`}
+                          width={80}
+                          height={80}
+                          className="rounded-md object-cover border-2 border-gray-200 dark:border-gray-700"
+                        />
+                      </div>
+                    )}
                     
                     {/* Review role */}
                     <div className="mt-auto pt-3 border-t border-gray-100 dark:border-gray-800">

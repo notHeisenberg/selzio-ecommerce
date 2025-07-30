@@ -48,7 +48,8 @@ export default function ProductReviews({ product, toast }) {
     loading: initialLoading,
     error,
     ratingDistribution,
-    addReview
+    addReview,
+    pagination
   } = useProductReviews(product.productCode);
 
   // Keep a local copy of all reviews to filter client-side
@@ -57,6 +58,10 @@ export default function ProductReviews({ product, toast }) {
   
   // Store a reference to the original rating distribution that won't change when filtering
   const [originalRatingDistribution, setOriginalRatingDistribution] = useState([]);
+  
+  // Calculate dynamic review count and average rating from reviews collection
+  const [dynamicReviewCount, setDynamicReviewCount] = useState(0);
+  const [dynamicAverageRating, setDynamicAverageRating] = useState(0);
 
   // Initialize all reviews and distribution when data is fetched
   useEffect(() => {
@@ -74,7 +79,26 @@ export default function ProductReviews({ product, toast }) {
     if (ratingDistribution && ratingDistribution.length > 0) {
       setOriginalRatingDistribution(ratingDistribution);
     }
-  }, [fetchedReviews, initialLoading, ratingDistribution]);
+    
+    // Update dynamic review count from pagination data
+    if (pagination && pagination.total !== undefined) {
+      setDynamicReviewCount(pagination.total);
+    }
+    
+    // Calculate dynamic average rating from rating distribution
+    if (ratingDistribution && ratingDistribution.length > 0) {
+      const totalReviews = ratingDistribution.reduce((sum, item) => sum + item.count, 0);
+      if (totalReviews > 0) {
+        const weightedSum = ratingDistribution.reduce((sum, item) => sum + (item.rating * item.count), 0);
+        const averageRating = weightedSum / totalReviews;
+        setDynamicAverageRating(parseFloat(averageRating.toFixed(1)));
+      } else {
+        setDynamicAverageRating(0);
+      }
+    } else {
+      setDynamicAverageRating(0);
+    }
+  }, [fetchedReviews, initialLoading, ratingDistribution, pagination]);
 
   // Client-side filtering function
   const filterReviews = useCallback((selectedRating) => {
@@ -208,6 +232,17 @@ export default function ProductReviews({ product, toast }) {
           setFilteredReviews(prev => [newReview, ...prev]);
         }
         
+        // Update dynamic counts immediately
+        setDynamicReviewCount(prev => prev + 1);
+        
+        // Recalculate average rating with the new review
+        const updatedReviews = [newReview, ...allReviews];
+        if (updatedReviews.length > 0) {
+          const totalRating = updatedReviews.reduce((sum, review) => sum + review.rating, 0);
+          const newAverageRating = totalRating / updatedReviews.length;
+          setDynamicAverageRating(parseFloat(newAverageRating.toFixed(1)));
+        }
+        
         toast({
           title: "Review Submitted",
           description: "Thank you for your review!",
@@ -230,16 +265,16 @@ export default function ProductReviews({ product, toast }) {
         {/* Review Summary */}
         <div className="lg:col-span-4 bg-secondary/10 p-6 rounded-none">
           <div className="text-center mb-4">
-            <div className="text-5xl font-bold mb-2">{product.rating || 0}</div>
+            <div className="text-5xl font-bold mb-2">{dynamicAverageRating || 0}</div>
             <div className="flex justify-center mb-1">
               {[...Array(5)].map((_, i) => (
                 <Star
                   key={i}
-                  className={`h-5 w-5 ${i < Math.floor(product.rating || 0) ? 'fill-amber-400 text-amber-400' : 'text-muted-foreground'}`}
+                  className={`h-5 w-5 ${i < Math.floor(dynamicAverageRating || 0) ? 'fill-amber-400 text-amber-400' : 'text-muted-foreground'}`}
                 />
               ))}
             </div>
-            <p className="text-sm text-muted-foreground">Based on {product.reviews || 0} reviews</p>
+            <p className="text-sm text-muted-foreground">Based on {dynamicReviewCount || 0} reviews</p>
           </div>
 
           {/* Rating Distribution */}
@@ -295,11 +330,11 @@ export default function ProductReviews({ product, toast }) {
                   <DialogTitle className="text-lg uppercase tracking-wider font-bold">Review {product.name}</DialogTitle>
                 </DialogHeader>
                 
-                <AnimatePresence mode="wait">
+                <div className="flex flex-col h-full">
                   <motion.form 
                     onSubmit={handleSubmitReview} 
-                    className="space-y-5 mt-5 overflow-y-auto pr-1" 
-                    style={{ maxHeight: "calc(85vh - 100px)" }}
+                    className="flex-grow overflow-y-auto space-y-5 pr-2" 
+                    style={{ maxHeight: "calc(85vh - 150px)" }}
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ duration: 0.2 }}
@@ -474,7 +509,7 @@ export default function ProductReviews({ product, toast }) {
                     
                     {/* Submit Button */}
                     <motion.div 
-                      className="flex justify-end gap-3 pt-2 border-t-2 border-gray-200 dark:border-gray-700 mt-6"
+                      className="flex justify-end gap-3 pt-4 border-t-2 border-gray-200 dark:border-gray-700 mt-auto"
                       initial={{ opacity: 0, y: 5 }}
                       animate={{ opacity: 1, y: 0 }}
                       transition={{ delay: 0.6 }}
@@ -505,7 +540,7 @@ export default function ProductReviews({ product, toast }) {
                       </Button>
                     </motion.div>
                   </motion.form>
-                </AnimatePresence>
+                </div>
               </DialogContent>
             </Dialog>
           </div>

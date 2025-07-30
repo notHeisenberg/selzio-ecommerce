@@ -14,7 +14,6 @@ export function ComboCard({ combo, index }) {
   const handleImageError = () => {
     setImageError(true);
   };
-  console.log(combo)
 
   if (!combo) return null;
 
