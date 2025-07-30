@@ -325,20 +325,19 @@ export default function ProductReviews({ product, toast }) {
 
             {/* Review Dialog with Form */}
             <Dialog open={reviewDialogOpen} onOpenChange={setReviewDialogOpen}>
-              <DialogContent className="sm:max-w-[500px] max-h-[85vh] rounded-none border-2 border-black dark:border-white">
-                <DialogHeader className="border-b-2 border-black dark:border-white pb-3">
+              <DialogContent className="sm:max-w-[500px] max-h-[80vh] rounded-none border-2 border-black dark:border-white p-0">
+                <DialogHeader className="border-b-2 border-black dark:border-white pb-3 px-6 pt-6">
                   <DialogTitle className="text-lg uppercase tracking-wider font-bold">Review {product.name}</DialogTitle>
                 </DialogHeader>
                 
-                <div className="flex flex-col h-full">
-                  <motion.form 
-                    onSubmit={handleSubmitReview} 
-                    className="flex-grow overflow-y-auto space-y-5 pr-2" 
-                    style={{ maxHeight: "calc(85vh - 150px)" }}
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.2 }}
-                  >
+                {/* Scrollable Content */}
+                <motion.div 
+                  className="overflow-y-auto space-y-5 px-6 py-4" 
+                  style={{ maxHeight: "calc(85vh - 160px)" }}
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.2 }}
+                >
                     {/* Rating Selection */}
                     <div className="border-l-4 border-black dark:border-white pl-3 py-1">
                       <Label htmlFor="rating" className="text-sm font-bold uppercase tracking-wide">Rating*</Label>
@@ -495,52 +494,51 @@ export default function ProductReviews({ product, toast }) {
                       </p>
                     </motion.div>
                     
-                    {/* Error Message */}
-                    {submitError && (
-                      <motion.div 
-                        className="bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 border-l-4 border-red-500 dark:border-red-400 p-3 text-sm"
-                        initial={{ opacity: 0, scaleY: 0, originY: 0 }}
-                        animate={{ opacity: 1, scaleY: 1 }}
-                        transition={{ duration: 0.2 }}
-                      >
-                        {submitError}
-                      </motion.div>
-                    )}
-                    
-                    {/* Submit Button */}
+                  {/* Error Message */}
+                  {submitError && (
                     <motion.div 
-                      className="flex justify-end gap-3 pt-4 border-t-2 border-gray-200 dark:border-gray-700 mt-auto"
-                      initial={{ opacity: 0, y: 5 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: 0.6 }}
+                      className="bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 border-l-4 border-red-500 dark:border-red-400 p-3 text-sm"
+                      initial={{ opacity: 0, scaleY: 0, originY: 0 }}
+                      animate={{ opacity: 1, scaleY: 1 }}
+                      transition={{ duration: 0.2 }}
                     >
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        onClick={handleReviewDialogClose}
-                        className="rounded-none border-2 border-gray-300 dark:border-gray-600 hover:border-black dark:hover:border-white hover:bg-transparent"
-                      >
-                        CANCEL
-                      </Button>
-                      <Button 
-                        type="submit"
-                        size="sm"
-                        disabled={isSubmitting}
-                        className="rounded-none bg-black hover:bg-black/80 text-white dark:bg-white dark:text-black dark:hover:bg-white/80 uppercase tracking-wider border-2 border-black dark:border-white font-bold"
-                      >
-                        {isSubmitting ? (
-                          <>
-                            <Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" />
-                            Submitting...
-                          </>
-                        ) : (
-                          'Submit Review'
-                        )}
-                      </Button>
+                      {submitError}
                     </motion.div>
-                  </motion.form>
-                </div>
+                  )}
+                </motion.div>
+                
+                {/* Fixed Button Footer */}
+                <motion.div 
+                  className="flex justify-end gap-3 pt-8 px-1 bg-transparent"
+                  initial={{ opacity: 0, y: 5 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.2, duration: 0.2 }}
+                >
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={handleReviewDialogClose}
+                    className="rounded-none border-2 border-gray-300 dark:border-gray-600 hover:border-black dark:hover:border-white hover:bg-transparent"
+                  >
+                    CANCEL
+                  </Button>
+                  <Button 
+                    onClick={handleSubmitReview}
+                    size="sm"
+                    disabled={isSubmitting}
+                    className="rounded-none bg-black hover:bg-black/80 text-white dark:bg-white dark:text-black dark:hover:bg-white/80 uppercase tracking-wider border-2 border-black dark:border-white font-bold"
+                  >
+                    {isSubmitting ? (
+                      <>
+                        <Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" />
+                        Submitting...
+                      </>
+                    ) : (
+                      'Submit Review'
+                    )}
+                  </Button>
+                </motion.div>
               </DialogContent>
             </Dialog>
           </div>

@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect, useRef, useCallback } from "react";
-import { Star, ChevronLeft, ChevronRight, User, Loader2, X } from "lucide-react";
+import { Star, ChevronLeft, ChevronRight, User, Loader2, X, Upload } from "lucide-react";
 import {
   Carousel,
   CarouselContent,
@@ -108,6 +108,8 @@ export function Testimonials() {
   const [email, setEmail] = useState('');
   const [reviewText, setReviewText] = useState('');
   const [rating, setRating] = useState(0);
+  const [imageFile, setImageFile] = useState(null);
+  const [imagePreview, setImagePreview] = useState(null);
   const [localTestimonials, setLocalTestimonials] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -229,7 +231,33 @@ export function Testimonials() {
     setEmail('');
     setReviewText('');
     setRating(0);
+    setImageFile(null);
+    setImagePreview(null);
     setSubmitError('');
+  };
+  
+  const handleImageUpload = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      if (file.size > 2 * 1024 * 1024) {
+        setSubmitError('Image size should be less than 2MB');
+        return;
+      }
+      
+      setImageFile(file);
+      
+      // Create image preview
+      const reader = new FileReader();
+      reader.onload = () => {
+        setImagePreview(reader.result);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+  
+  const removeImage = () => {
+    setImageFile(null);
+    setImagePreview(null);
   };
 
   const handleSubmitReview = async (e) => {
@@ -252,7 +280,7 @@ export function Testimonials() {
         role: "Customer",
         verified: false,
         date: new Date().toISOString().split('T')[0],
-        image: null,
+        image: imagePreview, // Use the image preview for display
         rating,
         text: reviewText,
       };
@@ -483,20 +511,19 @@ export function Testimonials() {
 
       {/* Review Dialog with Form */}
       <Dialog open={reviewDialogOpen} onOpenChange={setReviewDialogOpen}>
-        <DialogContent className="sm:max-w-[500px] max-h-[85vh] rounded-none border-2 border-black dark:border-white">
-          <DialogHeader className="border-b-2 border-black dark:border-white pb-3">
+        <DialogContent className="sm:max-w-[500px] max-h-[85vh] rounded-none border-2 border-black dark:border-white p-0">
+          <DialogHeader className="border-b-2 border-black dark:border-white pb-3 px-6 pt-6">
             <DialogTitle className="text-lg uppercase tracking-wider font-bold">Share Your Experience</DialogTitle>
           </DialogHeader>
           
-          <AnimatePresence mode="wait">
-            <motion.form 
-              onSubmit={handleSubmitReview} 
-              className="space-y-5 mt-5 overflow-y-auto pr-1" 
-              style={{ maxHeight: "calc(85vh - 100px)" }}
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.2 }}
-            >
+          {/* Scrollable Content */}
+          <motion.div 
+            className="space-y-5 mt-5 overflow-y-auto px-6 py-4" 
+            style={{ maxHeight: "calc(85vh - 160px)" }}
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.2 }}
+          >
               {/* Rating Selection */}
               <div className="border-l-4 border-black dark:border-white pl-3 py-1">
                 <Label htmlFor="rating" className="text-sm font-bold uppercase tracking-wide">Rating*</Label>
@@ -600,6 +627,59 @@ export function Testimonials() {
                 />
               </motion.div>
               
+              {/* Image Upload */}
+              <motion.div
+                initial={{ opacity: 0, y: 5 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.5 }}
+                className="border-l-4 border-transparent"
+              >
+                <Label htmlFor="image" className="text-sm font-bold uppercase tracking-wide">Add a Photo (Optional)</Label>
+                <div className="mt-2">
+                  {imagePreview ? (
+                    <motion.div 
+                      className="relative w-24 h-24 border-2 border-black dark:border-white overflow-hidden"
+                      initial={{ opacity: 0, scale: 0.8 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      transition={{ type: "spring", stiffness: 300, damping: 20 }}
+                    >
+                      <img
+                        src={imagePreview}
+                        alt="Testimonial"
+                        className="w-full h-full object-cover"
+                      />
+                      <button
+                        type="button"
+                        onClick={removeImage}
+                        className="absolute top-1 right-1 bg-black text-white dark:bg-white dark:text-black p-1 border-none"
+                      >
+                        <X className="h-3.5 w-3.5" />
+                      </button>
+                    </motion.div>
+                  ) : (
+                    <motion.div 
+                      className="flex items-center justify-center border-2 border-dashed border-gray-300 dark:border-gray-600 hover:border-black dark:hover:border-white p-4"
+                      whileHover={{ backgroundColor: "rgba(0,0,0,0.025)" }}
+                    >
+                      <label className="flex flex-col items-center cursor-pointer">
+                        <Upload className="h-5 w-5 text-gray-500 mb-1.5" />
+                        <span className="text-xs text-muted-foreground">Upload</span>
+                        <input
+                          id="image"
+                          type="file"
+                          accept="image/*"
+                          className="hidden"
+                          onChange={handleImageUpload}
+                        />
+                      </label>
+                    </motion.div>
+                  )}
+                </div>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Max size: 2MB
+                </p>
+              </motion.div>
+              
               {/* Error Message */}
               {submitError && (
                 <motion.div 
@@ -611,43 +691,42 @@ export function Testimonials() {
                   {submitError}
                 </motion.div>
               )}
-              
-              {/* Submit Button */}
-              <motion.div 
-                className="flex justify-end gap-3 pt-2 border-t-2 border-gray-200 dark:border-gray-700 mt-6"
-                initial={{ opacity: 0, y: 5 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.6 }}
+            </motion.div>
+          
+            {/* Fixed Button Footer */}
+            <motion.div 
+              className="flex justify-end gap-3 pt-12 px-1 bg-transparent"
+              initial={{ opacity: 0, y: 5 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.2, duration: 0.2 }}
+            >
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={handleReviewDialogClose}
+                className="rounded-none border-2 border-gray-300 dark:border-gray-600 hover:border-black dark:hover:border-white hover:bg-transparent"
               >
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={handleReviewDialogClose}
-                  className="rounded-none border-2 border-gray-300 dark:border-gray-600 hover:border-black dark:hover:border-white hover:bg-transparent"
-                >
-                  CANCEL
-                </Button>
-                <Button 
-                  type="submit"
-                  size="sm"
-                  disabled={isSubmitting}
-                  className="rounded-none bg-black hover:bg-black/80 text-white dark:bg-white dark:text-black dark:hover:bg-white/80 uppercase tracking-wider border-2 border-black dark:border-white font-bold"
-                >
-                  {isSubmitting ? (
-                    <>
-                      <Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" />
-                      Submitting...
-                    </>
-                  ) : (
-                    'Submit'
-                  )}
-                </Button>
-              </motion.div>
-            </motion.form>
-          </AnimatePresence>
+                CANCEL
+              </Button>
+              <Button 
+                onClick={handleSubmitReview}
+                size="sm"
+                disabled={isSubmitting}
+                className="rounded-none bg-black hover:bg-black/80 text-white dark:bg-white dark:text-black dark:hover:bg-white/80 uppercase tracking-wider border-2 border-black dark:border-white font-bold"
+              >
+                {isSubmitting ? (
+                  <>
+                    <Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" />
+                    Submitting...
+                  </>
+                ) : (
+                  'Submit'
+                )}
+              </Button>
+            </motion.div>
         </DialogContent>
       </Dialog>
     </section>
   );
-} 
+}
