@@ -28,12 +28,35 @@ export async function GET(req) {
     }
     
 
-    // Check if user is admin for different behavior
-    const isAdmin = user && (
-      user.role === 'admin' || 
-      user.isAdmin === true || 
-      user.admin === true
-    );
+    // Fetch full user data from database to check admin role properly
+    let isAdmin = false;
+    let fullUser = null;
+    
+    if (user) {
+      try {
+        const usersCollection = await getUsersCollection();
+        const userId = user.id || user._id;
+        
+        if (userId) {
+          // Convert to ObjectId if it's a valid string
+          let userObjectId = userId;
+          if (typeof userId === 'string' && ObjectId.isValid(userId)) {
+            userObjectId = new ObjectId(userId);
+          }
+          
+          fullUser = await usersCollection.findOne({ _id: userObjectId });
+          
+          if (fullUser) {
+            // Check admin role from database
+            isAdmin = fullUser.role === 'admin';
+          }
+        }
+      } catch (error) {
+        console.error('Error fetching user for admin check:', error);
+        // Fallback to token-based check
+        isAdmin = user.role === 'admin' || user.isAdmin === true || user.admin === true;
+      }
+    }
     
     // Get URL parameters
     const url = new URL(req.url);
@@ -45,6 +68,8 @@ export async function GET(req) {
     const sortBy = url.searchParams.get('sortBy') || 'createdAt';
     const sortOrder = url.searchParams.get('sortOrder') || 'desc';
     const includeUsers = url.searchParams.get('includeUsers') === 'true';
+    
+    console.log('🔍 Orders API - Admin status:', { isAdmin, includeUsers });
     
     // Prepare query
     let query = {};
@@ -417,9 +442,39 @@ export async function PUT(req) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
     
-    // Only admins can update orders
-    const isAdmin = user.role === 'admin' || user.isAdmin === true || user.admin === true;
+    // Fetch full user data from database to check admin role properly
+    let isAdmin = false;
     
+    try {
+      const usersCollection = await getUsersCollection();
+      const userId = user.id || user._id;
+      
+      if (userId) {
+        // Convert to ObjectId if it's a valid string
+        let userObjectId = userId;
+        if (typeof userId === 'string' && ObjectId.isValid(userId)) {
+          userObjectId = new ObjectId(userId);
+        }
+        
+        const fullUser = await usersCollection.findOne({ _id: userObjectId });
+        
+        if (fullUser) {
+          // Check admin role from database
+          isAdmin = fullUser.role === 'admin';
+          console.log('🔍 Full user data for admin check:', { 
+            userId: fullUser._id.toString(), 
+            role: fullUser.role, 
+            isAdmin 
+          });
+        } else {
+          console.error('🔴 User not found in database:', userId);
+        }
+      }
+    } catch (error) {
+      console.error('🔴 Error fetching user for admin check:', error);
+      // Fallback to token-based check
+      isAdmin = user.role === 'admin' || user.isAdmin === true || user.admin === true;
+    }
     
     if (!isAdmin) {
       console.error('🔴 User is not admin', { userId: user.id, role: user.role });
@@ -547,9 +602,39 @@ export async function DELETE(req) {
       return NextResponse.json({ error: 'User information required' }, { status: 401 });
     }
     
-    // Only admins can delete orders
-    const isAdmin = user.role === 'admin' || user.isAdmin === true || user.admin === true;
+    // Fetch full user data from database to check admin role properly
+    let isAdmin = false;
     
+    try {
+      const usersCollection = await getUsersCollection();
+      const userId = user.id || user._id;
+      
+      if (userId) {
+        // Convert to ObjectId if it's a valid string
+        let userObjectId = userId;
+        if (typeof userId === 'string' && ObjectId.isValid(userId)) {
+          userObjectId = new ObjectId(userId);
+        }
+        
+        const fullUser = await usersCollection.findOne({ _id: userObjectId });
+        
+        if (fullUser) {
+          // Check admin role from database
+          isAdmin = fullUser.role === 'admin';
+          console.log('🔍 Full user data for admin check (DELETE):', { 
+            userId: fullUser._id.toString(), 
+            role: fullUser.role, 
+            isAdmin 
+          });
+        } else {
+          console.error('🔴 User not found in database:', userId);
+        }
+      }
+    } catch (error) {
+      console.error('🔴 Error fetching user for admin check:', error);
+      // Fallback to token-based check
+      isAdmin = user.role === 'admin' || user.isAdmin === true || user.admin === true;
+    }
     
     if (!isAdmin) {
       console.error('🔴 Non-admin user attempting to delete order');

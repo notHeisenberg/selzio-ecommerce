@@ -100,6 +100,13 @@ export const AuthProvider = ({ children }) => {
           sessionUser.role = 'admin';
         }
         
+        // Ensure consistent ID format
+        if (sessionUser._id && !sessionUser.id) {
+          sessionUser.id = sessionUser._id;
+        } else if (sessionUser.id && !sessionUser._id) {
+          sessionUser._id = sessionUser.id;
+        }
+        
         // Save auth data to localStorage
         try {
           localStorage.setItem('auth_token', token);
@@ -194,10 +201,18 @@ export const AuthProvider = ({ children }) => {
               try {
                 const response = await api.get('/api/users/profile');
                 if (response.data) {
+                  // Ensure consistent format for the updated user data
+                  const updatedUser = {
+                    ...response.data,
+                    // Ensure both _id and id are available for consistency
+                    _id: response.data._id || response.data.id,
+                    id: response.data.id || response.data._id
+                  };
+                  
                   // Update with latest data
-                  setUser(response.data);
+                  setUser(updatedUser);
                   try {
-                    localStorage.setItem('user_data', JSON.stringify(response.data));
+                    localStorage.setItem('user_data', JSON.stringify(updatedUser));
                   } catch (e) {
                     console.error('Failed to update localStorage:', e);
                   }
@@ -410,8 +425,16 @@ export const AuthProvider = ({ children }) => {
     try {
       const response = await api.get('/api/users/profile');
       if (response.data) {
-        setUser(response.data);
-        localStorage.setItem('user_data', JSON.stringify(response.data));
+        // Ensure consistent format for the refreshed user data
+        const refreshedUser = {
+          ...response.data,
+          // Ensure both _id and id are available for consistency
+          _id: response.data._id || response.data.id,
+          id: response.data.id || response.data._id
+        };
+        
+        setUser(refreshedUser);
+        localStorage.setItem('user_data', JSON.stringify(refreshedUser));
         return true;
       }
     } catch (error) {

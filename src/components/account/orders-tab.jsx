@@ -22,9 +22,7 @@ import { Label } from '@/components/ui/label';
 import { format, addHours, isAfter } from 'date-fns';
 
 export default function OrdersTab() {
-  const { user } = useAuth();
   const { toast } = useToast();
-
 
   // Use the custom hook for orders
   const {
@@ -45,6 +43,7 @@ export default function OrdersTab() {
     usersWithOrders,
     loadingUsers
   } = useOrders();
+
 
   // State for order management
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -582,7 +581,7 @@ export default function OrdersTab() {
                         {extendedOrderStatuses[order.status]?.label || order.status}
                       </Badge>
                       <div className="flex flex-wrap gap-2">
-                        {(isAdmin || user?.role === 'admin') && (
+                        {isAdmin && (
                           <Button
                             variant="outline"
                             size="sm"

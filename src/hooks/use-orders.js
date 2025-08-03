@@ -19,7 +19,9 @@ export function useOrders() {
   const queryClient = useQueryClient();
   const { user, isAuthenticated } = useAuth();
   const { data: session } = useSession();
-  const isAdmin = user?.role === 'admin' || user?.isAdmin === true || user?.admin === true;
+  
+  // Determine if user is admin from user role
+  const isAdmin = user?.role === 'admin';
   
   // State for filtering and pagination
   const [pagination, setPagination] = useState({
@@ -74,6 +76,11 @@ export function useOrders() {
         
         params.append('sortBy', filter.sortBy);
         params.append('sortOrder', filter.sortOrder);
+        
+        // Include users for admin filtering
+        if (isAdmin) {
+          params.append('includeUsers', 'true');
+        }
         
         // Determine the endpoint based on user role
         const endpoint = `/api/orders?${params.toString()}`;
@@ -271,9 +278,8 @@ export function useOrders() {
   });
 
   // Get all users who have placed orders (for admin filtering)
-  // Create a fake users list for now since the simplified API doesn't return users
-  const usersWithOrders = [];
-  const loadingUsers = false;
+  const usersWithOrders = ordersData?.users || [];
+  const loadingUsers = isLoading || isFetching;
 
   // Handle page change
   const handlePageChange = (newPage) => {
@@ -333,7 +339,6 @@ export function useOrders() {
     usersWithOrders: usersWithOrders || [],
     loadingUsers,
     isAdmin,
-    
     // Status
     isLoading,
     isError,

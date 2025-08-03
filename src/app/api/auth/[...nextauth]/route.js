@@ -45,9 +45,10 @@ export const authOptions = {
 
           if (response.ok && data.user) {
             return {
-              id: data.user.id,
-              name: data.user.name,
-              email: data.user.email,
+              ...data.user,
+              // Ensure both _id and id are available for consistency
+              _id: data.user._id || data.user.id,
+              id: data.user.id || data.user._id,
               image: data.user.avatar,
               token: data.token,
             };
@@ -85,7 +86,13 @@ export const authOptions = {
 
             if (response.ok) {
               token.accessToken = data.token;
-              token.user = data.user;
+              // Store the complete user object from database
+              token.user = {
+                ...data.user,
+                // Ensure both _id and id are available for consistency
+                _id: data.user._id || data.user.id,
+                id: data.user.id || data.user._id
+              };
             } else {
               console.error("Social auth API error:", data.error);
               // Set token with minimal info to prevent undefined errors

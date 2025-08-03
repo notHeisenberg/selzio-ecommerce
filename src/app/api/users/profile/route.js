@@ -25,10 +25,16 @@ export async function GET(req) {
     // Remove sensitive fields but add a flag indicating if password exists
     const { password, ...userWithoutPassword } = user;
     
-    return NextResponse.json({
+    // Ensure consistent ID format
+    const userData = {
       ...userWithoutPassword,
+      // Ensure both _id and id are available for consistency
+      _id: userWithoutPassword._id ? userWithoutPassword._id.toString() : userWithoutPassword.id,
+      id: userWithoutPassword.id || userWithoutPassword._id?.toString(),
       hasPassword: !!password
-    });
+    };
+    
+    return NextResponse.json(userData);
   } catch (error) {
     console.error('Error fetching user profile:', error);
     return NextResponse.json(

@@ -46,18 +46,37 @@ export async function requireAuth(req) {
  * @returns {Object|Response} The admin user data or an error response
  */
 export async function requireAdmin(req) {
-  const user = getAuthUser(req);
+  const tokenUser = getAuthUser(req);
   
-  if (!user) {
+  if (!tokenUser) {
     return authError('Authentication required');
   }
   
-  // Check if user has admin role
-  if (user.role !== 'admin') {
-    return authError('Admin access required', 403);
+  // Fetch the complete user from database to get the latest role information
+  try {
+    const usersCollection = await getUsersCollection();
+    const fullUser = await usersCollection.findOne({ _id: new ObjectId(tokenUser.id) });
+    
+    if (!fullUser) {
+      return authError('User not found', 404);
+    }
+    
+    // Check if user has admin role from database
+    if (fullUser.role !== 'admin') {
+      return authError('Admin access required', 403);
+    }
+    
+    // Return the full user data with both token info and database info
+    return {
+      ...tokenUser,
+      ...fullUser,
+      _id: fullUser._id.toString(),
+      id: fullUser._id.toString()
+    };
+  } catch (error) {
+    console.error('Error fetching user for admin check:', error);
+    return authError('Authentication service unavailable', 500);
   }
-  
-  return user;
 }
 
 /**
