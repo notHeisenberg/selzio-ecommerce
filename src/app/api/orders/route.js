@@ -1,9 +1,10 @@
 import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '../auth/[...nextauth]/route';
-import { getOrdersCollection, getUsersCollection } from '@/lib/mongodb';
+import { getOrdersCollection, getUsersCollection, getProductsCollection } from '@/lib/mongodb';
 import { ObjectId } from 'mongodb';
 import { getAuthUser } from '@/lib/jwt';
+import { updateProductStats, checkProductStock } from '@/utils/productUtils';
 
 export async function GET(req) {
   try {
@@ -397,6 +398,7 @@ export async function POST(req) {
     }
     
     const ordersCollection = await getOrdersCollection();
+    const productsCollection = await getProductsCollection();
 
     const order = {
       ...orderData,
@@ -405,9 +407,35 @@ export async function POST(req) {
       updatedAt: new Date()
     };
 
+    // Check stock availability before creating order
+    if (order.items && Array.isArray(order.items)) {
+      console.log('📦 Checking stock for order items:', order.items.length);
+      
+      const stockCheck = await checkProductStock(order.items);
+      if (!stockCheck.success) {
+        return NextResponse.json({ 
+          error: 'Insufficient stock', 
+          details: stockCheck.issues,
+          message: stockCheck.message 
+        }, { status: 400 });
+      }
+      
+      // Update product statistics and stock
+      try {
+        await updateProductStats(order.items, 'add');
+        console.log('✅ Product statistics updated successfully');
+      } catch (updateError) {
+        console.error('❌ Error updating product statistics:', updateError);
+        // Continue with order creation even if product updates fail
+        // In production, you might want to handle this more strictly
+      }
+    }
+
+    // Insert the order
     const result = await ordersCollection.insertOne(order);
     order._id = result.insertedId;
 
+    console.log('🎉 Order created successfully:', order._id.toString());
     return NextResponse.json({ order });
   } catch (error) {
     console.error('Error creating order:', error);

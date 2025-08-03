@@ -44,7 +44,6 @@ export default function OrdersTab() {
     loadingUsers
   } = useOrders();
 
-
   // State for order management
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState(null);
@@ -577,7 +576,7 @@ export default function OrdersTab() {
                       )}
                     </div>
                     <div className="flex flex-wrap items-center gap-2">
-                      <Badge className={`${extendedOrderStatuses[order.status]?.color || 'bg-gray-500'} text-white capitalize font-medium px-3 py-1 rounded-full text-xs`}>
+                      <Badge className={`${extendedOrderStatuses[order.status]?.color || 'bg-gray-500'} text-white capitalize font-medium px-3 py-1 rounded-sm text-xs`}>
                         {extendedOrderStatuses[order.status]?.label || order.status}
                       </Badge>
                       <div className="flex flex-wrap gap-2">
@@ -983,23 +982,33 @@ export default function OrdersTab() {
               <div className="space-y-6 p-1">
                 {/* Status Badge */}
                 <div className="flex justify-center mb-2">
-                  <Badge className={`${extendedOrderStatuses[orderDetails.status]?.color || 'bg-gray-500'} text-white font-medium px-6 py-1.5 rounded-full text-sm`}>
+                  <Badge className={`${extendedOrderStatuses[orderDetails.status]?.color || 'bg-gray-500'} text-white font-medium px-6 py-1.5 rounded-sm text-sm`}>
                     {extendedOrderStatuses[orderDetails.status]?.label || orderDetails.status}
                   </Badge>
                 </div>
 
                 {/* Admin sees customer details */}
-                {isAdmin && orderDetails.user && (
+                {isAdmin && (
                   <div className="bg-muted/50 rounded-none p-4">
                     <h3 className="text-lg font-semibold mb-3 flex items-center text-primary">
                       <User className="h-4 w-4 mr-2" />
                       Customer Information
                     </h3>
                     <div className="space-y-2 text-sm pl-4 border-l-2 border-primary/20">
-                      <p><span className="font-medium">Name:</span> {orderDetails.user.name || 'N/A'}</p>
-                      <p><span className="font-medium">Email:</span> {orderDetails.user.email || 'N/A'}</p>
-                      {orderDetails.payment?.paymentNumber && <p><span className="font-medium">Phone:</span> {orderDetails.payment?.paymentNumber}</p>}
-                      <p><span className="font-medium">Account Type:</span> {orderDetails.user.role || 'customer'}</p>
+                      {/* Show guest info if it's a guest order */}
+                      {orderDetails.isGuestOrder ? (
+                        <>
+                          <p><span className="font-medium">Name:</span> {orderDetails.shipping.info.name || 'N/A'}</p>
+                          <p><span className="font-medium">Email:</span> {orderDetails.shipping.info.email || 'N/A'}</p>
+                          <p><span className="font-medium">Phone:</span> {orderDetails.shipping.info.phone || orderDetails.payment?.paymentNumber || 'N/A'}</p>
+                        </>
+                      ) : (
+                        <>
+                          <p><span className="font-medium">Name:</span> {orderDetails.user.name || 'N/A'}</p>
+                          <p><span className="font-medium">Email:</span> {orderDetails.user.email || 'N/A'}</p>
+                          <p><span className="font-medium">Phone:</span> {orderDetails.user.phone || orderDetails.payment?.paymentNumber || 'N/A'}</p>
+                        </>
+                      )}
                     </div>
                   </div>
                 )}

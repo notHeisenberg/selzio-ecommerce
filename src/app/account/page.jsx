@@ -17,6 +17,7 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import ProfileTab from '@/components/account/profile-tab';
 import OrdersTab from '@/components/account/orders-tab';
 import WishlistTab from '@/components/account/wishlist-tab';
+import ProductManagementTab from '@/components/account/product-management-tab';
 import SettingsTab from '@/components/account/settings-tab';
 
 // The main component
@@ -37,7 +38,7 @@ export default function AccountPage() {
 }
 
 function AccountPageContent() {
-  const { isAuthenticated, loading: authLoading, logout } = useAuth();
+  const { isAuthenticated, loading: authLoading, logout, user } = useAuth();
   const { 
     isLoading: profileLoading, 
     isError, 
@@ -57,24 +58,7 @@ function AccountPageContent() {
   // Setup active tab state
   const [activeTab, setActiveTab] = useState('profile');
   
-  // Effect to update active tab when URL parameters change
-  useEffect(() => {
-    const tabParam = searchParams.get('tab');
-    if (tabParam && ['profile', 'orders', 'wishlist', 'settings'].includes(tabParam)) {
-      setActiveTab(tabParam);
-    }
-  }, [searchParams]);
-  
-  // Redirect to login if not authenticated
-  useEffect(() => {
-    if (!authLoading && !isAuthenticated) {
-      router.push('/auth/login');
-    }
-  }, [isAuthenticated, authLoading, router]);
-  
-  const loading = authLoading || profileLoading;
-  
-  // Try to get user data from localStorage if not available from the hook
+  // Get the user data or fallback to localStorage
   const ensureUserData = () => {
     if (profileLoading) return null;
     
@@ -90,8 +74,31 @@ function AccountPageContent() {
     return null;
   };
   
-  // Get the user data or fallback to localStorage
   const userData = ensureUserData();
+  
+  // Check if user is admin
+  const isAdmin = user?.role === 'admin';
+  
+  // Effect to update active tab when URL parameters change
+  useEffect(() => {
+    const tabParam = searchParams.get('tab');
+    // Adjust valid tabs based on user role
+    const validTabs = isAdmin 
+      ? ['profile', 'orders', 'products', 'settings'] 
+      : ['profile', 'orders', 'wishlist', 'settings'];
+    if (tabParam && validTabs.includes(tabParam)) {
+      setActiveTab(tabParam);
+    }
+  }, [searchParams, isAdmin]);
+  
+  // Redirect to login if not authenticated
+  useEffect(() => {
+    if (!authLoading && !isAuthenticated) {
+      router.push('/auth/login');
+    }
+  }, [isAuthenticated, authLoading, router]);
+  
+  const loading = authLoading || profileLoading;
   
   if (loading) {
     return (
@@ -206,10 +213,17 @@ function AccountPageContent() {
                     <Package className="h-4 w-4 mr-2" />
                     <span className="hidden sm:inline">Orders</span>
                   </TabsTrigger>
-                  <TabsTrigger value="wishlist">
-                    <Heart className="h-4 w-4 mr-2" />
-                    <span className="hidden sm:inline">Wishlist</span>
-                  </TabsTrigger>
+                  {isAdmin ? (
+                    <TabsTrigger value="products">
+                      <Package className="h-4 w-4 mr-2" />
+                      <span className="hidden sm:inline">Products</span>
+                    </TabsTrigger>
+                  ) : (
+                    <TabsTrigger value="wishlist">
+                      <Heart className="h-4 w-4 mr-2" />
+                      <span className="hidden sm:inline">Wishlist</span>
+                    </TabsTrigger>
+                  )}
                   <TabsTrigger value="settings">
                     <Settings className="h-4 w-4 mr-2" />
                     <span className="hidden sm:inline">Settings</span>
@@ -223,11 +237,17 @@ function AccountPageContent() {
                 <TabsContent value="orders" className="mt-6">
                   <OrdersTab />
                 </TabsContent>
-                
-                <TabsContent value="wishlist" className="mt-6">
-                  <WishlistTab />
-                </TabsContent>
-                
+
+                {isAdmin ? (
+                  <TabsContent value="products" className="mt-6">
+                    <ProductManagementTab />
+                  </TabsContent>
+                ) : (
+                  <TabsContent value="wishlist" className="mt-6">
+                    <WishlistTab />
+                  </TabsContent>
+                )}
+
                 <TabsContent value="settings" className="mt-6">
                   <SettingsTab />
                 </TabsContent>

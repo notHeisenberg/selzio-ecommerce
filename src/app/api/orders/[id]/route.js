@@ -4,6 +4,7 @@ import { authOptions } from '../../auth/[...nextauth]/route';
 import { getOrdersCollection, getUsersCollection } from '@/lib/mongodb';
 import { ObjectId } from 'mongodb';
 import { getAuthUser } from '@/lib/jwt';
+import { updateProductStats } from '@/utils/productUtils';
 
 // GET a single order by ID
 export async function GET(req, { params }) {
@@ -380,6 +381,34 @@ export async function PUT(req, { params }) {
 
     // If we get here, only allow admin updates for other fields
     if (isAdmin) {
+      // Check if we're changing the order status to cancelled
+      const oldStatus = order.status;
+      const newStatus = updateData.status;
+      
+      // Handle product statistics reversal for cancelled orders
+      if (newStatus === 'cancelled' && oldStatus !== 'cancelled' && order.items) {
+        try {
+          console.log('📉 Reversing product statistics for cancelled order:', params.id);
+          await updateProductStats(order.items, 'subtract');
+          console.log('✅ Product statistics reversed for cancellation');
+        } catch (statsError) {
+          console.error('❌ Error reversing product statistics:', statsError);
+          // Continue with status update even if stats reversal fails
+        }
+      }
+      
+      // Handle product statistics addition for orders being restored from cancelled
+      if (oldStatus === 'cancelled' && newStatus !== 'cancelled' && order.items) {
+        try {
+          console.log('📈 Restoring product statistics for uncancelled order:', params.id);
+          await updateProductStats(order.items, 'add');
+          console.log('✅ Product statistics restored for uncancellation');
+        } catch (statsError) {
+          console.error('❌ Error restoring product statistics:', statsError);
+          // Continue with status update even if stats restoration fails
+        }
+      }
+      
       const result = await ordersCollection.findOneAndUpdate(
         { _id: new ObjectId(params.id) },
         { 
