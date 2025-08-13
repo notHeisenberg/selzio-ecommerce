@@ -209,9 +209,14 @@ export default function ComboDetail({ comboCode }) {
     const comboCartItem = {
       comboCode: combo.comboCode,
       name: combo.name,
-      price: calculateComboPrice(),
+      // Use original combo price, not the calculated discounted price
+      price: combo.price || 0,
       image: combo.image || (combo.images && combo.images.length > 0 ? combo.images[0] : null),
       isCombo: true,
+      description: combo.description || null,
+      shortDescription: combo.shortDescription || null,
+      // Pass the original discount - cart will handle applying it correctly
+      discount: combo.discount || 0,
       products: selectedProducts.map((product, index) => ({
         productCode: product.productCode,
         name: product.name,

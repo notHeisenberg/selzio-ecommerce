@@ -4,7 +4,6 @@ combos = [
         "name": "Old Money 3-Polo Combo",
         "description": "Create your perfect wardrobe with any 3 polos from our premium Old Money collection. Mix and match colors to suit your style. Each polo features 200+ GSM premium cotton for exceptional comfort and that coveted old money aesthetic.",
         "price": 1499.00,
-        "basePrice": 1499.00,
         "images": [
           "/images/categories/Old_money_all.png",
           "/images/products/old-money-combo-1.jpg",

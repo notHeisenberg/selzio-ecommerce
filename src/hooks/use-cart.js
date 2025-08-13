@@ -70,7 +70,10 @@ export const CartProvider = ({ children }) => {
         isCombo: true,
         quantity: 1,
         // Make sure we keep the products array for combos
-        products: product.products || []
+        products: product.products || [],
+        // Ensure these fields are included if they exist for combos
+        description: product.description || null,
+
       };
     }
     
