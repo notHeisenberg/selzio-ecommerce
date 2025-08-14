@@ -8,9 +8,9 @@ export function cn(...inputs) {
 export function formatPrice(price) {
   // Check if price is a whole number
   if (price % 1 === 0) {
-    return `${Math.round(price)} BDT`;
+    return Math.round(price);
   }
-  return `${price.toFixed(2)} BDT`;
+  return price.toFixed(2);
 }
 
 // Calculate discounted price

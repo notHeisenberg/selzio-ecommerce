@@ -234,14 +234,7 @@ export default function ProductContentArea({
                         </Button>
                     )}
                 </div>
-
-                {/* Short product teaser */}
-                <div className="mb-10">
-                    <h2 className="text-lg font-semibold mb-2">{product.name} — Built for Everyday Style. Designed to Stand Out.</h2>
-                    <p className="text-muted-foreground leading-relaxed">
-                        Looking for a <span className="font-medium">men&apos;s bracelet in Bangladesh</span> that you can wear with any outfit — one that lasts, without fading or tarnish?
-                    </p>
-                </div>
+                
             </div>
 
             {/* Detailed sections - all part of the scrollable right column */}

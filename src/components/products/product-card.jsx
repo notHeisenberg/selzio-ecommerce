@@ -141,7 +141,7 @@ export function ProductCard({ product, index = 0, animationEnabled = true }) {
       displayPrice: product.price,  // Keep original price for reference
       price: product.price // Always use original price, discount will be applied in cart calculation
     };
-    
+
     addToCart(productToAdd);
 
     // Show success toast
@@ -177,7 +177,7 @@ export function ProductCard({ product, index = 0, animationEnabled = true }) {
 
     // Get base size price (or use product price if not specified)
     let sizePrice = sizeInfo?.price || product.price;
-    
+
     // Create product with selected size - use original price
     // The cart hook will apply the discount during total calculation
     const productWithSize = {
@@ -343,11 +343,11 @@ export function ProductCard({ product, index = 0, animationEnabled = true }) {
             >
               <Heart className={`h-3.5 w-3.5 sm:h-4 sm:w-4 md:h-5 md:w-5 transition-colors duration-300
                 ${mounted && resolvedTheme === 'dark'
-                  ? isWishlisted 
-                    ? 'fill-red-500 text-red-500' 
+                  ? isWishlisted
+                    ? 'fill-red-500 text-red-500'
                     : 'text-gray-200 group-hover/btn:text-red-500 group-hover/btn:fill-red-500/30'
-                  : isWishlisted 
-                    ? 'fill-rose-500 text-rose-500' 
+                  : isWishlisted
+                    ? 'fill-rose-500 text-rose-500'
                     : 'text-slate-700 group-hover/btn:text-rose-500 group-hover/btn:fill-rose-500/30'
                 }`} />
             </Button>
@@ -451,16 +451,24 @@ export function ProductCard({ product, index = 0, animationEnabled = true }) {
             <div className="flex items-center gap-2 mt-2">
               {product.discount > 0 ? (
                 <>
-                  <span className="text-sm font-medium text-primary">
-                    Tk {discountedPrice}
+                  <span className="text-sm font-medium text-rose-500">
+                    ৳{discountedPrice}
                   </span>
                   <span className="text-xs line-through text-neutral-500 dark:text-neutral-400">
-                    Tk {originalPrice}
+                    {product?.sizes?.length > 0 && product.sizes[0]?.price 
+                      ? `Starting from ৳${product.sizes[0].price} to ৳${product.sizes[product.sizes.length - 1].price}` 
+                      : `৳${originalPrice}`
+                    }
                   </span>
                 </>
               ) : (
-                <span className="text-sm font-medium">
-                  {product.price ? `Tk ${product.price}` : 'Price not available'}
+                <span className="text-sm font-medium text-rose-500">
+                  {product?.sizes?.length > 0 && product.sizes[0]?.price 
+                    ? `Starting from ৳${product.sizes[0].price} to ৳${product.sizes[product.sizes.length - 1].price}`
+                    : product.price 
+                      ? `৳${product.price}` 
+                      : 'Price not available'
+                  }
                 </span>
               )}
             </div>

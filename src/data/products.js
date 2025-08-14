@@ -133,6 +133,13 @@ export const getCategories = async () => {
   }));
 };
 
+// Default images mapping for subcategories
+const defaultImages = {
+  // Fashion subcategories
+  'Old Money': '/images/categories/Old_money_all.png',
+  'Perfume Oils': '/images/categories/Perfume_Oils_All.jpg',
+};
+
 // Async function to get featured categories
 export const getFeaturedCategories = async () => {
   const { products } = await initializeProducts();
@@ -153,15 +160,13 @@ export const getFeaturedCategories = async () => {
     const categorySlug = createSlug(category);
     const subcatSlug = createSlug(subcat);
     
-    // Default images based on index if no specific mapping is available
-    const defaultImages = [
-      '/images/categories/Old_money_all.png',
-    ];
+    // Get image from defaultImages mapping or fall back to Old Money image
+    const image = defaultImages[subcat] || '/images/categories/Old_money_all.png';
     
     return {
       id: index + 1,
       name: subcat,
-      image: defaultImages[index % defaultImages.length],
+      image: image,
       count: count,
       description: `Shop our ${subcat} collection`,
       href: `/products/${categorySlug}/${subcatSlug}`

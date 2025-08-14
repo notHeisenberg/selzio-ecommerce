@@ -45,7 +45,7 @@ const CartDrawer = () => {
     // Apply any item-specific discount
     let itemPrice = item.price;
     if (item.discount && item.discount > 0) {
-      itemPrice = getDiscountedPrice(itemPrice, item.discount);
+      itemPrice = getDiscountedPrice(item.price, item.discount);
     }
     
     // Multiply by quantity
@@ -158,34 +158,9 @@ const CartDrawer = () => {
     setOpen(false);
   };
 
-  // Animation variants
-  const cartItemVariants = {
-    hidden: { opacity: 0, x: 20 },
-    visible: { 
-      opacity: 1, 
-      x: 0,
-      transition: { type: "spring", stiffness: 300, damping: 24 }
-    },
-    exit: { 
-      opacity: 0, 
-      x: -20, 
-      transition: { duration: 0.2 } 
-    }
-  };
-
-  const staggerContainer = {
-    hidden: { opacity: 0 },
-    visible: {
-      opacity: 1,
-      transition: {
-        staggerChildren: 0.07
-      }
-    }
-  };
 
   // Update the isLoading check to also depend on cart initialization
   const showLoading = isLoading || !isInitialized;
-
   return (
     <>
       <Drawer
@@ -309,14 +284,14 @@ const CartDrawer = () => {
                             >
                               {item.name}
                             </Link>
-                            <span className="ml-4">
-                              {formatPrice(calculateItemTotal(item))}
-                              {item.discount && item.discount > 0 && (
-                                <span className="block text-xs text-muted-foreground line-through">
-                                  {formatPrice(item.price * item.quantity)}
-                                </span>
-                              )}
-                            </span>
+                            <div className="ml-4">
+                              {formatPrice(calculateItemTotal(item))} BDT
+                              {item.discount && item.discount > 0 ? (
+                                <div className="text-xs text-muted-foreground line-through">
+                                  {formatPrice(item.price * item.quantity)} BDT
+                                </div>
+                              ) : null}
+                            </div>
                           </div>
                           {item.selectedSize && (
                             <p className="mt-1 text-sm text-muted-foreground">
@@ -400,7 +375,7 @@ const CartDrawer = () => {
                       animate={{ opacity: 1 }}
                       className="font-medium text-foreground"
                     >
-                      {totalPrice % 1 === 0 ? Math.round(totalPrice) : totalPrice.toFixed(2)} BDT
+                      {formatPrice(totalPrice)} BDT
                     </motion.span>
                   </div>
 
@@ -416,7 +391,7 @@ const CartDrawer = () => {
                           <Tag className="h-4 w-4 mr-1" />
                           Discount ({appliedCoupon.discount * 100}%)
                         </span>
-                        <span>-{discountAmount % 1 === 0 ? Math.round(discountAmount) : discountAmount.toFixed(2)} BDT</span>
+                        <span>-{formatPrice(discountAmount)} BDT</span>
                       </motion.div>
                     )}
                   </AnimatePresence>
@@ -433,7 +408,7 @@ const CartDrawer = () => {
                           <Tag className="h-4 w-4 mr-1" />
                           Discount
                         </span>
-                        <span>-{discountAmount % 1 === 0 ? Math.round(discountAmount) : discountAmount.toFixed(2)} BDT</span>
+                        <span>-{formatPrice(discountAmount)} BDT</span>
                       </motion.div>
                     )}
                   </AnimatePresence>
@@ -456,7 +431,7 @@ const CartDrawer = () => {
                       animate={{ scale: 1 }}
                       className="text-primary"
                     >
-                      {grandTotal % 1 === 0 ? Math.round(grandTotal) : grandTotal.toFixed(2)} BDT
+                      {formatPrice(grandTotal)} BDT
                     </motion.span>
                   </div>
 
