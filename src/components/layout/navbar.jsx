@@ -14,8 +14,9 @@ import UserMenu from '@/components/user/user-menu';
 import CartDrawer from '@/components/cart/cart-drawer';
 import ThemeSwitcher from '@/components/theme/theme-switcher';
 import MobileMenu from './mobile-menu';
-import { getProducts, navItems, createSlug } from '@/data/products';
+import { navItems } from '@/data/products';
 import { useAuth } from '@/hooks/use-auth';
+import { useAppData } from '@/providers/data-provider';
 import { motion, AnimatePresence } from 'framer-motion';
 
 export function Navbar() {
@@ -29,66 +30,10 @@ export function Navbar() {
   const searchRef = useRef(null);
   const iconsRef = useRef(null);
   const { isAuthenticated } = useAuth();
-  const [categories, setCategories] = useState([]);
-
-  // Fetch subcategories on component mount
-  useEffect(() => {
-    const fetchCategories = async () => {
-      try {
-        // Fetch products to get all subcategories
-        const products = await getProducts();
-
-        
-        // Group subcategories by category
-        const subcategoriesByCategory = {};
-        
-        products.forEach(product => {
-          if (product.category) {
-            // Normalize category name
-            const categoryName = product.category.trim();
-            
-            // Ensure subcategory exists and is not empty
-            if (product.subcategory) {
-              // Normalize subcategory name
-              const subcategoryName = product.subcategory.trim();
-              
-              if (subcategoryName) {
-                if (!subcategoriesByCategory[categoryName]) {
-                  subcategoriesByCategory[categoryName] = new Set();
-                }
-                subcategoriesByCategory[categoryName].add(subcategoryName);
-              }
-            }
-          }
-        });
-        
-        
-        // Convert to the format needed for the dropdown
-        const categorizedSubcategories = Object.entries(subcategoriesByCategory).map(([category, subcategories]) => ({
-          category,
-          subcategories: Array.from(subcategories).map(subcategory => ({
-            name: subcategory,
-            href: `/products/${createSlug(category)}/${createSlug(subcategory)}`
-          }))
-        }));
-        
-        // Sort categories alphabetically
-        categorizedSubcategories.sort((a, b) => a.category.localeCompare(b.category));
-        
-        // For each category, sort subcategories alphabetically
-        categorizedSubcategories.forEach(category => {
-          category.subcategories.sort((a, b) => a.name.localeCompare(b.name));
-        });
-        
-        setCategories(categorizedSubcategories);
-      } catch (error) {
-        console.error('Failed to fetch subcategories:', error);
-        setCategories([]);
-      }
-    };
-    
-    fetchCategories();
-  }, []);
+  const { getCategorizedSubcategories, loading: dataLoading } = useAppData();
+  
+  // Get categories from centralized data
+  const categories = getCategorizedSubcategories();
 
   useEffect(() => {
     // Logo animation

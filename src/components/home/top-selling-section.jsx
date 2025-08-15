@@ -1,34 +1,17 @@
 "use client"
 
-import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { ProductCard } from '@/components/products/product-card';
-import { getTopSellingProducts } from '@/data/products';
+import { useAppData } from '@/providers/data-provider';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ArrowRight } from 'lucide-react';
 
 export function TopSellingSection() {
-  const [topSellingProducts, setTopSellingProducts] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-
-  useEffect(() => {
-    const loadTopSellingProducts = async () => {
-      try {
-        setLoading(true);
-        const products = await getTopSellingProducts(4);
-        setTopSellingProducts(products);
-      } catch (err) {
-        console.error('Failed to load top selling products:', err);
-        setError('Failed to load products. Please try again later.');
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    loadTopSellingProducts();
-  }, []);
+  const { getTopSellingProducts, loading, error, initialized } = useAppData();
+  
+  // Get top selling products from centralized data
+  const topSellingProducts = getTopSellingProducts(4);
 
   // Skeleton loader for loading state
   const ProductSkeleton = () => (

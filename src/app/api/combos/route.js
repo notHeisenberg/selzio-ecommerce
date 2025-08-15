@@ -29,7 +29,7 @@ export async function GET(req) {
       .limit(limit)
       .toArray();
 
-    return NextResponse.json({
+    const response = NextResponse.json({
       combos,
       pagination: {
         page,
@@ -38,6 +38,13 @@ export async function GET(req) {
         pages: Math.ceil(total / limit)
       }
     });
+
+    // Add proper caching headers for better performance
+    response.headers.set('Cache-Control', 'public, max-age=600, stale-while-revalidate=300');
+    response.headers.set('CDN-Cache-Control', 'max-age=1200');
+    response.headers.set('Vary', 'Accept-Encoding');
+    
+    return response;
   } catch (error) {
     console.error('Error fetching combos:', error);
     return NextResponse.json(

@@ -97,11 +97,18 @@ export async function GET(req) {
     // Count total matching documents
     const total = await productsCollection.countDocuments(query);
 
-    return NextResponse.json({
+    const response = NextResponse.json({
       products,
       totalPages: Math.ceil(total / limit),
       currentPage: page
     });
+
+    // Add proper caching headers for better performance
+    response.headers.set('Cache-Control', 'public, max-age=600, stale-while-revalidate=300');
+    response.headers.set('CDN-Cache-Control', 'max-age=1200');
+    response.headers.set('Vary', 'Accept-Encoding');
+    
+    return response;
   } catch (error) {
     console.error('Products fetch error:', error);
     return NextResponse.json(

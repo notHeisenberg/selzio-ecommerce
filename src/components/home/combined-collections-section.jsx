@@ -1,8 +1,7 @@
 "use client"
 
-import { useState, useEffect } from 'react';
-import { getFeaturedCategories, getProducts } from '@/data/products';
-import { getFeaturedCombos } from '@/data/combos';
+import { useState } from 'react';
+import { useAppData } from '@/providers/data-provider';
 import Image from 'next/image';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
@@ -11,11 +10,8 @@ import { Button } from '../ui/button';
 import { Badge } from '../ui/badge';
 
 export function CombinedCollectionsSection() {
-  const [featuredCategories, setFeaturedCategories] = useState([]);
-  const [combos, setCombos] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const { featuredCategories, combos, loading, initialized, error } = useAppData();
   const [imageErrors, setImageErrors] = useState({});
-  const [categoryDiscounts, setCategoryDiscounts] = useState({});
 
   // Handle image error by setting a flag
   const handleImageError = (itemId) => {
@@ -25,60 +21,22 @@ export function CombinedCollectionsSection() {
     }));
   };
 
-  // Calculate discount information for each category
-  const calculateCategoryDiscounts = async (categories, products) => {
-    const discounts = {};
-    
-    categories.forEach(category => {
-      // Get products in this category/subcategory
-      const categoryProducts = products.filter(product => 
-        product.subcategory === category.name && product.discount > 0
-      );
-      
-      if (categoryProducts.length > 0) {
-        // Calculate the maximum discount in this category
-        const maxDiscount = Math.max(...categoryProducts.map(p => p.discount));
-        // Round to nearest 5 for cleaner display (e.g., 23% becomes 25%)
-        const roundedDiscount = Math.round(maxDiscount / 5) * 5;
-        discounts[category.name] = Math.min(roundedDiscount, 50); // Cap at 50%
-      }
-    });
-    
-    return discounts;
-  };
-
-  // Fetch data
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const [categoriesData, combosData, productsData] = await Promise.all([
-          getFeaturedCategories(),
-          getFeaturedCombos(),
-          getProducts()
-        ]);
-        
-        setFeaturedCategories(categoriesData);
-        setCombos(combosData);
-        
-        // Calculate discount information for categories
-        const discounts = await calculateCategoryDiscounts(categoriesData, productsData);
-        setCategoryDiscounts(discounts);
-        
-      } catch (error) {
-        console.error('Failed to fetch data:', error);
-        setFeaturedCategories([]);
-        setCombos([]);
-      } finally {
-        setLoading(false);
-      }
-    };
-    
-    fetchData();
-  }, []);
-
-  // If there's no data at all, don't render the section
-  if (!loading && featuredCategories.length === 0 && combos.length === 0) {
+  // If there's no data at all and loading is complete, don't render the section
+  if (!loading && initialized && featuredCategories.length === 0 && combos.length === 0) {
     return null;
+  }
+
+  // Show error state if there's an error
+  if (error && !loading) {
+    return (
+      <section className="py-10 bg-background overflow-hidden mt-[-20px] sm:mt-0">
+        <div className="container mx-auto px-4">
+          <div className="text-center text-red-500">
+            <p>Failed to load collections. Please try again later.</p>
+          </div>
+        </div>
+      </section>
+    );
   }
 
   return (
@@ -130,10 +88,10 @@ export function CombinedCollectionsSection() {
                       <div className="card group">
                         <div className="relative overflow-hidden min-h-[300px] bg-white dark:bg-gray-800">
                           {/* Discount Badge */}
-                          {categoryDiscounts[category.name] && (
+                          {category.discount && category.discount > 0 && (
                             <div className="absolute top-3 right-3 z-10">
                               <Badge className="bg-red-500 text-white text-xs px-2 py-1 font-semibold shadow-md">
-                                Up to {categoryDiscounts[category.name]}% OFF
+                                Up to {category.discount}% OFF
                               </Badge>
                             </div>
                           )}
