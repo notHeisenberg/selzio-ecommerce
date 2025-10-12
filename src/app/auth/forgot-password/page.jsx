@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -8,6 +8,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
 import { Button } from '@/components/ui/button';
+import { useTheme } from 'next-themes';
 import {
   Form,
   FormControl,
@@ -29,6 +30,12 @@ export default function ForgotPasswordPage() {
   const [isSubmitted, setIsSubmitted] = useState(false);
   const router = useRouter();
   const { toast } = useToast();
+  const { resolvedTheme } = useTheme();
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
   
   const form = useForm({
     resolver: zodResolver(forgotPasswordSchema),
@@ -63,19 +70,31 @@ export default function ForgotPasswordPage() {
   }
 
   return (
-    <div className="container max-w-md mx-auto py-16 px-4">
-      <div className="absolute top-4 left-4">
-        <Link href="/" className="flex items-center">
-          <div className="relative h-10 w-10 mr-2">
-            <Image src="/logo.png" alt="Selzio Logo" fill className="object-contain" />
+    <div className="min-h-screen bg-gradient-to-b from-background to-secondary/20 flex flex-col items-center justify-center p-4 gap-8">
+      {/* Logo Section */}
+      <div className="flex justify-center">
+        <Link href="/" className="flex items-center h-16 justify-center">
+          <div className="relative h-72 w-80">
+            <Image 
+              src="/images/logo_new.png" 
+              alt="Selzio Logo" 
+              fill 
+              sizes="320px"
+              className="object-contain w-full h-full transition-all duration-300"
+              style={{
+                filter: mounted && resolvedTheme === 'light' 
+                  ? 'invert(1) hue-rotate(180deg) saturate(3.5)' 
+                  : 'none'
+              }}
+              quality={100}
+            />
           </div>
-          <span className="text-xl font-bold text-foreground dark:text-white">
-            SELZ<span className="text-primary">I</span>O
-          </span>
         </Link>
       </div>
       
-      <div className="space-y-6">
+      {/* Form Section */}
+      <div className="w-full max-w-md bg-background border border-border shadow-lg p-8 rounded-none">
+        <div className="space-y-6">
         <div className="space-y-2 text-center">
           <h1 className="text-3xl font-bold">Reset Password</h1>
           <p className="text-muted-foreground">
@@ -145,6 +164,7 @@ export default function ForgotPasswordPage() {
             </form>
           </Form>
         )}
+        </div>
       </div>
     </div>
   );

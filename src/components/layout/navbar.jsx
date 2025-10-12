@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Menu, ChevronDown, LogIn, Search, X } from 'lucide-react';
+import { Menu, ChevronDown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useScrollDirection } from '@/hooks/use-scroll-direction';
 import { cn } from '@/lib/utils';
@@ -17,23 +17,29 @@ import MobileMenu from './mobile-menu';
 import { navItems } from '@/data/products';
 import { useAuth } from '@/hooks/use-auth';
 import { useAppData } from '@/providers/data-provider';
-import { motion, AnimatePresence } from 'framer-motion';
+import { useTheme } from 'next-themes';
 
 export function Navbar() {
   const { isVisible, scrollY } = useScrollDirection({ isNavbar: true });
   const pathname = usePathname();
   const [isCategoryOpen, setIsCategoryOpen] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const [isSearchOpen, setIsSearchOpen] = useState(false);
   const logoRef = useRef(null);
   const navRef = useRef(null);
   const searchRef = useRef(null);
   const iconsRef = useRef(null);
   const { isAuthenticated } = useAuth();
   const { getCategorizedSubcategories, loading: dataLoading } = useAppData();
+  const { resolvedTheme } = useTheme();
+  const [mounted, setMounted] = useState(false);
   
   // Get categories from centralized data
   const categories = getCategorizedSubcategories();
+
+  // Avoid hydration mismatch
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   useEffect(() => {
     // Logo animation
@@ -107,38 +113,74 @@ export function Navbar() {
       >
         <div className="container mx-auto px-4 lg:max-w-[1200px]">
           {/* Top Row - Logo, Navigation, Icons */}
-          <div className="flex h-16 md:h-20 items-center justify-between">
-            {/* Mobile Menu Button - Only visible on mobile, now on left side */}
-            <div className="md:hidden">
-              <Button 
-                variant="ghost" 
-                size="icon" 
-                className="text-foreground hover:text-primary hover:bg-secondary transition-colors duration-300"
-                onClick={() => setIsMobileMenuOpen(true)}
-                aria-label="Menu"
+           <div className="flex h-16 md:h-20 items-center justify-between w-full">
+            {/* Mobile: Three-part layout - Menu Button | Logo | Icons */}
+            <div className="md:hidden flex items-center justify-between w-full">
+              {/* Left: Menu Button */}
+              <div className="flex-shrink-0">
+                <Button 
+                  variant="ghost" 
+                  size="icon" 
+                  className="text-foreground hover:text-primary hover:bg-secondary transition-colors duration-300"
+                  onClick={() => setIsMobileMenuOpen(true)}
+                  aria-label="Menu"
+                >
+                  <Menu className="h-5 w-5" />
+                </Button>
+              </div>
+
+              {/* Center: Logo */}
+              <Link 
+                ref={logoRef}
+                href="/" 
+                className="flex items-center justify-center flex-1 h-16"
               >
-                <Menu className="h-5 w-5" />
-              </Button>
+                <div className="relative w-full h-72">
+                  <Image 
+                    src="/images/logo_new.png"
+                    alt="Selzio Logo" 
+                    fill 
+                    sizes="256px" 
+                    className="object-contain w-full h-full transition-all duration-300"
+                    style={{
+                      filter: mounted && resolvedTheme === 'light' 
+                        ? 'invert(1) hue-rotate(180deg) saturate(3.5)' 
+                        : 'none'
+                    }}
+                    quality={100}
+                    priority
+                  />
+                </div>
+              </Link>
+
+              {/* Right: Icons */}
+              <div className="flex items-center gap-2 flex-shrink-0">
+                {isAuthenticated && <UserMenu />}
+                <CartDrawer />
+              </div>
             </div>
 
-            {/* Logo - Centered on mobile */}
+            {/* Desktop: Logo on left */}
             <Link 
-              ref={logoRef}
               href="/" 
-              className="flex items-center md:order-first order-none ml-10"
+              className="hidden md:flex items-center"
             >
-              <div className="relative h-8 w-8 md:h-10 md:w-10 mr-2">
+              <div className="relative h-64 w-64 mr-2">
                 <Image 
-                  src="/images/logo.png" 
+                  src="/images/logo_new.png"
                   alt="Selzio Logo" 
                   fill 
-                  sizes="(max-width: 768px) 32px, 40px" 
-                  className="object-contain" 
+                  sizes="256px" 
+                  className="object-contain w-full h-full transition-all duration-300"
+                  style={{
+                    filter: mounted && resolvedTheme === 'light' 
+                      ? 'invert(1) hue-rotate(180deg) saturate(3.5)' 
+                      : 'none'
+                  }}
+                  quality={100}
+                  priority
                 />
               </div>
-              <span className="text-lg md:text-xl font-bold text-foreground dark:text-white mr-2">
-                SELZ<span className="text-rose-500">I</span>O
-              </span>
             </Link>
 
             {/* Navigation Items */}
@@ -228,25 +270,11 @@ export function Navbar() {
               <SearchBar />
             </div>
 
-            {/* Icons Section */}
-            <div ref={iconsRef} className="flex items-center gap-2 md:gap-4">
+            {/* Icons Section - Desktop Only */}
+            <div ref={iconsRef} className="hidden md:flex items-center gap-4">
               <UserMenu />
               <CartDrawer />
-              {/* Search icon on small screens, ThemeSwitcher on larger screens */}
-              <div className="md:hidden">
-                <Button 
-                  variant="ghost" 
-                  size="icon" 
-                  className="text-foreground hover:text-primary hover:bg-secondary transition-colors duration-300"
-                  onClick={() => setIsSearchOpen(true)}
-                  aria-label="Search"
-                >
-                  <Search className="h-5 w-5" />
-                </Button>
-              </div>
-              <div className="hidden md:block">
-                <ThemeSwitcher />
-              </div>
+              <ThemeSwitcher />
             </div>
           </div>
 
@@ -262,32 +290,6 @@ export function Navbar() {
         isOpen={isMobileMenuOpen} 
         onClose={() => setIsMobileMenuOpen(false)} 
       />
-
-      {/* Mobile Search Overlay */}
-      <AnimatePresence>
-        {isSearchOpen && (
-          <motion.div
-            className="fixed inset-0 z-50 bg-background/90 backdrop-blur-md flex flex-col p-4"
-            initial={{ opacity: 0, y: -20 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -20 }}
-            transition={{ duration: 0.2 }}
-          >
-            <div className="flex justify-between items-center mb-4">
-              <h2 className="text-lg font-medium">Search</h2>
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => setIsSearchOpen(false)}
-                className="text-muted-foreground hover:text-foreground"
-              >
-                <X className="h-5 w-5" />
-              </Button>
-            </div>
-            <SearchBar onResultClick={() => setIsSearchOpen(false)} />
-          </motion.div>
-        )}
-      </AnimatePresence>
 
       {/* Empty div with navbar's height to prevent content from hiding under fixed navbar */}
       <div className="h-16 md:h-20"></div>

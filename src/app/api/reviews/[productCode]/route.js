@@ -29,26 +29,44 @@ export async function GET(request, { params }) {
       query.rating = parseInt(ratingFilter);
     }
     
-    // Get reviews with pagination
-    const reviews = await reviewsCollection
-      .find(query)
-      .sort({ date: -1 }) // Most recent first
-      .skip((page - 1) * limit)
-      .limit(limit)
-      .toArray();
-    
-    // Get total count for pagination
-    const totalReviews = await reviewsCollection
-      .countDocuments(query);
-    
-    // Get rating distribution
-    const ratingDistribution = await reviewsCollection
-      .aggregate([
-        { $match: { productCode } },
-        { $group: { _id: '$rating', count: { $sum: 1 } } },
-        { $sort: { _id: -1 } }
-      ])
-      .toArray();
+    // Execute all queries in parallel for maximum speed
+    const [reviews, totalReviews, ratingDistribution] = await Promise.all([
+      // Get reviews with pagination and field projection
+      reviewsCollection
+        .find(query, {
+          projection: {
+            name: 1,
+            rating: 1,
+            text: 1,
+            image: 1,
+            verified: 1,
+            date: 1,
+            productCode: 1,
+            createdAt: 1
+          }
+        })
+        .sort({ createdAt: -1, rating: -1 }) // Use indexed sort
+        .skip((page - 1) * limit)
+        .limit(limit)
+        .toArray(),
+      
+      // Get total count
+      reviewsCollection.countDocuments(query),
+      
+      // Get rating distribution (optimized)
+      reviewsCollection
+        .aggregate([
+          { $match: { productCode } },
+          { 
+            $group: { 
+              _id: '$rating', 
+              count: { $sum: 1 } 
+            } 
+          },
+          { $sort: { _id: -1 } }
+        ])
+        .toArray()
+    ]);
     
     // Format rating distribution
     const formattedDistribution = Array.from({ length: 5 }, (_, i) => {
@@ -63,7 +81,7 @@ export async function GET(request, { params }) {
       };
     });
     
-    return NextResponse.json({
+    const response = NextResponse.json({
       reviews,
       pagination: {
         total: totalReviews,
@@ -73,6 +91,15 @@ export async function GET(request, { params }) {
       },
       ratingDistribution: formattedDistribution
     });
+
+    // Add caching headers for better performance
+    response.headers.set(
+      'Cache-Control',
+      'public, max-age=60, stale-while-revalidate=300' // 1 min cache, 5 min stale
+    );
+    response.headers.set('CDN-Cache-Control', 'max-age=120');
+    
+    return response;
   } catch (error) {
     console.error('Error fetching reviews:', error);
     return NextResponse.json(

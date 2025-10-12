@@ -36,7 +36,12 @@ export function CategoriesSection() {
         const maxDiscount = Math.max(...categoryProducts.map(p => p.discount));
         // Round to nearest 5 for cleaner display (e.g., 23% becomes 25%)
         const roundedDiscount = Math.round(maxDiscount / 5) * 5;
-        discounts[category.name] = Math.min(roundedDiscount, 50); // Cap at 50%
+        const finalDiscount = Math.min(roundedDiscount, 50); // Cap at 50%
+        
+        // Only add discount if it's greater than 0
+        if (finalDiscount > 0) {
+          discounts[category.name] = finalDiscount;
+        }
       }
     });
     
@@ -101,7 +106,7 @@ export function CategoriesSection() {
                     <div className="card group">
                       <div className="relative overflow-hidden min-h-[300px] bg-white dark:bg-gray-800">
                         {/* Discount Badge */}
-                        {categoryDiscounts[category.name] && (
+                        {categoryDiscounts[category.name] && categoryDiscounts[category.name] > 0 && (
                           <div className="absolute top-3 right-3 z-10">
                             <Badge className="bg-red-500 text-white text-xs px-2 py-1 font-semibold shadow-md">
                               Up to {categoryDiscounts[category.name]}% OFF

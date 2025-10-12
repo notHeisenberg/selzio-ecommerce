@@ -21,6 +21,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
+import { useAppData } from '@/providers/data-provider';
 import axios from 'axios';
 import Image from "next/image";
 
@@ -110,30 +111,20 @@ export function Testimonials() {
   const [rating, setRating] = useState(0);
   const [imageFile, setImageFile] = useState(null);
   const [imagePreview, setImagePreview] = useState(null);
+  
+  // Get testimonials from optimized data provider (no separate API call!)
+  const { testimonials: providerTestimonials, loading: dataLoading } = useAppData();
   const [localTestimonials, setLocalTestimonials] = useState([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState(null);
 
-  // Fetch testimonials from API
+  // Update local testimonials when provider data arrives
   useEffect(() => {
-    const fetchTestimonials = async () => {
-      try {
-        const response = await axios.get('/api/testimonials?limit=12');
-        if (response.data && response.data.testimonials) {
-          setLocalTestimonials(response.data.testimonials);
-        } else {
-          setError('Could not fetch testimonials.');
-        }
-      } catch (err) {
-        console.error("Error fetching testimonials:", err);
-        setError(err.message || 'An unknown error occurred.');
-      } finally {
-        setIsLoading(false);
-      }
-    };
-    
-    fetchTestimonials();
-  }, []);
+    if (providerTestimonials && providerTestimonials.length > 0) {
+      setLocalTestimonials(providerTestimonials);
+    } else if (!dataLoading) {
+      // Fallback to static testimonials if no data from provider
+      setLocalTestimonials(testimonials);
+    }
+  }, [providerTestimonials, dataLoading]);
 
   // Mark component as mounted (client-side only)
   useEffect(() => {
@@ -319,11 +310,11 @@ export function Testimonials() {
             </p>
           </div>
           <div className="w-full max-w-6xl mx-auto min-h-[400px] flex items-center justify-center">
-            {isLoading ? (
+            {dataLoading ? (
               <div className="animate-pulse bg-secondary/50 w-full h-96 rounded-lg" />
-            ) : error ? (
-              <div className="text-red-500 bg-red-100 dark:bg-red-900/20 p-4 rounded-lg">
-                <p>Could not load testimonials. Please try again later.</p>
+            ) : localTestimonials.length === 0 ? (
+              <div className="text-muted-foreground bg-secondary/30 p-4 rounded-lg">
+                <p>Loading testimonials...</p>
               </div>
             ) : (
               <div className="animate-pulse bg-secondary/50 w-full h-96 rounded-lg" />

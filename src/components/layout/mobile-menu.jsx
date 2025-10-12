@@ -13,6 +13,7 @@ import { getCombos } from '@/data/combos';
 import { useAuth } from '@/hooks/use-auth';
 import { motion, AnimatePresence } from 'framer-motion';
 import ThemeSwitcher from '@/components/theme/theme-switcher';
+import { useTheme } from 'next-themes';
 
 const MobileMenu = ({ isOpen, onClose }) => {
   const menuRef = useRef(null);
@@ -22,7 +23,14 @@ const MobileMenu = ({ isOpen, onClose }) => {
   const [categories, setCategories] = useState([]);
   const [combos, setCombos] = useState([]);
   const [expandedCategories, setExpandedCategories] = useState({});
+  const { resolvedTheme } = useTheme();
+  const [mounted, setMounted] = useState(false);
   
+  // Avoid hydration mismatch
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
   // Fetch subcategories and combos when the menu opens
   useEffect(() => {
     if (isOpen) {
@@ -184,22 +192,31 @@ const MobileMenu = ({ isOpen, onClose }) => {
             <div className="h-full flex flex-col">
               {/* Header */}
               <motion.div 
-                className="flex items-center justify-between p-4 border-b border-border"
+                className="flex items-center justify-center p-2 border-b border-border"
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 transition={{ delay: 0.2 }}
               >
                 <Link 
                   href="/" 
-                  className="flex items-center"
+                  className="flex items-center h-16 justify-center"
                   onClick={onClose}
                 >
-                  <div className="relative h-8 w-8 mr-2">
-                    <Image src="/images/logo.png" alt="Selzio Logo" fill className="object-contain" />
+                  <div className="relative h-72 w-64">
+                    <Image 
+                      src="/images/logo_new.png" 
+                      alt="Selzio Logo" 
+                      fill 
+                      sizes="256px"
+                      className="object-contain w-full h-full transition-all duration-300"
+                      style={{
+                        filter: mounted && resolvedTheme === 'light' 
+                          ? 'invert(1) hue-rotate(180deg) saturate(3.5)' 
+                          : 'none'
+                      }}
+                      quality={100}
+                    />
                   </div>
-                  <span className="text-lg font-bold text-foreground dark:text-white">
-                    SELZ<span className="text-rose-500">I</span>O
-                  </span>
                 </Link>
                 <Button
                   variant="ghost"

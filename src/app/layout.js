@@ -1,5 +1,3 @@
-
-
 import { Inter } from 'next/font/google';
 import './globals.css';
 import { ThemeProvider } from 'next-themes';
@@ -12,6 +10,7 @@ import QueryProvider from '@/components/providers/query-provider';
 import { DataProvider } from '@/providers/data-provider';
 import { Providers } from '@/app/providers';
 import { SocialSidebarWrapper } from '@/components/layout/social-sidebar-wrapper';
+
 const inter = Inter({ subsets: ['latin'] });
 
 export const metadata = {

@@ -19,15 +19,34 @@ export async function GET(req) {
     if (featured === 'true') query.featured = true;
     if (comboCode) query.comboCode = comboCode;
 
-    // Execute query
+    // Execute query with projection and parallel execution
     const skip = (page - 1) * limit;
-    const total = await combosCollection.countDocuments(query);
-    const combos = await combosCollection
-      .find(query)
-      .sort({ createdAt: -1 })
-      .skip(skip)
-      .limit(limit)
-      .toArray();
+    
+    // Optimize: Only fetch needed fields
+    const projection = {
+      comboCode: 1,
+      name: 1,
+      description: 1,
+      price: 1,
+      originalPrice: 1,
+      discount: 1,
+      image: 1,
+      images: 1,
+      products: 1,
+      featured: 1,
+      createdAt: 1
+    };
+    
+    // Execute both queries in parallel
+    const [total, combos] = await Promise.all([
+      combosCollection.countDocuments(query),
+      combosCollection
+        .find(query, { projection })
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(limit)
+        .toArray()
+    ]);
 
     const response = NextResponse.json({
       combos,

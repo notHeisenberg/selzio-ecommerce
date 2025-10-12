@@ -88,7 +88,7 @@ export function CombinedCollectionsSection() {
                       <div className="card group">
                         <div className="relative overflow-hidden min-h-[300px] bg-white dark:bg-gray-800">
                           {/* Discount Badge */}
-                          {category.discount && category.discount > 0 && (
+                          {category.discount > 0 && (
                             <div className="absolute top-3 right-3 z-10">
                               <Badge className="bg-red-500 text-white text-xs px-2 py-1 font-semibold shadow-md">
                                 Up to {category.discount}% OFF

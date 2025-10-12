@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -8,6 +8,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useAuth } from '@/hooks/use-auth';
+import { useTheme } from 'next-themes';
 import { Button } from '@/components/ui/button';
 import {
   Form,
@@ -39,6 +40,12 @@ export default function RegisterPage() {
   const { register } = useAuth();
   const router = useRouter();
   const { toast } = useToast();
+  const { resolvedTheme } = useTheme();
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
   
   const form = useForm({
     resolver: zodResolver(registerSchema),
@@ -139,23 +146,34 @@ export default function RegisterPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-background to-secondary/20 flex flex-col items-center justify-center p-4">
+    <div className="min-h-screen bg-gradient-to-b from-background to-secondary/20 flex flex-col items-center justify-center p-4 gap-8">
+      {/* Logo Section */}
       <motion.div 
         initial={{ y: -20, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
         transition={{ duration: 0.5 }}
-        className="absolute top-4 left-4 z-10"
+        className="flex justify-center"
       >
-        <Link href="/" className="flex items-center">
-          <div className="relative h-10 w-10 mr-2">
-            <Image src="/images/logo.png" alt="Selzio Logo" fill className="object-contain" />
+        <Link href="/" className="flex items-center h-16 justify-center">
+          <div className="relative h-72 w-80">
+            <Image 
+              src="/images/logo_new.png" 
+              alt="Selzio Logo" 
+              fill 
+              sizes="320px"
+              className="object-contain w-full h-full transition-all duration-300"
+              style={{
+                filter: mounted && resolvedTheme === 'light' 
+                  ? 'invert(1) hue-rotate(180deg) saturate(3.5)' 
+                  : 'none'
+              }}
+              quality={100}
+            />
           </div>
-          <span className="text-xl font-bold text-foreground dark:text-white">
-            SELZ<span className="text-rose-500">I</span>O
-          </span>
         </Link>
       </motion.div>
       
+      {/* Form Section */}
       <motion.div 
         variants={containerVariants}
         initial="hidden"

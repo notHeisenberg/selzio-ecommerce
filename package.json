@@ -6,7 +6,9 @@
     "dev": "next dev --turbopack --port 3001",
     "build": "NODE_ENV=production next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "setup:indexes": "node scripts/add-db-indexes.js",
+    "setup:performance": "node scripts/add-db-indexes.js && echo '\n✅ Database optimized! Check PERFORMANCE_OPTIMIZATION_GUIDE.md for next steps.'"
   },
   "dependencies": {
     "@auth/core": "0.34.2",

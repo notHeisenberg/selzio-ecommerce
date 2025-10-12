@@ -17,21 +17,29 @@ export function Footer() {
 
   return (
     <footer className="bg-secondary/30 border-t border-border">
-      <div className="container mx-auto px-4 py-16">
+      <div className="container mx-auto px-4 py-8">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-12">
           {/* Company Info */}
           <div className="flex flex-col">
-            <div className="mb-6">
-              <Link href="/" className="inline-block">
-                <div className="flex items-center">
-                  <div className="relative h-10 w-10 mr-3">
-                    <Image src="/images/logo.png" alt="Selzio Logo" fill className="object-contain" />
+            <div className="mb-8">
+                <div className="flex items-center h-16">
+                  <div className="relative h-72 w-full">
+                    <Image 
+                      src="/images/logo_new.png" 
+                      alt="Selzio Logo" 
+                      fill 
+                      sizes="256px"
+                      className="object-contain w-full h-full transition-all duration-300"
+                      style={{
+                        filter: mounted && resolvedTheme === 'light' 
+                          ? 'invert(1) hue-rotate(180deg) saturate(3.5)' 
+                          : 'none'
+                      }}
+                      quality={100}
+                      loading="lazy"
+                    />
                   </div>
-                  <span className="text-2xl font-bold text-foreground dark:text-white">
-                    SELZ<span className="text-primary">I</span>O
-                  </span>
                 </div>
-              </Link>
             </div>
             <p className="text-muted-foreground mb-6 max-w-md">
               Your one-stop destination for premium fashion and lifestyle products with nationwide delivery across Bangladesh.
