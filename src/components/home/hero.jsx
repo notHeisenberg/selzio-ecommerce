@@ -38,14 +38,14 @@ export function Hero() {
   };
 
   return (
-    <div className="relative w-full overflow-hidden h-[400px] sm:h-[450px] md:h-[500px] lg:h-[550px]">
+    <div className="relative w-full overflow-hidden h-[350px] md:h-[500px] lg:h-[550px]">
       {/* Background Image with Overlay */}
       <div className="absolute inset-0">
         <Image
-          src="/images/Banner.jpg"
+          src="/images/cp.jpg"
           alt="Hero background"
           fill
-          className="sm:object-cover object-cover h-full w-full"
+          className="sm:object-cover object-contain h-full w-full"
           priority
         />
       </div>
