@@ -74,8 +74,12 @@ export default function ProductManagementTab() {
             }
 
             // Fetch both products and admin stats in parallel
+            // Add cache busting to ensure fresh data
             const [productsResponse, statsResponse] = await Promise.all([
-                fetch('/api/products'),
+                fetch('/api/products?t=' + Date.now(), {
+                    headers,
+                    cache: 'no-store'
+                }),
                 fetch('/api/admin/stats', {
                     headers,
                     credentials: 'include'
@@ -192,7 +196,13 @@ export default function ProductManagementTab() {
                 throw new Error(errorData.error || `Failed to ${formMode === 'edit' ? 'update' : 'create'} product`);
             }
 
-            // Refresh the products list
+            // Close the modal first
+            setFormModalOpen(false);
+            
+            // Clear selected product to prevent stale data
+            setSelectedProduct(null);
+            
+            // Refresh the products list with fresh data
             await fetchData();
             
         } catch (error) {

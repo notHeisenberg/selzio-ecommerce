@@ -102,7 +102,10 @@ export async function GET(req) {
       description: 1,
       tags: 1,
       featured: 1,
-      createdAt: 1
+      sizes: 1,
+      additionalInfo: 1,
+      createdAt: 1,
+      updatedAt: 1
     };
 
     // Execute both queries in parallel for better performance
@@ -122,9 +125,20 @@ export async function GET(req) {
       currentPage: page
     });
 
-    // Add proper caching headers for better performance
-    response.headers.set('Cache-Control', 'public, max-age=600, stale-while-revalidate=300');
-    response.headers.set('CDN-Cache-Control', 'max-age=1200');
+    // Check if this is an admin request (has timestamp parameter)
+    const isAdminRequest = searchParams.get('t');
+    
+    if (isAdminRequest) {
+      // For admin requests, disable caching to ensure fresh data
+      response.headers.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+      response.headers.set('Pragma', 'no-cache');
+      response.headers.set('Expires', '0');
+    } else {
+      // For public requests, use caching for better performance
+      response.headers.set('Cache-Control', 'public, max-age=600, stale-while-revalidate=300');
+      response.headers.set('CDN-Cache-Control', 'max-age=1200');
+    }
+    
     response.headers.set('Vary', 'Accept-Encoding');
     
     return response;
@@ -150,28 +164,45 @@ export async function POST(req) {
     // Get products collection
     const productsCollection = await getProductsCollection();
 
+    // Clean up the product data - remove undefined values
+    const cleanedData = Object.entries(body).reduce((acc, [key, value]) => {
+      if (value !== undefined) {
+        acc[key] = value;
+      }
+      return acc;
+    }, {});
+
+    // Initialize stats fields if not present
+    if (!cleanedData.orders) cleanedData.orders = 0;
+    if (!cleanedData.revenue) cleanedData.revenue = 0;
+
     // Add timestamps and creator info
     const product = {
-      ...body,
+      ...cleanedData,
       createdBy: user.id,
       createdAt: new Date(),
       updatedAt: new Date()
     };
     
+    console.log('📝 Creating product:', product.name, 'with sizes:', product.sizes);
+    
     // Insert product
     const result = await productsCollection.insertOne(product);
     
+    // Fetch the created product
+    const createdProduct = await productsCollection.findOne({ _id: result.insertedId });
+    
     return NextResponse.json(
       { 
-        ...product,
-        _id: result.insertedId 
+        success: true,
+        product: createdProduct
       }, 
       { status: 201 }
     );
   } catch (error) {
     console.error('Product creation error:', error);
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { error: error.message || 'Internal server error' },
       { status: 500 }
     );
   }

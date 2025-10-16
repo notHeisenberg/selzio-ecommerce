@@ -59,19 +59,29 @@ export async function PUT(req, { params }) {
     // Get products collection
     const productsCollection = await getProductsCollection();
 
+    // Clean up the product data - remove undefined values
+    const cleanedData = Object.entries(body).reduce((acc, [key, value]) => {
+      if (value !== undefined) {
+        acc[key] = value;
+      }
+      return acc;
+    }, {});
+
     // Add updated timestamp and modifier info
-    const updatedProduct = {
-      ...body,
+    const updateData = {
+      ...cleanedData,
       updatedBy: user.id,
       updatedAt: new Date()
     };
+
+    console.log('🔄 Updating product:', productCode, 'with sizes:', updateData.sizes);
 
     let result;
     
     // Try to update by productCode first
     result = await productsCollection.findOneAndUpdate(
       { productCode },
-      { $set: updatedProduct },
+      { $set: updateData },
       { returnDocument: 'after' }
     );
 
@@ -79,7 +89,7 @@ export async function PUT(req, { params }) {
     if (!result && ObjectId.isValid(productCode)) {
       result = await productsCollection.findOneAndUpdate(
         { _id: new ObjectId(productCode) },
-        { $set: updatedProduct },
+        { $set: updateData },
         { returnDocument: 'after' }
       );
     }
@@ -88,7 +98,12 @@ export async function PUT(req, { params }) {
       return NextResponse.json({ error: 'Product not found' }, { status: 404 });
     }
 
-    return NextResponse.json(result);
+    console.log('✅ Product updated successfully:', result.name);
+
+    return NextResponse.json({
+      success: true,
+      product: result
+    });
   } catch (error) {
     console.error('Product update error:', error);
     return NextResponse.json(
