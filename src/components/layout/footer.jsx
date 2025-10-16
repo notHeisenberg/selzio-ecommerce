@@ -22,14 +22,14 @@ export function Footer() {
           {/* Company Info */}
           <div className="flex flex-col">
             <div className="mb-8">
-                <div className="flex items-center h-16">
-                  <div className="relative h-72 w-full">
+                <div className="flex items-center">
+                  <div className="relative w-[16rem] h-[4.5rem] overflow-hidden">
                     <Image 
                       src="/images/logo_new.png" 
                       alt="Selzio Logo" 
                       fill 
-                      sizes="256px"
-                      className="object-contain w-full h-full transition-all duration-300"
+                      sizes="2000px"
+                      className="object-cover transition-all duration-300"
                       style={{
                         filter: mounted && resolvedTheme === 'light' 
                           ? 'invert(1) hue-rotate(180deg) saturate(3.5)' 

@@ -73,14 +73,14 @@ export default function ForgotPasswordPage() {
     <div className="min-h-screen bg-gradient-to-b from-background to-secondary/20 flex flex-col items-center justify-center p-4 gap-8">
       {/* Logo Section */}
       <div className="flex justify-center">
-        <Link href="/" className="flex items-center h-16 justify-center">
-          <div className="relative h-72 w-80">
+        <Link href="/" className="flex items-center justify-center">
+          <div className="relative w-[16rem] h-[4.5rem] overflow-hidden">
             <Image 
               src="/images/logo_new.png" 
               alt="Selzio Logo" 
               fill 
-              sizes="320px"
-              className="object-contain w-full h-full transition-all duration-300"
+              sizes="2000px"
+              className="object-cover transition-all duration-300"
               style={{
                 filter: mounted && resolvedTheme === 'light' 
                   ? 'invert(1) hue-rotate(180deg) saturate(3.5)' 

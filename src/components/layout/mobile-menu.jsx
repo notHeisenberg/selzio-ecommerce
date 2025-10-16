@@ -199,16 +199,16 @@ const MobileMenu = ({ isOpen, onClose }) => {
               >
                 <Link 
                   href="/" 
-                  className="flex items-center h-16 justify-center"
+                  className="flex items-center justify-center"
                   onClick={onClose}
                 >
-                  <div className="relative h-72 w-64">
+                  <div className="relative w-[18rem] h-[5.5rem] overflow-hidden">
                     <Image 
                       src="/images/logo_new.png" 
                       alt="Selzio Logo" 
                       fill 
-                      sizes="256px"
-                      className="object-contain w-full h-full transition-all duration-300"
+                      sizes="20000px"
+                      className="object-cover transition-all duration-300"
                       style={{
                         filter: mounted && resolvedTheme === 'light' 
                           ? 'invert(1) hue-rotate(180deg) saturate(3.5)' 

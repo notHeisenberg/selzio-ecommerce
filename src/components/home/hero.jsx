@@ -38,7 +38,7 @@ export function Hero() {
   };
 
   return (
-    <div className="relative w-full overflow-hidden h-[350px] md:h-[500px] lg:h-[550px]">
+    <div className="relative w-full overflow-hidden h-[300px] md:h-[500px] lg:h-[550px]">
       {/* Background Image with Overlay */}
       <div className="absolute inset-0">
         <Image
@@ -51,7 +51,7 @@ export function Hero() {
       </div>
 
       {/* Content */}
-      <div className="relative h-full container mx-auto px-4 flex items-end sm:pb-5 pb-8 justify-center">
+      <div className="relative h-full container mx-auto px-4 flex items-end md:pb-6 pb-2 justify-center">
         <motion.div 
           className="text-center mb-2 sm:mb-4"
           initial={{ opacity: 0, y: 20 }}
@@ -69,7 +69,7 @@ export function Hero() {
                 >
                   <Button 
                     asChild 
-                    className="bg-transparent border border-white text-white hover:bg-white/10 rounded-none py-4 px-8 sm:py-5 sm:px-12 md:py-6 md:px-16 text-base md:text-lg transition-all duration-300 hover:border-2"
+                    className="bg-transparent border border-white text-white hover:bg-white/10 rounded-none py-4 px-8 sm:py-4 sm:px-12 md:py-6 md:px-16 text-base md:text-lg transition-all duration-300 hover:border-2"
                   >
                     <Link href="/store" className="flex items-center">
                       Shop Now
