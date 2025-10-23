@@ -104,7 +104,7 @@ export const WishlistProvider = ({ children, shouldFetch = false }) => {
         const response = await axios.get('/api/wishlist', {
           headers: createHeaders(),
           withCredentials: true,
-          timeout: 5000 // 5 seconds timeout
+          timeout: 15000 // 15 seconds timeout (increased from 5s)
         });
         
         return response.data.wishlist || [];

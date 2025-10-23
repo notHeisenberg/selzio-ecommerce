@@ -5,7 +5,7 @@ import { ObjectId } from 'mongodb';
 
 export async function GET(req, { params }) {
   try {
-    const { comboCode } = params;
+    const { comboCode } = await params;
 
     if (!comboCode) {
       return NextResponse.json(
@@ -53,7 +53,7 @@ export async function PUT(req, { params }) {
       return user; // Return the error response
     }
 
-    const { comboCode } = params;
+    const { comboCode } = await params;
     const body = await req.json();
     
     // Get combos collection
@@ -107,7 +107,7 @@ export async function DELETE(req, { params }) {
       return user; // Return the error response
     }
 
-    const { comboCode } = params;
+    const { comboCode } = await params;
     
     // Get combos collection
     const combosCollection = await getCombosCollection();

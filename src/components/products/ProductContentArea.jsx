@@ -58,7 +58,7 @@ export default function ProductContentArea({
             selectedSize,
             price: currentPrice // Always use original price, discount will be applied in cart calculation
         };
-        
+
         // Call the handleAddToCart function with the customized product
         handleAddToCart(productWithSize, quantity);
     };
@@ -72,7 +72,7 @@ export default function ProductContentArea({
             selectedSize,
             price: currentPrice // Always use original price, discount will be applied in cart calculation
         };
-        
+
         // Call the handleBuyNow function with the customized product
         handleBuyNow(productWithSize, quantity);
     };
@@ -80,7 +80,7 @@ export default function ProductContentArea({
     return (
         <div className="lg:w-1/2">
             <style>{scrollbarHideStyles}</style>
-            
+
             {/* Product Header Section - Combined into this file */}
             <div className="lg:pt-0 md:mt-28 lg:mt-0">
                 <h1 className="text-3xl font-medium mb-2">{product.name}</h1>
@@ -107,16 +107,16 @@ export default function ProductContentArea({
                     {product.discount > 0 ? (
                         <>
                             <span className="text-lg line-through text-muted-foreground font-medium">
-                                {formatPrice(currentPrice)}
+                                {formatPrice(currentPrice)} BDT
                             </span>
                             <span className="text-2xl font-medium">
-                                {formatPrice(getDiscountedPrice(currentPrice, product.discount))}
+                                {formatPrice(getDiscountedPrice(currentPrice, product.discount))} BDT
                             </span>
                             <Badge variant="outline" className="ml-2 rounded-lg bg-black text-white dark:bg-white dark:text-black">Sale</Badge>
                         </>
                     ) : (
                         <span className="text-2xl font-medium">
-                            {formatPrice(currentPrice)}
+                            {formatPrice(currentPrice)} BDT
                         </span>
                     )}
                 </div>
@@ -142,8 +142,8 @@ export default function ProductContentArea({
                                 </div>
                                 <span className="text-sm text-gray-600 dark:text-gray-300">
                                     {selectedSize &&
-                                    product.sizes.find(s => s.name === selectedSize)?.stock > 0
-                                    ? 'In stock' : 'Out of stock'}
+                                        product.sizes.find(s => s.name === selectedSize)?.stock > 0
+                                        ? 'In stock' : 'Out of stock'}
                                 </span>
                             </div>
                         </div>
@@ -234,7 +234,7 @@ export default function ProductContentArea({
                         </Button>
                     )}
                 </div>
-                
+
             </div>
 
             {/* Detailed sections - all part of the scrollable right column */}

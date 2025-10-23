@@ -69,50 +69,44 @@ export async function GET(request) {
         const products = await productsCollection.find({ 
           $or: [
             { _id: { $in: productIds.filter(id => id instanceof ObjectId) } },
-            { id: { $in: productIds.filter(id => !(id instanceof ObjectId)) } }
+            { productCode: { $in: productIds.filter(id => !(id instanceof ObjectId)) } }
           ] 
         }).toArray();
         
-        // Update wishlist items with product data
+        // Build a map of product data for quick lookup
+        const productMap = new Map();
         for (const product of products) {
-          const productId = product._id?.toString() || product.id;
-          
-          // Find the index of the item in the items array
-          const itemIndex = userWishlist.items.findIndex(
-            item => item.productId === productId
-          );
-          
-          if (itemIndex !== -1) {
-            // Update the item with product data
-            userWishlist.items[itemIndex] = {
-              ...userWishlist.items[itemIndex],
-              name: product.name,
-              price: product.price,
-              image: product.image || product.images?.[0] || '',
-              category: product.category,
-              subcategory: product.subcategory,
-              stock: product.stock || 0,
-              rating: product.rating,
-              discount: product.discount
+          const productId = product._id?.toString() || product.productCode;
+          productMap.set(productId, {
+            name: product.name,
+            price: product.price,
+            image: product.image || product.images?.[0] || '',
+            category: product.category,
+            subcategory: product.subcategory,
+            stock: product.stock || 0,
+            rating: product.rating,
+            discount: product.discount
+          });
+        }
+        
+        // Update all items in memory
+        for (let i = 0; i < userWishlist.items.length; i++) {
+          const item = userWishlist.items[i];
+          const productData = productMap.get(item.productId);
+          if (productData) {
+            userWishlist.items[i] = {
+              ...item,
+              ...productData
             };
-            
-            // Update the document in the database
-            await wishlistCollection.updateOne(
-              { userId, "items.productId": productId },
-              { 
-                $set: { 
-                  [`items.$.name`]: product.name,
-                  [`items.$.price`]: product.price,
-                  [`items.$.image`]: product.image || product.images?.[0] || '',
-                  [`items.$.category`]: product.category,
-                  [`items.$.subcategory`]: product.subcategory,
-                  [`items.$.stock`]: product.stock || 0,
-                  [`items.$.rating`]: product.rating,
-                  [`items.$.discount`]: product.discount
-                } 
-              }
-            );
           }
+        }
+        
+        // Perform a single bulk update to the database if any items were updated
+        if (productMap.size > 0) {
+          await wishlistCollection.updateOne(
+            { userId },
+            { $set: { items: userWishlist.items } }
+          );
         }
       }
     }

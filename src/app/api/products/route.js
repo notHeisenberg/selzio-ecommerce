@@ -183,9 +183,7 @@ export async function POST(req) {
       createdAt: new Date(),
       updatedAt: new Date()
     };
-    
-    console.log('📝 Creating product:', product.name, 'with sizes:', product.sizes);
-    
+
     // Insert product
     const result = await productsCollection.insertOne(product);
     

@@ -296,7 +296,7 @@ export default function ProductManagementTab() {
     }
 
     return (
-        <div className="space-y-6">
+        <div className="space-y-4 sm:space-y-6 overflow-x-hidden">
             {/* Header */}
             <Card>
                 <CardHeader>
@@ -311,54 +311,54 @@ export default function ProductManagementTab() {
             </Card>
 
             {/* Stats Overview */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
                 <Card>
-                    <CardContent className="p-4">
+                    <CardContent className="p-3 sm:p-4">
                         <div className="flex items-center gap-2">
-                            <Package className="h-4 w-4 text-blue-500" />
-                            <span className="text-sm font-medium">Total Products</span>
+                            <Package className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-blue-500 flex-shrink-0" />
+                            <span className="text-xs sm:text-sm font-medium truncate">Total Products</span>
                         </div>
-                        <p className="text-2xl font-bold mt-2">{stats.totalProducts}</p>
-                        <p className="text-xs text-muted-foreground mt-1">
-                            {productStats.lowStock + productStats.outOfStock} low/out of stock
+                        <p className="text-xl sm:text-2xl font-bold mt-2">{stats.totalProducts}</p>
+                        <p className="text-xs text-muted-foreground mt-1 truncate">
+                            {productStats.lowStock + productStats.outOfStock} low/out
                         </p>
                     </CardContent>
                 </Card>
                 
                 <Card>
-                    <CardContent className="p-4">
+                    <CardContent className="p-3 sm:p-4">
                         <div className="flex items-center gap-2">
-                            <BarChart3 className="h-4 w-4 text-green-500" />
-                            <span className="text-sm font-medium">Total Orders</span>
+                            <BarChart3 className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-green-500 flex-shrink-0" />
+                            <span className="text-xs sm:text-sm font-medium truncate">Total Orders</span>
                         </div>
-                        <p className="text-2xl font-bold mt-2">{stats.totalOrders.toLocaleString()}</p>
-                        <p className="text-xs text-muted-foreground mt-1">
-                            {stats.recentOrders} in last 7 days
+                        <p className="text-xl sm:text-2xl font-bold mt-2">{stats.totalOrders.toLocaleString()}</p>
+                        <p className="text-xs text-muted-foreground mt-1 truncate">
+                            {stats.recentOrders} in 7 days
                         </p>
                     </CardContent>
                 </Card>
                 
                 <Card>
-                    <CardContent className="p-4">
+                    <CardContent className="p-3 sm:p-4">
                         <div className="flex items-center gap-2">
-                            <BarChart3 className="h-4 w-4 text-purple-500" />
-                            <span className="text-sm font-medium">Total Revenue</span>
+                            <BarChart3 className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-purple-500 flex-shrink-0" />
+                            <span className="text-xs sm:text-sm font-medium truncate">Total Revenue</span>
                         </div>
-                        <p className="text-2xl font-bold mt-2">৳{stats.totalRevenue.toLocaleString()}</p>
-                        <p className="text-xs text-muted-foreground mt-1">
+                        <p className="text-xl sm:text-2xl font-bold mt-2 truncate">৳{stats.totalRevenue.toLocaleString()}</p>
+                        <p className="text-xs text-muted-foreground mt-1 truncate">
                             Avg: ৳{stats.avgOrderValue.toFixed(2)}
                         </p>
                     </CardContent>
                 </Card>
                 
                 <Card>
-                    <CardContent className="p-4">
+                    <CardContent className="p-3 sm:p-4">
                         <div className="flex items-center gap-2">
-                            <AlertCircle className="h-4 w-4 text-red-500" />
-                            <span className="text-sm font-medium">Users</span>
+                            <AlertCircle className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-red-500 flex-shrink-0" />
+                            <span className="text-xs sm:text-sm font-medium truncate">Users</span>
                         </div>
-                        <p className="text-2xl font-bold mt-2">{stats.totalUsers.toLocaleString()}</p>
-                        <p className="text-xs text-muted-foreground mt-1">
+                        <p className="text-xl sm:text-2xl font-bold mt-2">{stats.totalUsers.toLocaleString()}</p>
+                        <p className="text-xs text-muted-foreground mt-1 truncate">
                             Registered users
                         </p>
                     </CardContent>
@@ -367,28 +367,28 @@ export default function ProductManagementTab() {
 
             {/* Main Content */}
             <Card>
-                <CardContent className="p-6">
-                    <Tabs defaultValue="products" className="space-y-6">
-                        <TabsList>
+                <CardContent className="p-3 sm:p-6">
+                    <Tabs defaultValue="products" className="space-y-4 sm:space-y-6">
+                        <TabsList className="w-full grid grid-cols-2">
                             <TabsTrigger value="products">Products</TabsTrigger>
                             <TabsTrigger value="analytics">Analytics</TabsTrigger>
                         </TabsList>
                         
-                        <TabsContent value="products" className="space-y-4">
+                        <TabsContent value="products" className="space-y-4 overflow-x-hidden">
                             {/* Controls */}
-                            <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
-                                <div className="flex gap-2 items-center flex-1">
-                                    <div className="relative flex-1 max-w-sm">
+                            <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 items-stretch sm:items-center justify-between">
+                                <div className="flex flex-col sm:flex-row gap-2 items-stretch sm:items-center flex-1 w-full">
+                                    <div className="relative flex-1 sm:max-w-sm w-full">
                                         <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
                                         <Input
                                             placeholder="Search products..."
                                             value={searchTerm}
                                             onChange={(e) => setSearchTerm(e.target.value)}
-                                            className="pl-9"
+                                            className="pl-9 w-full"
                                         />
                                     </div>
                                     <Select value={filter} onValueChange={setFilter}>
-                                        <SelectTrigger className="w-[150px]">
+                                        <SelectTrigger className="w-full sm:w-[150px]">
                                             <SelectValue placeholder="Filter by status" />
                                         </SelectTrigger>
                                         <SelectContent>
@@ -399,7 +399,7 @@ export default function ProductManagementTab() {
                                         </SelectContent>
                                     </Select>
                                 </div>
-                                <Button className="hover:bg-primary/90" onClick={handleAddProduct}>
+                                <Button className="hover:bg-primary/90 w-full sm:w-auto" onClick={handleAddProduct}>
                                     <Plus className="h-4 w-4 mr-2" />
                                     Add Product
                                 </Button>
@@ -421,80 +421,89 @@ export default function ProductManagementTab() {
                             ) : (
                                 <div className="space-y-3">
                                     {filteredProducts.map((product) => (
-                                        <div key={product.id} className="border rounded-sm p-4 hover:bg-muted/50 transition-colors">
-                                            <div className="flex items-center gap-4">
-                                                {/* Product Image */}
-                                                <div className="relative w-16 h-16 rounded-sm overflow-hidden bg-muted flex-shrink-0">
-                                                    <Image
-                                                        src={Array.isArray(product?.image) ? product.image[0] : product?.image || '/images/product-placeholder.png'}
-                                                        alt={product.name}
-                                                        fill
-                                                        className="object-cover"
-                                                        onError={(e) => {
-                                                            e.target.style.display = 'none';
-                                                        }}
-                                                    />
-                                                </div>
-                                                
-                                                {/* Product Info */}
-                                                <div className="flex-1 min-w-0">
-                                                    <div className="flex items-start justify-between">
-                                                        <div>
-                                                            <h3 className="font-medium truncate">{product.name}</h3>
-                                                            <p className="text-sm text-muted-foreground">{product.category}</p>
-                                                            <div className="flex items-center gap-4 mt-2 text-sm">
-                                                                <div className="flex items-center gap-2">
-                                                                    {product.discount && product.discount > 0 ? (
-                                                                        <>
-                                                                            <span className="font-medium text-green-600">
-                                                                                ৳{(product.price * (1 - product.discount / 100)).toFixed(2)}
-                                                                            </span>
-                                                                            <div className="flex items-center gap-1">
-                                                                                <span className="text-xs line-through text-gray-400">
-                                                                                    ৳{product.price}
-                                                                                </span>
-                                                                                <span className="text-xs bg-red-500 text-white px-1 py-0.5 rounded">
-                                                                                    -{product.discount}%
-                                                                                </span>
-                                                                            </div>
-                                                                        </>
-                                                                    ) : (
-                                                                        <span className="font-medium">৳{product.price}</span>
-                                                                    )}
-                                                                </div>
-                                                                <span className={`${
-                                                                    product.stock === 0 ? 'text-red-600' :
-                                                                    product.stock < 50 ? 'text-yellow-600' :
-                                                                    'text-green-600'
-                                                                }`}>
-                                                                    Stock: {product.stock}
-                                                                    {product.sizes && Array.isArray(product.sizes) && product.sizes.length > 0 && (
-                                                                        <span className="text-xs text-muted-foreground ml-1">
-                                                                            ({product.sizes.length} sizes)
-                                                                        </span>
-                                                                    )}
-                                                                </span>
-                                                                <span className="text-muted-foreground">
-                                                                    {product.orders} orders • ৳{product.revenue.toLocaleString()} revenue
-                                                                </span>
+                                        <div key={product.id} className="border rounded-sm p-3 sm:p-4 hover:bg-muted/50 transition-colors">
+                                            <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4">
+                                                {/* Product Image & Basic Info */}
+                                                <div className="flex items-start gap-3 flex-1 min-w-0">
+                                                    <div className="relative w-16 h-16 sm:w-16 sm:h-16 rounded-sm overflow-hidden bg-muted flex-shrink-0">
+                                                        <Image
+                                                            src={Array.isArray(product?.image) ? product.image[0] : product?.image || '/images/product-placeholder.png'}
+                                                            alt={product.name}
+                                                            fill
+                                                            className="object-cover"
+                                                            onError={(e) => {
+                                                                e.target.style.display = 'none';
+                                                            }}
+                                                        />
+                                                    </div>
+                                                    
+                                                    {/* Product Info */}
+                                                    <div className="flex-1 min-w-0">
+                                                        <div className="flex items-start justify-between gap-2">
+                                                            <div className="flex-1 min-w-0">
+                                                                <h3 className="font-medium truncate text-sm sm:text-base">{product.name}</h3>
+                                                                <p className="text-xs sm:text-sm text-muted-foreground truncate">{product.category}</p>
+                                                            </div>
+                                                            <div className="flex-shrink-0">
+                                                                {getStatusBadge(product.status)}
                                                             </div>
                                                         </div>
-                                                        <div className="flex items-center gap-2 ml-4">
-                                                            {getStatusBadge(product.status)}
+                                                        
+                                                        {/* Price & Stock - Responsive Layout */}
+                                                        <div className="flex flex-wrap items-center gap-2 sm:gap-4 mt-2 text-xs sm:text-sm">
+                                                            <div className="flex items-center gap-2">
+                                                                {product.discount && product.discount > 0 ? (
+                                                                    <>
+                                                                        <span className="font-medium text-green-600 whitespace-nowrap">
+                                                                            ৳{(product.price * (1 - product.discount / 100)).toFixed(2)}
+                                                                        </span>
+                                                                        <div className="flex items-center gap-1">
+                                                                            <span className="text-xs line-through text-gray-400 whitespace-nowrap">
+                                                                                ৳{product.price}
+                                                                            </span>
+                                                                            <span className="text-xs bg-red-500 text-white px-1 py-0.5 rounded whitespace-nowrap">
+                                                                                -{product.discount}%
+                                                                            </span>
+                                                                        </div>
+                                                                    </>
+                                                                ) : (
+                                                                    <span className="font-medium whitespace-nowrap">৳{product.price}</span>
+                                                                )}
+                                                            </div>
+                                                            <span className={`whitespace-nowrap ${
+                                                                product.stock === 0 ? 'text-red-600' :
+                                                                product.stock < 50 ? 'text-yellow-600' :
+                                                                'text-green-600'
+                                                            }`}>
+                                                                Stock: {product.stock}
+                                                                {product.sizes && Array.isArray(product.sizes) && product.sizes.length > 0 && (
+                                                                    <span className="text-xs text-muted-foreground ml-1">
+                                                                        ({product.sizes.length})
+                                                                    </span>
+                                                                )}
+                                                            </span>
+                                                            <span className="text-muted-foreground hidden sm:inline whitespace-nowrap">
+                                                                {product.orders} orders • ৳{product.revenue.toLocaleString()}
+                                                            </span>
+                                                        </div>
+                                                        
+                                                        {/* Mobile-only revenue info */}
+                                                        <div className="sm:hidden mt-1 text-xs text-muted-foreground">
+                                                            {product.orders} orders • ৳{product.revenue.toLocaleString()} revenue
                                                         </div>
                                                     </div>
                                                 </div>
                                                 
                                                 {/* Actions */}
-                                                <div className="flex items-center gap-2 flex-shrink-0">
-                                                    <Button variant="ghost" size="sm" onClick={() => handleViewProduct(product)}>
-                                                        <Eye className="h-4 w-4" />
+                                                <div className="flex items-center gap-1 sm:gap-2 justify-end sm:justify-start flex-shrink-0">
+                                                    <Button variant="ghost" size="sm" onClick={() => handleViewProduct(product)} className="h-8 w-8 sm:h-9 sm:w-9 p-0">
+                                                        <Eye className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                                                     </Button>
-                                                    <Button variant="ghost" size="sm" onClick={() => handleEditProduct(product)}>
-                                                        <Edit className="h-4 w-4" />
+                                                    <Button variant="ghost" size="sm" onClick={() => handleEditProduct(product)} className="h-8 w-8 sm:h-9 sm:w-9 p-0">
+                                                        <Edit className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                                                     </Button>
-                                                    <Button variant="ghost" size="sm" className="text-red-600 hover:text-red-700" onClick={() => handleDeleteProduct(product)}>
-                                                        <Trash2 className="h-4 w-4" />
+                                                    <Button variant="ghost" size="sm" className="text-red-600 hover:text-red-700 h-8 w-8 sm:h-9 sm:w-9 p-0" onClick={() => handleDeleteProduct(product)}>
+                                                        <Trash2 className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                                                     </Button>
                                                 </div>
                                             </div>

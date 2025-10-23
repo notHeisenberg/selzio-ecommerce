@@ -29,8 +29,9 @@ export async function GET(req, { params }) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
+    const { id } = await params;
     const ordersCollection = await getOrdersCollection();
-    const order = await ordersCollection.findOne({ _id: new ObjectId(params.id) });
+    const order = await ordersCollection.findOne({ _id: new ObjectId(id) });
 
     if (!order) {
       return NextResponse.json({ error: 'Order not found' }, { status: 404 });
@@ -212,7 +213,7 @@ export async function PUT(req, { params }) {
       userRole: user.role, 
       isAdmin,
       requestedAction: 'Update Order',
-      orderId: params.id
+      orderId: id
     });
     
     // Safely attempt to parse the request body
@@ -236,19 +237,21 @@ export async function PUT(req, { params }) {
       }, { status: 400 });
     }
 
+    const { id } = await params;
+    
     // Verify ObjectId is valid
-    if (!ObjectId.isValid(params.id)) {
-      console.error('🔴 Invalid ObjectId:', params.id);
+    if (!ObjectId.isValid(id)) {
+      console.error('🔴 Invalid ObjectId:', id);
       return NextResponse.json({ error: 'Invalid order ID format' }, { status: 400 });
     }
     
     const ordersCollection = await getOrdersCollection();
     
     // Fetch the order first for validation
-    const order = await ordersCollection.findOne({ _id: new ObjectId(params.id) });
+    const order = await ordersCollection.findOne({ _id: new ObjectId(id) });
     
     if (!order) {
-      console.error('🔴 Order not found with ID:', params.id);
+      console.error('🔴 Order not found with ID:', id);
       return NextResponse.json({ error: 'Order not found' }, { status: 404 });
     }
     
@@ -266,7 +269,7 @@ export async function PUT(req, { params }) {
       }
       
       console.log('💎 Admin responding to cancellation request:', {
-        orderId: params.id,
+        orderId: id,
         status: updateData.status,
         approved: updateData.cancellationApproved
       });
@@ -281,7 +284,7 @@ export async function PUT(req, { params }) {
       };
       
       const result = await ordersCollection.findOneAndUpdate(
-        { _id: new ObjectId(params.id) },
+        { _id: new ObjectId(id) },
         { $set: updateFields },
         { returnDocument: 'after' }
       );
@@ -308,7 +311,7 @@ export async function PUT(req, { params }) {
       
       if (orderUserId !== requestUserId) {
         console.error('🔴 User trying to update someone else\'s order', 
-          { orderId: params.id, orderUser: orderUserId, requestUser: requestUserId });
+          { orderId: id, orderUser: orderUserId, requestUser: requestUserId });
         return NextResponse.json({ error: 'You can only update your own orders' }, { status: 403 });
       }
     }
@@ -324,7 +327,7 @@ export async function PUT(req, { params }) {
       
       if (now > cancellationDeadline) {
         console.error('🔴 Cancellation window expired', 
-          { orderId: params.id, orderDate, cancellationDeadline, now });
+          { orderId: id, orderDate, cancellationDeadline, now });
         return NextResponse.json({ 
           error: 'Cancellation window expired. You can only cancel orders within 6 hours of placing them.' 
         }, { status: 403 });
@@ -332,7 +335,7 @@ export async function PUT(req, { params }) {
       
       // Check if order is in a cancellable state
       if (order.status !== 'pending' && order.status !== 'processing') {
-        console.error('🔴 Order not in cancellable state', { orderId: params.id, status: order.status });
+        console.error('🔴 Order not in cancellable state', { orderId: id, status: order.status });
         return NextResponse.json({ 
           error: 'This order cannot be cancelled in its current state' 
         }, { status: 400 });
@@ -340,7 +343,7 @@ export async function PUT(req, { params }) {
       
       // Check if a cancellation was already requested or responded to
       if (order.cancellationRequestedAt || order.cancellationResponded) {
-        console.error('🔴 Cancellation already requested or responded to', { orderId: params.id });
+        console.error('🔴 Cancellation already requested or responded to', { orderId: id });
         return NextResponse.json({ 
           error: 'You cannot submit another cancellation request for this order' 
         }, { status: 400 });
@@ -348,7 +351,7 @@ export async function PUT(req, { params }) {
       
       // Process the cancellation request
       const result = await ordersCollection.findOneAndUpdate(
-        { _id: new ObjectId(params.id) },
+        { _id: new ObjectId(id) },
         { 
           $set: { 
             status: 'cancellation_requested',
@@ -388,7 +391,7 @@ export async function PUT(req, { params }) {
       // Handle product statistics reversal for cancelled orders
       if (newStatus === 'cancelled' && oldStatus !== 'cancelled' && order.items) {
         try {
-          console.log('📉 Reversing product statistics for cancelled order:', params.id);
+          console.log('📉 Reversing product statistics for cancelled order:', id);
           await updateProductStats(order.items, 'subtract');
           console.log('✅ Product statistics reversed for cancellation');
         } catch (statsError) {
@@ -400,7 +403,7 @@ export async function PUT(req, { params }) {
       // Handle product statistics addition for orders being restored from cancelled
       if (oldStatus === 'cancelled' && newStatus !== 'cancelled' && order.items) {
         try {
-          console.log('📈 Restoring product statistics for uncancelled order:', params.id);
+          console.log('📈 Restoring product statistics for uncancelled order:', id);
           await updateProductStats(order.items, 'add');
           console.log('✅ Product statistics restored for uncancellation');
         } catch (statsError) {
@@ -410,7 +413,7 @@ export async function PUT(req, { params }) {
       }
       
       const result = await ordersCollection.findOneAndUpdate(
-        { _id: new ObjectId(params.id) },
+        { _id: new ObjectId(id) },
         { 
           $set: { 
             ...updateData,
@@ -446,6 +449,7 @@ export async function PUT(req, { params }) {
 // DELETE a single order by ID (admin only)
 export async function DELETE(req, { params }) {
   try {
+    const { id } = await params;
 
     // Try to get session from NextAuth first
     const session = await getServerSession(authOptions);
@@ -507,33 +511,33 @@ export async function DELETE(req, { params }) {
     }
     
     // Verify ObjectId is valid
-    if (!ObjectId.isValid(params.id)) {
-      console.error('🔴 Invalid ObjectId:', params.id);
+    if (!ObjectId.isValid(id)) {
+      console.error('🔴 Invalid ObjectId:', id);
       return NextResponse.json({ error: 'Invalid order ID format' }, { status: 400 });
     }
     
     const ordersCollection = await getOrdersCollection();
     
     // First find the order to verify it exists
-    const existingOrder = await ordersCollection.findOne({ _id: new ObjectId(params.id) });
+    const existingOrder = await ordersCollection.findOne({ _id: new ObjectId(id) });
     
     if (!existingOrder) {
-      console.error('🔴 Order not found with ID:', params.id);
+      console.error('🔴 Order not found with ID:', id);
       return NextResponse.json({ error: 'Order not found' }, { status: 404 });
     }
     
     // Delete the order
-    const result = await ordersCollection.deleteOne({ _id: new ObjectId(params.id) });
+    const result = await ordersCollection.deleteOne({ _id: new ObjectId(id) });
     
     if (result.deletedCount === 1) {
-      console.log('✅ Order deleted successfully:', params.id);
+      console.log('✅ Order deleted successfully:', id);
       return NextResponse.json({ 
         success: true, 
         message: 'Order deleted successfully',
-        orderId: params.id
+        orderId: id
       });
     } else {
-      console.error('🔴 Failed to delete order:', params.id);
+      console.error('🔴 Failed to delete order:', id);
       return NextResponse.json({ 
         error: 'Failed to delete order' 
       }, { status: 500 });

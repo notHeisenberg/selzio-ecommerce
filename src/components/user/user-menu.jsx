@@ -81,12 +81,22 @@ const UserMenu = () => {
             <span>Orders</span>
           </Link>
         </DropdownMenuItem>
-        <DropdownMenuItem asChild className="focus:bg-secondary focus:text-foreground">
-          <Link href="/account?tab=wishlist" className="cursor-pointer text-foreground">
-            <Heart className="mr-2 h-4 w-4" />
-            <span>Wishlist</span>
-          </Link>
-        </DropdownMenuItem>
+        {user?.role === 'admin' && (
+          <DropdownMenuItem asChild className="focus:bg-secondary focus:text-foreground">
+            <Link href="/account?tab=products" className="cursor-pointer text-foreground">
+              <Package className="mr-2 h-4 w-4" />
+              <span>Products</span>
+            </Link>
+          </DropdownMenuItem>
+        )}
+        {user?.role !== 'admin' && (
+          <DropdownMenuItem asChild className="focus:bg-secondary focus:text-foreground">
+            <Link href="/account?tab=wishlist" className="cursor-pointer text-foreground">
+              <Heart className="mr-2 h-4 w-4" />
+              <span>Wishlist</span>
+            </Link>
+          </DropdownMenuItem>
+        )}
         <DropdownMenuItem asChild className="focus:bg-secondary focus:text-foreground">
           <Link href="/account?tab=settings" className="cursor-pointer text-foreground">
             <Settings className="mr-2 h-4 w-4" />

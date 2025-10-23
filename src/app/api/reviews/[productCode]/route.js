@@ -3,7 +3,7 @@ import { getDatabase, getReviewsCollection } from '@/lib/mongodb';
 
 export async function GET(request, { params }) {
   try {
-    const { productCode } = params;
+    const { productCode } = await params;
     
     if (!productCode) {
       return NextResponse.json(

@@ -452,21 +452,21 @@ export function ProductCard({ product, index = 0, animationEnabled = true }) {
               {product.discount > 0 ? (
                 <>
                   <span className="text-sm font-medium text-rose-500">
-                    ৳{discountedPrice}
+                    {discountedPrice} BDT
                   </span>
                   <span className="text-xs line-through text-neutral-500 dark:text-neutral-400">
-                    {product?.sizes?.length > 0 && product.sizes[0]?.price 
-                      ? `Starting from ৳${product.sizes[0].price} to ৳${product.sizes[product.sizes.length - 1].price}` 
-                      : `৳${originalPrice}`
+                    {product?.sizes?.length > 0 && product.sizes[0]?.price
+                      ? `Starting from ৳${product.sizes[0].price} to ৳${product.sizes[product.sizes.length - 1].price}`
+                      : `${originalPrice} BDT`
                     }
                   </span>
                 </>
               ) : (
                 <span className="text-sm font-medium text-rose-500">
-                  {product?.sizes?.length > 0 && product.sizes[0]?.price 
+                  {product?.sizes?.length > 0 && product.sizes[0]?.price
                     ? `Starting from ৳${product.sizes[0].price} to ৳${product.sizes[product.sizes.length - 1].price}`
-                    : product.price 
-                      ? `৳${product.price}` 
+                    : product.price
+                      ? `${product.price} BDT`
                       : 'Price not available'
                   }
                 </span>

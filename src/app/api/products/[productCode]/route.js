@@ -5,7 +5,7 @@ import { ObjectId } from 'mongodb';
 
 export async function GET(req, { params }) {
   try {
-    const { productCode } = params;
+    const { productCode } = await params;
 
     if (!productCode) {
       return NextResponse.json(
@@ -53,7 +53,7 @@ export async function PUT(req, { params }) {
       return user; // Return the error response
     }
 
-    const { productCode } = params;
+    const { productCode } = await params;
     const body = await req.json();
     
     // Get products collection
@@ -73,9 +73,6 @@ export async function PUT(req, { params }) {
       updatedBy: user.id,
       updatedAt: new Date()
     };
-
-    console.log('🔄 Updating product:', productCode, 'with sizes:', updateData.sizes);
-
     let result;
     
     // Try to update by productCode first
@@ -97,8 +94,6 @@ export async function PUT(req, { params }) {
     if (!result) {
       return NextResponse.json({ error: 'Product not found' }, { status: 404 });
     }
-
-    console.log('✅ Product updated successfully:', result.name);
 
     return NextResponse.json({
       success: true,
@@ -122,7 +117,7 @@ export async function DELETE(req, { params }) {
       return user; // Return the error response
     }
 
-    const { productCode } = params;
+    const { productCode } = await params;
     
     // Get products collection
     const productsCollection = await getProductsCollection();
