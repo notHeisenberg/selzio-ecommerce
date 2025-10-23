@@ -24,7 +24,7 @@ const createSlug = (text) => {
 // Default images mapping for subcategories
 const defaultImages = {
   'Old Money': '/images/categories/Old_money_all.png',
-  'Perfume Oils': '/images/categories/Perfume_Oils_All.jpg',
+  'Perfume Oil': '/images/categories/Perfume_Oils_All.jpg',
 };
 
 export const OptimizedDataProvider = ({ children }) => {
