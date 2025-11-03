@@ -1,6 +1,11 @@
 import { NextResponse } from 'next/server';
 import { getCombosCollection } from '@/lib/mongodb';
 import { requireAuth, requireAdmin } from '@/middleware/auth';
+import { revalidatePath, revalidateTag } from 'next/cache';
+
+// Force this route to be dynamic and never cached
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
 
 // GET combos
 export async function GET(req) {
@@ -101,6 +106,16 @@ export async function POST(req) {
     
     // Insert combo
     const result = await combosCollection.insertOne(combo);
+    
+    // Revalidate all combo-related paths and tags
+    try {
+      revalidatePath('/combos');
+      revalidatePath('/');
+      revalidateTag('combos');
+      revalidateTag('homepage');
+    } catch (revalidateError) {
+      console.warn('Cache revalidation warning:', revalidateError);
+    }
     
     return NextResponse.json(
       { 

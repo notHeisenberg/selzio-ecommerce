@@ -5,6 +5,10 @@ import { authOptions } from '../../auth/[...nextauth]/route';
 import { getAuthUser } from '@/lib/jwt';
 import { ObjectId } from 'mongodb';
 
+// Force this route to be dynamic and never cached
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+
 export async function GET(req) {
   try {
     // Try to get session from NextAuth first

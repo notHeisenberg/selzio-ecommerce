@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getProductsCollection, getCombosCollection, getReviewsCollection } from '@/lib/mongodb';
+import { unstable_cache } from 'next/cache';
 
 /**
  * Optimized endpoint specifically for homepage data
@@ -184,5 +185,5 @@ export async function GET(req) {
 // Enable edge runtime for faster response times
 export const runtime = 'nodejs'; // Use 'edge' if your MongoDB driver supports it
 export const dynamic = 'force-dynamic';
-export const revalidate = 60; // Revalidate every 1 minute
+export const revalidate = 0; // Always fetch fresh data, rely on revalidateTag for cache busting
 

@@ -2,6 +2,11 @@ import { NextResponse } from 'next/server';
 import { getProductsCollection } from '@/lib/mongodb';
 import { requireAdmin } from '@/middleware/auth';
 import { ObjectId } from 'mongodb';
+import { revalidatePath, revalidateTag } from 'next/cache';
+
+// Force this route to be dynamic and never cached
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
 
 export async function GET(req, { params }) {
   try {
@@ -95,6 +100,18 @@ export async function PUT(req, { params }) {
       return NextResponse.json({ error: 'Product not found' }, { status: 404 });
     }
 
+    // Revalidate all product-related paths and tags after update
+    try {
+      revalidatePath('/store');
+      revalidatePath('/');
+      revalidatePath('/products/[category]', 'page');
+      revalidatePath(`/products/${result.category}`, 'page');
+      revalidateTag('products');
+      revalidateTag('homepage');
+    } catch (revalidateError) {
+      console.warn('Cache revalidation warning:', revalidateError);
+    }
+
     return NextResponse.json({
       success: true,
       product: result
@@ -134,6 +151,17 @@ export async function DELETE(req, { params }) {
     
     if (!result) {
       return NextResponse.json({ error: 'Product not found' }, { status: 404 });
+    }
+
+    // Revalidate all product-related paths and tags after deletion
+    try {
+      revalidatePath('/store');
+      revalidatePath('/');
+      revalidatePath('/products/[category]', 'page');
+      revalidateTag('products');
+      revalidateTag('homepage');
+    } catch (revalidateError) {
+      console.warn('Cache revalidation warning:', revalidateError);
     }
 
     return NextResponse.json({ message: 'Product deleted successfully' });

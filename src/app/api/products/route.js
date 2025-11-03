@@ -1,6 +1,11 @@
 import { NextResponse } from 'next/server';
 import { getProductsCollection } from '@/lib/mongodb';
 import { requireAuth, requireAdmin } from '@/middleware/auth';
+import { revalidatePath, revalidateTag } from 'next/cache';
+
+// Force this route to be dynamic and never cached
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
 
 export async function GET(req) {
   try {
@@ -190,6 +195,17 @@ export async function POST(req) {
     
     // Fetch the created product
     const createdProduct = await productsCollection.findOne({ _id: result.insertedId });
+    
+    // Revalidate all product-related paths and tags
+    try {
+      revalidatePath('/store');
+      revalidatePath('/');
+      revalidatePath('/products/[category]', 'page');
+      revalidateTag('products');
+      revalidateTag('homepage');
+    } catch (revalidateError) {
+      console.warn('Cache revalidation warning:', revalidateError);
+    }
     
     return NextResponse.json(
       { 
