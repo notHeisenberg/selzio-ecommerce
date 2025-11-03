@@ -5,8 +5,8 @@ import { createContext, useContext, useState, useEffect, useCallback, useMemo } 
 const DataContext = createContext();
 
 // Cache duration constants
-const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes (reduced from 10)
-const HTTP_CACHE_DURATION = 300; // 5 minutes in seconds
+const CACHE_DURATION = 60 * 1000; // 1 minute (reduced from 10)
+const HTTP_CACHE_DURATION = 60; // 1 minute in seconds
 
 // Global cache to prevent duplicate requests across component instances
 let globalCache = {

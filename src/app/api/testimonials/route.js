@@ -9,13 +9,14 @@ export async function GET(request) {
     // Get MongoDB collection
     const reviewsCollection = await getReviewsCollection();
     
-    // Get all 4* and 5* reviews
+    // Get all 4* and 5* reviews (both product reviews and general testimonials)
     const highRatedReviews = await reviewsCollection
       .find({ 
         rating: { $in: [4, 5] },
         // Only include reviews with text content
         text: { $exists: true, $ne: "" }
       })
+      .sort({ createdAt: -1 })
       .toArray();
     
     // Randomize and limit the results

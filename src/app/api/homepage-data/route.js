@@ -84,7 +84,7 @@ export async function GET(req) {
         .limit(3)
         .toArray(),
 
-      // Get high-rated reviews for testimonials (4-5 stars only)
+      // Get high-rated reviews for testimonials (4-5 stars, includes both product reviews and general testimonials)
       // Using index: rating_1_createdAt_-1
       reviewsCollection
         .find(
@@ -101,7 +101,8 @@ export async function GET(req) {
               verified: 1,
               date: 1,
               productCode: 1,
-              createdAt: 1
+              createdAt: 1,
+              isGeneralTestimonial: 1
             }
           }
         )
@@ -165,9 +166,9 @@ export async function GET(req) {
     // Aggressive caching headers
     response.headers.set(
       'Cache-Control', 
-      'public, max-age=300, stale-while-revalidate=600' // 5 min cache, 10 min stale
+      'public, max-age=60, stale-while-revalidate=120' // 1 min cache, 2 min stale
     );
-    response.headers.set('CDN-Cache-Control', 'max-age=600');
+    response.headers.set('CDN-Cache-Control', 'max-age=60');
     response.headers.set('Vary', 'Accept-Encoding');
 
     return response;
@@ -183,5 +184,5 @@ export async function GET(req) {
 // Enable edge runtime for faster response times
 export const runtime = 'nodejs'; // Use 'edge' if your MongoDB driver supports it
 export const dynamic = 'force-dynamic';
-export const revalidate = 300; // Revalidate every 5 minutes
+export const revalidate = 60; // Revalidate every 1 minute
 

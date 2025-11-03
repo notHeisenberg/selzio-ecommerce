@@ -175,7 +175,7 @@ export const getFeaturedCategories = async () => {
 };
 
 // Get top selling products
-export const getTopSellingProducts = async (limit = 4) => {
+export const getTopSellingProducts = async (limit = 8) => {
   try {
     const response = await fetch(`/api/products?topSelling=true&limit=${limit}`, {
       credentials: 'same-origin',
@@ -300,18 +300,38 @@ export const getRelatedProducts = async (productCode, limit = 4) => {
       
       if (!sourceProduct) return [];
       
-      // Create a ranking function to prioritize related products
+      // MUST match same category (mandatory filter)
+      let relatedProducts = products.filter(p => 
+        p.productCode !== productCode && 
+        p.category === sourceProduct.category
+      );
+      
+      // If no products in same category, return empty
+      if (relatedProducts.length === 0) return [];
+      
+      // PREFER same subcategory if exists
+      if (sourceProduct.subcategory) {
+        const sameSubcategory = relatedProducts.filter(p => 
+          p.subcategory === sourceProduct.subcategory
+        );
+        
+        // Use subcategory matches if available, otherwise use category matches
+        if (sameSubcategory.length > 0) {
+          relatedProducts = sameSubcategory;
+        }
+      }
+      
+      // Create a ranking function to prioritize within same category/subcategory
       const getRelevanceScore = (product) => {
         let score = 0;
         
-        // Top selling products get highest priority
-        if (product.topSelling) score += 100;
+        // Subcategory match (if not already filtered)
+        if (sourceProduct.subcategory && product.subcategory === sourceProduct.subcategory) {
+          score += 50;
+        }
         
-        // Category match
-        if (product.category === sourceProduct.category) score += 50;
-        
-        // Subcategory match
-        if (sourceProduct.subcategory && product.subcategory === sourceProduct.subcategory) score += 30;
+        // Top selling products get priority
+        if (product.topSelling) score += 30;
         
         // Tag matches (each matching tag adds points)
         if (sourceProduct.tags && product.tags) {
@@ -322,9 +342,8 @@ export const getRelatedProducts = async (productCode, limit = 4) => {
         return score;
       };
       
-      // Filter out the current product, calculate scores, sort by score, and take top N
-      return products
-        .filter(p => p.productCode !== productCode)
+      // Calculate scores, sort by score, and take top N
+      return relatedProducts
         .map(p => ({ ...p, relevanceScore: getRelevanceScore(p) }))
         .sort((a, b) => b.relevanceScore - a.relevanceScore)
         .slice(0, limit);

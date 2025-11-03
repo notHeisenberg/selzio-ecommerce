@@ -25,13 +25,23 @@ export async function POST(request) {
     const rating = parseInt(formData.get('rating'));
     const name = formData.get('name');
     const email = formData.get('email') || '';
-    const reviewText = formData.get('reviewText');
+    const reviewText = formData.get('reviewText') || formData.get('text'); // Support both field names
     const imageFile = formData.get('image');
+    const isGeneralTestimonial = formData.get('isGeneralTestimonial') === 'true';
     
     // Validate required fields
-    if (!productId || !productCode || !rating || !name || !reviewText) {
+    // For general testimonials, productId and productCode are optional
+    if (!rating || !name || !reviewText) {
       return NextResponse.json(
         { message: 'Missing required fields' },
+        { status: 400 }
+      );
+    }
+    
+    // For product reviews, productId and productCode are required
+    if (!isGeneralTestimonial && (!productId || !productCode)) {
+      return NextResponse.json(
+        { message: 'Product information is required for product reviews' },
         { status: 400 }
       );
     }
@@ -46,15 +56,23 @@ export async function POST(request) {
 
     // Initialize review object
     const review = {
-      productId,
-      productCode,
       rating,
       name,
       email,
       text: reviewText,
       verified: !!session, // Mark as verified if user is logged in
       date: new Date(),
+      createdAt: new Date(),
     };
+    
+    // Add product info for product reviews
+    if (!isGeneralTestimonial && productId && productCode) {
+      review.productId = productId;
+      review.productCode = productCode;
+    } else {
+      // Mark as general testimonial
+      review.isGeneralTestimonial = true;
+    }
 
     // Handle image upload if provided
     if (imageFile) {
@@ -65,8 +83,9 @@ export async function POST(request) {
         const base64DataUrl = `data:${imageFile.type};base64,${base64File}`;
         
         // Upload to Cloudinary
+        const folderName = isGeneralTestimonial ? 'testimonials' : 'product-reviews';
         const result = await cloudinary.uploader.upload(base64DataUrl, {
-          folder: 'product-reviews',
+          folder: folderName,
         });
         
         // Add image URL to review
@@ -81,13 +100,22 @@ export async function POST(request) {
     const reviewsCollection = await getReviewsCollection();
     
     // Insert review into database
-    await reviewsCollection.insertOne(review);
+    const result = await reviewsCollection.insertOne(review);
     
-    // Update product's average rating using utility function
-    await calculateAndUpdateProductRating(productCode);
+    // Update product's average rating only for product reviews
+    if (!isGeneralTestimonial && productCode) {
+      await calculateAndUpdateProductRating(productCode);
+    }
+    
+    const successMessage = isGeneralTestimonial 
+      ? 'Testimonial submitted successfully' 
+      : 'Review submitted successfully';
     
     return NextResponse.json(
-      { message: 'Review submitted successfully' },
+      { 
+        message: successMessage,
+        reviewId: result.insertedId.toString()
+      },
       { status: 201 }
     );
   } catch (error) {

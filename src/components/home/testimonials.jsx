@@ -22,72 +22,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { useAppData } from '@/providers/data-provider';
-import axios from 'axios';
 import Image from "next/image";
-
-// More realistic testimonials with verified purchase status
-const testimonials = [
-  {
-    id: 1,
-    name: "Sarah Johnson",
-    role: "Verified Buyer",
-    verified: true,
-    date: "2023-11-15",
-    image: null,
-    rating: 5,
-    text: "I ordered the minimalist watch and I'm absolutely in love with it. The quality is exceptional and it looks even better in person than in the photos. Shipping was fast and the packaging was very secure. Definitely coming back for more!",
-  },
-  {
-    id: 2,
-    name: "Michael Chen",
-    role: "Verified Buyer",
-    verified: true,
-    date: "2023-12-03",
-    image: null,
-    rating: 4,
-    text: "The leather jacket I purchased exceeded my expectations in terms of quality. The fit is perfect and the material feels premium. My only small complaint is that the shipping took a bit longer than expected, but the product was worth the wait.",
-  },
-  {
-    id: 3,
-    name: "Emma Rodriguez",
-    role: "Fashion Blogger",
-    verified: true,
-    date: "2024-01-20",
-    image: null,
-    rating: 5,
-    text: "As someone who reviews fashion items professionally, I can say that Selzio's collection stands out from the crowd. The attention to detail and quality control is evident in every piece I've purchased. My followers have been asking where I got these items!",
-  },
-  {
-    id: 4,
-    name: "David Lee",
-    role: "Verified Buyer",
-    verified: true,
-    date: "2024-02-05",
-    image: null,
-    rating: 4,
-    text: "The wireless earbuds I purchased have great sound quality and battery life. Customer service was also very helpful when I had questions about the features. Would definitely recommend to friends looking for good tech products.",
-  },
-  {
-    id: 5,
-    name: "Priya Patel",
-    role: "Interior Designer",
-    verified: true,
-    date: "2024-03-12",
-    image: null,
-    rating: 5,
-    text: "I've ordered several home decor items for my clients and myself. The quality is consistent and the designs are unique. What I appreciate most is how accurately the products match their online descriptions and images.",
-  },
-  {
-    id: 6,
-    name: "Lucas Smith",
-    role: "Verified Buyer",
-    verified: false,
-    date: "2024-04-08",
-    image: null,
-    rating: 4,
-    text: "The smart watch has been a great addition to my tech collection. Good functionality and battery life. The app is intuitive and setup was easy. The only reason I'm not giving 5 stars is because the band could be more comfortable for all-day wear.",
-  },
-];
 
 export function Testimonials() {
   const { resolvedTheme } = useTheme();
@@ -121,8 +56,8 @@ export function Testimonials() {
     if (providerTestimonials && providerTestimonials.length > 0) {
       setLocalTestimonials(providerTestimonials);
     } else if (!dataLoading) {
-      // Fallback to static testimonials if no data from provider
-      setLocalTestimonials(testimonials);
+      // Show empty array if no testimonials from database
+      setLocalTestimonials([]);
     }
   }, [providerTestimonials, dataLoading]);
 
@@ -264,32 +199,53 @@ export function Testimonials() {
     setSubmitError('');
     
     try {
-      // Create new testimonial
+      // Prepare form data
+      const formData = new FormData();
+      formData.append('name', name);
+      formData.append('email', email);
+      formData.append('text', reviewText);
+      formData.append('rating', rating.toString());
+      formData.append('isGeneralTestimonial', 'true'); // Mark as general testimonial
+      
+      // Add image if provided
+      if (imageFile) {
+        formData.append('image', imageFile);
+      }
+      
+      // Submit to existing reviews API (handles both product reviews and testimonials)
+      const response = await fetch('/api/reviews/add', {
+        method: 'POST',
+        body: formData,
+      });
+      
+      const result = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(result.message || 'Failed to submit testimonial');
+      }
+      
+      // Optimistically add to local testimonials for immediate feedback
       const newTestimonial = {
         id: Date.now(),
         name,
         role: "Customer",
         verified: false,
         date: new Date().toISOString().split('T')[0],
-        image: imagePreview, // Use the image preview for display
+        image: imagePreview,
         rating,
         text: reviewText,
       };
       
-      // Simulate API call with timeout
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      // Add to local testimonials
       setLocalTestimonials(prev => [newTestimonial, ...prev]);
       
       toast({
         title: "Testimonial Submitted",
-        description: "Thank you for sharing your experience!",
+        description: "Thank you for sharing your experience! It will appear after review.",
       });
       
       handleReviewDialogClose();
     } catch (error) {
-      setSubmitError('An error occurred. Please try again.');
+      setSubmitError(error.message || 'An error occurred. Please try again.');
       console.error('Error submitting testimonial:', error);
     } finally {
       setIsSubmitting(false);
@@ -321,6 +277,258 @@ export function Testimonials() {
             )}
           </div>
         </div>
+      </section>
+    );
+  }
+
+  // Show empty state if no testimonials
+  if (localTestimonials.length === 0 && !dataLoading) {
+    return (
+      <section className="py-20 bg-background">
+        <div className="container mx-auto px-4">
+          <div className="text-center mb-16">
+            <h2 className="text-4xl font-bold mb-4">
+              What Our Customers Say
+            </h2>
+            <p className="text-muted-foreground max-w-2xl mx-auto mb-8">
+              Don't just take our word for it - hear from our satisfied customers about their shopping experience.
+            </p>
+          </div>
+          <div className="w-full max-w-6xl mx-auto min-h-[300px] flex flex-col items-center justify-center border-2 border-dashed border-gray-300 dark:border-gray-700 rounded-lg p-8">
+            <User className="h-12 w-12 text-muted-foreground mb-4" />
+            <h3 className="text-xl font-bold mb-2">No testimonials yet</h3>
+            <p className="text-muted-foreground mb-6 max-w-md text-center">
+              Be the first to share your experience with our products and services!
+            </p>
+            <Button 
+              variant="outline" 
+              size="sm" 
+              className="rounded-none border-2 border-black dark:border-white bg-black text-white dark:bg-white dark:text-black hover:bg-white hover:text-black dark:hover:bg-black dark:hover:text-white uppercase tracking-wider font-bold"
+              onClick={handleReviewDialogOpen}
+            >
+              Share Your Experience
+            </Button>
+          </div>
+        </div>
+
+        {/* Review Dialog */}
+        <Dialog open={reviewDialogOpen} onOpenChange={setReviewDialogOpen}>
+          <DialogContent className="sm:max-w-[500px] max-h-[85vh] rounded-none border-2 border-black dark:border-white p-0">
+            <DialogHeader className="border-b-2 border-black dark:border-white pb-3 px-6 pt-6">
+              <DialogTitle className="text-lg uppercase tracking-wider font-bold">Share Your Experience</DialogTitle>
+            </DialogHeader>
+            
+            {/* Scrollable Content */}
+            <motion.div 
+              className="space-y-5 mt-5 overflow-y-auto px-6 py-4" 
+              style={{ maxHeight: "calc(85vh - 160px)" }}
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.2 }}
+            >
+                {/* Rating Selection */}
+                <div className="border-l-4 border-black dark:border-white pl-3 py-1">
+                  <Label htmlFor="rating" className="text-sm font-bold uppercase tracking-wide">Rating*</Label>
+                  <motion.div 
+                    className="flex items-center gap-1 mt-3"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    transition={{ delay: 0.1 }}
+                  >
+                    {[1, 2, 3, 4, 5].map((value) => (
+                      <motion.button
+                        key={value}
+                        type="button"
+                        onClick={() => setRating(value)}
+                        className="focus:outline-none"
+                        whileHover={{ scale: 1.1 }}
+                        whileTap={{ scale: 0.9 }}
+                        initial={{ scale: 0.9 }}
+                        animate={{ 
+                          scale: value <= rating ? 1.1 : 1,
+                          transition: { duration: 0.2 }
+                        }}
+                      >
+                        <Star
+                          className={`h-7 w-7 transition-all ${
+                            value <= rating ? 'fill-amber-400 text-amber-400' : 'text-muted-foreground'
+                          }`}
+                        />
+                      </motion.button>
+                    ))}
+                    <motion.span 
+                      className="ml-2 text-amber-500 dark:text-amber-400 text-sm font-medium"
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: rating > 0 ? 1 : 0 }}
+                      transition={{ duration: 0.2 }}
+                    >
+                      {rating === 1 && "Poor"}
+                      {rating === 2 && "Fair"}
+                      {rating === 3 && "Good"}
+                      {rating === 4 && "Very Good"}
+                      {rating === 5 && "Excellent"}
+                    </motion.span>
+                  </motion.div>
+                </div>
+                
+                {/* Name */}
+                <motion.div
+                  initial={{ opacity: 0, y: 5 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.2 }}
+                  className="border-l-4 border-black dark:border-white pl-3 py-1"
+                >
+                  <Label htmlFor="name" className="text-sm font-bold uppercase tracking-wide">Your Name*</Label>
+                  <Input 
+                    id="name"
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    placeholder="Enter your name"
+                    className="mt-2 rounded-none border-2 border-gray-300 dark:border-gray-600 hover:border-black dark:hover:border-white focus:border-black dark:focus:border-white focus:ring-0 transition-colors"
+                    required
+                  />
+                </motion.div>
+                
+                {/* Email (Optional) */}
+                <motion.div
+                  initial={{ opacity: 0, y: 5 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.3 }}
+                  className="border-l-4 border-transparent"
+                >
+                  <Label htmlFor="email" className="text-sm font-bold uppercase tracking-wide">Your Email (Optional)</Label>
+                  <Input 
+                    id="email"
+                    type="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder="Enter your email"
+                    className="mt-2 rounded-none border-2 border-gray-300 dark:border-gray-600 hover:border-black dark:hover:border-white focus:border-black dark:focus:border-white focus:ring-0 transition-colors"
+                  />
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Your email will not be published.
+                  </p>
+                </motion.div>
+                
+                {/* Review Text */}
+                <motion.div
+                  initial={{ opacity: 0, y: 5 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.4 }}
+                  className="border-l-4 border-black dark:border-white pl-3 py-1"
+                >
+                  <Label htmlFor="review" className="text-sm font-bold uppercase tracking-wide">Your Experience*</Label>
+                  <Textarea 
+                    id="review"
+                    value={reviewText}
+                    onChange={(e) => setReviewText(e.target.value)}
+                    placeholder="Share your experience with our products or services..."
+                    rows={4}
+                    className="mt-2 rounded-none border-2 border-gray-300 dark:border-gray-600 hover:border-black dark:hover:border-white focus:border-black dark:focus:border-white focus:ring-0 transition-colors resize-none"
+                    required
+                  />
+                </motion.div>
+                
+                {/* Image Upload */}
+                <motion.div
+                  initial={{ opacity: 0, y: 5 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.5 }}
+                  className="border-l-4 border-transparent"
+                >
+                  <Label htmlFor="image" className="text-sm font-bold uppercase tracking-wide">Add a Photo (Optional)</Label>
+                  <div className="mt-2">
+                    {imagePreview ? (
+                      <motion.div 
+                        className="relative w-24 h-24 border-2 border-black dark:border-white overflow-hidden"
+                        initial={{ opacity: 0, scale: 0.8 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        transition={{ type: "spring", stiffness: 300, damping: 20 }}
+                      >
+                        <img
+                          src={imagePreview}
+                          alt="Testimonial"
+                          className="w-full h-full object-cover"
+                        />
+                        <button
+                          type="button"
+                          onClick={removeImage}
+                          className="absolute top-1 right-1 bg-black text-white dark:bg-white dark:text-black p-1 border-none"
+                        >
+                          <X className="h-3.5 w-3.5" />
+                        </button>
+                      </motion.div>
+                    ) : (
+                      <motion.div 
+                        className="flex items-center justify-center border-2 border-dashed border-gray-300 dark:border-gray-600 hover:border-black dark:hover:border-white p-4"
+                        whileHover={{ backgroundColor: "rgba(0,0,0,0.025)" }}
+                      >
+                        <label className="flex flex-col items-center cursor-pointer">
+                          <Upload className="h-5 w-5 text-gray-500 mb-1.5" />
+                          <span className="text-xs text-muted-foreground">Upload</span>
+                          <input
+                            id="image"
+                            type="file"
+                            accept="image/*"
+                            className="hidden"
+                            onChange={handleImageUpload}
+                          />
+                        </label>
+                      </motion.div>
+                    )}
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Max size: 2MB
+                  </p>
+                </motion.div>
+                
+                {/* Error Message */}
+                {submitError && (
+                  <motion.div 
+                    className="bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 border-l-4 border-red-500 dark:border-red-400 p-3 text-sm"
+                    initial={{ opacity: 0, scaleY: 0, originY: 0 }}
+                    animate={{ opacity: 1, scaleY: 1 }}
+                    transition={{ duration: 0.2 }}
+                  >
+                    {submitError}
+                  </motion.div>
+                )}
+              </motion.div>
+            
+              {/* Fixed Button Footer */}
+              <motion.div 
+                className="flex justify-end gap-3 pt-12 px-1 bg-transparent"
+                initial={{ opacity: 0, y: 5 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.2, duration: 0.2 }}
+              >
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={handleReviewDialogClose}
+                  className="rounded-none border-2 border-gray-300 dark:border-gray-600 hover:border-black dark:hover:border-white hover:bg-transparent"
+                >
+                  CANCEL
+                </Button>
+                <Button 
+                  onClick={handleSubmitReview}
+                  size="sm"
+                  disabled={isSubmitting}
+                  className="rounded-none bg-black hover:bg-black/80 text-white dark:bg-white dark:text-black dark:hover:bg-white/80 uppercase tracking-wider border-2 border-black dark:border-white font-bold"
+                >
+                  {isSubmitting ? (
+                    <>
+                      <Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" />
+                      Submitting...
+                    </>
+                  ) : (
+                    'Submit'
+                  )}
+                </Button>
+              </motion.div>
+          </DialogContent>
+        </Dialog>
       </section>
     );
   }
