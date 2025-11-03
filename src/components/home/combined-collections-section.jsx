@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useAppData } from '@/providers/data-provider';
 import Image from 'next/image';
 import Link from 'next/link';
@@ -10,8 +10,30 @@ import { Button } from '../ui/button';
 import { Badge } from '../ui/badge';
 
 export function CombinedCollectionsSection() {
-  const { featuredCategories, combos, loading, initialized, error } = useAppData();
+  const { featuredCategories, combos, loading, initialized, error, refresh } = useAppData();
   const [imageErrors, setImageErrors] = useState({});
+  
+  // Listen for cache invalidation events to refresh homepage data
+  useEffect(() => {
+    const handleProductsCacheInvalidated = () => {
+      // Trigger refresh from data provider
+      refresh();
+    };
+    
+    const handleCombosCacheInvalidated = () => {
+      // Trigger refresh from data provider
+      refresh();
+    };
+    
+    window.addEventListener('products-cache-invalidated', handleProductsCacheInvalidated);
+    window.addEventListener('combos-cache-invalidated', handleCombosCacheInvalidated);
+    
+    // Cleanup listeners
+    return () => {
+      window.removeEventListener('products-cache-invalidated', handleProductsCacheInvalidated);
+      window.removeEventListener('combos-cache-invalidated', handleCombosCacheInvalidated);
+    };
+  }, [refresh]);
 
   // Handle image error by setting a flag
   const handleImageError = (itemId) => {

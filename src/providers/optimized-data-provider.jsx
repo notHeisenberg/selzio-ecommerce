@@ -322,12 +322,18 @@ export const OptimizedDataProvider = ({ children }) => {
 
   // Force refresh function (bypasses cache)
   const refresh = useCallback(async () => {
+    // Invalidate all caches
     globalCache = {
       homepage: { data: null, timestamp: 0, loading: false },
       products: { data: null, timestamp: 0, loading: false }
     };
-    await loadHomepageData();
-  }, [loadHomepageData]);
+    
+    // Reload both homepage and full data to ensure everything is fresh
+    await Promise.all([
+      loadHomepageData(),
+      loadFullProductsData()
+    ]);
+  }, [loadHomepageData, loadFullProductsData]);
 
   // Expose a function to load full data on demand
   const ensureFullDataLoaded = useCallback(() => {

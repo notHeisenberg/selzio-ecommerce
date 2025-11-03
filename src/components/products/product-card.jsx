@@ -276,6 +276,28 @@ export function ProductCard({ product, index = 0, animationEnabled = true }) {
   const originalPrice = calculateOriginalPrice();
   const discountedPrice = calculateDiscountedPrice();
 
+  // Calculate min and max prices from sizes
+  const getPriceRange = () => {
+    if (!product?.sizes || product.sizes.length === 0) {
+      return null;
+    }
+    
+    const prices = product.sizes
+      .map(size => size.price)
+      .filter(price => price != null && !isNaN(price));
+    
+    if (prices.length === 0) {
+      return null;
+    }
+    
+    const minPrice = Math.min(...prices);
+    const maxPrice = Math.max(...prices);
+    
+    return { minPrice, maxPrice };
+  };
+
+  const priceRange = getPriceRange();
+
   const cardContent = (
     <div className="card-wrapper cursor-pointer w-full h-full" onClick={handleCardClick}>
       <div className="card relative w-full bg-transparent dark:bg-transparent overflow-hidden">
@@ -452,19 +474,22 @@ export function ProductCard({ product, index = 0, animationEnabled = true }) {
               {product.discount > 0 ? (
                 <>
                   <span className="text-sm font-medium text-rose-500">
-                    {discountedPrice} BDT
+                    {priceRange
+                      ? `Starting from ৳${Math.round(priceRange.minPrice * (1 - product.discount / 100))} to ৳${Math.round(priceRange.maxPrice * (1 - product.discount / 100))}`
+                      : `${discountedPrice} BDT`
+                    }
                   </span>
                   <span className="text-xs line-through text-neutral-500 dark:text-neutral-400">
-                    {product?.sizes?.length > 0 && product.sizes[0]?.price
-                      ? `Starting from ৳${product.sizes[0].price} to ৳${product.sizes[product.sizes.length - 1].price}`
+                    {priceRange
+                      ? `৳${priceRange.minPrice} - ৳${priceRange.maxPrice}`
                       : `${originalPrice} BDT`
                     }
                   </span>
                 </>
               ) : (
                 <span className="text-sm font-medium text-rose-500">
-                  {product?.sizes?.length > 0 && product.sizes[0]?.price
-                    ? `Starting from ৳${product.sizes[0].price} to ৳${product.sizes[product.sizes.length - 1].price}`
+                  {priceRange
+                    ? `Starting from ৳${priceRange.minPrice} to ৳${priceRange.maxPrice}`
                     : product.price
                       ? `${product.price} BDT`
                       : 'Price not available'

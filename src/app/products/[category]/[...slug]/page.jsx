@@ -164,6 +164,20 @@ export default function ProductCatchAllPage() {
     if (isProductWithSubcategory || isLikelyProductCode) {
       fetchProduct();
     }
+    
+    // Listen for cache invalidation events to refetch product details
+    const handleProductsCacheInvalidated = () => {      
+      if (isProductWithSubcategory || isLikelyProductCode) {
+        fetchProduct();
+      }
+    };
+    
+    window.addEventListener('products-cache-invalidated', handleProductsCacheInvalidated);
+    
+    // Cleanup listener
+    return () => {
+      window.removeEventListener('products-cache-invalidated', handleProductsCacheInvalidated);
+    };
   }, [slug, isLikelyProductCode, isProductWithSubcategory]);
   
   // Fetch products for subcategory view
@@ -220,6 +234,20 @@ export default function ProductCatchAllPage() {
     if (isSubcategoryPage) {
       fetchProducts();
     }
+    
+    // Listen for cache invalidation events
+    const handleProductsCacheInvalidated = () => {
+      if (isSubcategoryPage) {
+        fetchProducts();
+      }
+    };
+    
+    window.addEventListener('products-cache-invalidated', handleProductsCacheInvalidated);
+    
+    // Cleanup listener
+    return () => {
+      window.removeEventListener('products-cache-invalidated', handleProductsCacheInvalidated);
+    };
   }, [category, subcategory, isSubcategoryPage]);
   
   // Apply filters whenever any filter changes

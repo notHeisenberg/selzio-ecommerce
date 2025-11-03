@@ -10,6 +10,20 @@ let isLoading = false;
 let lastFetchTime = 0;
 const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
 
+// Function to invalidate the cache (to be called when products are updated)
+export const invalidateProductsCache = () => {
+  const previousCacheSize = productsCache.length;
+  productsCache = [];
+  categoriesCache = [];
+  featuredCategoriesCache = [];
+  lastFetchTime = 0;
+  
+  // Dispatch a custom event to notify components to refetch
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(new CustomEvent('products-cache-invalidated'));
+  }
+};
+
 // Helper function to create URL-friendly slugs
 export const createSlug = (text) => {
   if (!text) return '';
@@ -75,11 +89,13 @@ export const initializeProducts = async () => {
   isLoading = true;
   
   try {
-    // Fetch products from API
-    const response = await fetch('/api/products?limit=100', {
+    // Fetch products from API with cache busting
+    const response = await fetch('/api/products?limit=100&t=' + Date.now(), {
       credentials: 'same-origin', // Include cookies
+      cache: 'no-store',
       headers: {
-        'Cache-Control': 'no-store'
+        'Cache-Control': 'no-store, no-cache, must-revalidate',
+        'Pragma': 'no-cache'
       }
     });
     

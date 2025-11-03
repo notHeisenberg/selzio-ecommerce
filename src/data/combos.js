@@ -6,6 +6,18 @@ let isLoading = false;
 let lastFetchTime = 0;
 const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
 
+// Function to invalidate the cache (to be called when combos are updated)
+export const invalidateCombosCache = () => {
+  combosCache = [];
+  lastFetchTime = 0;
+  console.log('Combos cache invalidated');
+  
+  // Dispatch a custom event to notify components to refetch
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(new CustomEvent('combos-cache-invalidated'));
+  }
+};
+
 // Function to generate combo URL
 export const getComboUrl = (combo) => {
   return `/combos/${combo.comboCode}`;
@@ -40,8 +52,14 @@ export const initializeCombos = async () => {
   isLoading = true;
   
   try {
-    // Fetch combos from API
-    const response = await fetch('/api/combos?limit=100');
+    // Fetch combos from API with cache busting
+    const response = await fetch('/api/combos?limit=100&t=' + Date.now(), {
+      cache: 'no-store',
+      headers: {
+        'Cache-Control': 'no-store, no-cache, must-revalidate',
+        'Pragma': 'no-cache'
+      }
+    });
     
     if (!response.ok) {
       throw new Error(`API error: ${response.status}`);

@@ -75,6 +75,24 @@ export default function StorePage() {
     if (savedShowCombos !== null) {
       setShowCombos(savedShowCombos === "true");
     }
+    
+    // Listen for cache invalidation events
+    const handleProductsCacheInvalidated = () => {
+      loadProducts();
+    };
+    
+    const handleCombosCacheInvalidated = () => {
+      loadCombos();
+    };
+    
+    window.addEventListener('products-cache-invalidated', handleProductsCacheInvalidated);
+    window.addEventListener('combos-cache-invalidated', handleCombosCacheInvalidated);
+    
+    // Cleanup listeners
+    return () => {
+      window.removeEventListener('products-cache-invalidated', handleProductsCacheInvalidated);
+      window.removeEventListener('combos-cache-invalidated', handleCombosCacheInvalidated);
+    };
   }, []);
 
   // Save combo visibility preference

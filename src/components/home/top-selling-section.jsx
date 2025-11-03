@@ -3,15 +3,57 @@
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { ProductCard } from '@/components/products/product-card';
-import { useAppData } from '@/providers/data-provider';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ArrowRight } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { getProducts } from '@/data/products';
 
 export function TopSellingSection() {
-  const { getTopSellingProducts, loading, error, initialized } = useAppData();
+  const [topSellingProducts, setTopSellingProducts] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  // Function to load top selling products
+  const loadTopSellingProducts = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      
+      // Use getProducts() from @/data/products which has built-in cache invalidation
+      const products = await getProducts();
+      
+      // Sort by sales and get top 4
+      const sortedProducts = products
+        .filter(p => p.stock > 0)
+        .sort((a, b) => (b.sales || 0) - (a.sales || 0))
+        .slice(0, 4);
+      
+      setTopSellingProducts(sortedProducts);
+    } catch (err) {
+      console.error('Failed to load top selling products:', err);
+      setError('Failed to load products. Please try again later.');
+    } finally {
+      setLoading(false);
+    }
+  };
   
-  // Get top selling products from centralized data
-  const topSellingProducts = getTopSellingProducts(4);
+  // Load products on mount and listen for cache invalidation events
+  useEffect(() => {
+    loadTopSellingProducts();
+    
+    // Listen for cache invalidation events to refresh homepage data
+    const handleProductsCacheInvalidated = () => {
+      // Reload products when cache is invalidated
+      loadTopSellingProducts();
+    };
+    
+    window.addEventListener('products-cache-invalidated', handleProductsCacheInvalidated);
+    
+    // Cleanup listener
+    return () => {
+      window.removeEventListener('products-cache-invalidated', handleProductsCacheInvalidated);
+    };
+  }, []);
 
   // Skeleton loader for loading state
   const ProductSkeleton = () => (

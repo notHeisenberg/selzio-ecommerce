@@ -10,6 +10,35 @@ import { motion, AnimatePresence } from 'framer-motion';
 export default function ProductViewModal({ product, open, onClose }) {
     if (!product) return null;
 
+    // Utility function to calculate price range from sizes
+    const getPriceRange = (product) => {
+        if (!product.sizes || !Array.isArray(product.sizes) || product.sizes.length === 0) {
+            return null;
+        }
+
+        const prices = product.sizes
+            .filter(size => size.price && size.price > 0)
+            .map(size => size.price);
+
+        if (prices.length === 0) return null;
+
+        const minPrice = Math.min(...prices);
+        const maxPrice = Math.max(...prices);
+
+        // Apply discount if available
+        const discount = product.discount || 0;
+        const minDiscountedPrice = minPrice * (1 - discount / 100);
+        const maxDiscountedPrice = maxPrice * (1 - discount / 100);
+
+        return {
+            min: minDiscountedPrice,
+            max: maxDiscountedPrice,
+            originalMin: minPrice,
+            originalMax: maxPrice,
+            hasRange: minPrice !== maxPrice
+        };
+    };
+
     const getStatusBadge = (status) => {
         const variants = {
             active: 'bg-green-500',
@@ -148,25 +177,65 @@ export default function ProductViewModal({ product, open, onClose }) {
                                         className="grid grid-cols-2 gap-6"
                                     >
                                         <div className="p-4 bg-gradient-to-r from-blue-50 to-blue-100 rounded-xl">
-                                            <p className="text-sm text-blue-600 font-medium">Price</p>
-                                            <div className="flex items-baseline gap-2">
-                                                {product.discount && product.discount > 0 ? (
-                                                    <>
-                                                        <p className="text-3xl font-bold text-blue-900">
-                                                            ৳{(product.price * (1 - product.discount / 100)).toFixed(2)}
-                                                        </p>
-                                                        <div className="flex flex-col">
-                                                            <span className="text-sm line-through text-gray-500">
-                                                                ৳{product.price}
-                                                            </span>
-                                                            <span className="text-xs bg-red-500 text-white px-2 py-1 rounded">
-                                                                -{product.discount}%
-                                                            </span>
-                                                        </div>
-                                                    </>
-                                                ) : (
-                                                    <p className="text-3xl font-bold text-blue-900">৳{product.price}</p>
-                                                )}
+                                            <p className="text-sm text-blue-600 font-medium">Price Range</p>
+                                            <div className="flex items-baseline gap-2 flex-wrap">
+                                                {(() => {
+                                                    const priceRange = getPriceRange(product);
+                                                    
+                                                    if (priceRange && priceRange.hasRange) {
+                                                        // Show price range for products with size variations
+                                                        return (
+                                                            <>
+                                                                <p className="text-2xl font-bold text-blue-900">
+                                                                    ৳{priceRange.min.toFixed(2)} - ৳{priceRange.max.toFixed(2)}
+                                                                </p>
+                                                                {product.discount && product.discount > 0 && (
+                                                                    <span className="text-xs bg-red-500 text-white px-2 py-1 rounded">
+                                                                        -{product.discount}%
+                                                                    </span>
+                                                                )}
+                                                            </>
+                                                        );
+                                                    } else if (priceRange && !priceRange.hasRange) {
+                                                        // Single price from sizes
+                                                        return product.discount && product.discount > 0 ? (
+                                                            <>
+                                                                <p className="text-3xl font-bold text-blue-900">
+                                                                    ৳{priceRange.min.toFixed(2)}
+                                                                </p>
+                                                                <div className="flex flex-col">
+                                                                    <span className="text-sm line-through text-gray-500">
+                                                                        ৳{priceRange.originalMin}
+                                                                    </span>
+                                                                    <span className="text-xs bg-red-500 text-white px-2 py-1 rounded">
+                                                                        -{product.discount}%
+                                                                    </span>
+                                                                </div>
+                                                            </>
+                                                        ) : (
+                                                            <p className="text-3xl font-bold text-blue-900">৳{priceRange.min.toFixed(2)}</p>
+                                                        );
+                                                    } else {
+                                                        // Fallback to product.price if no size variations
+                                                        return product.discount && product.discount > 0 ? (
+                                                            <>
+                                                                <p className="text-3xl font-bold text-blue-900">
+                                                                    ৳{(product.price * (1 - product.discount / 100)).toFixed(2)}
+                                                                </p>
+                                                                <div className="flex flex-col">
+                                                                    <span className="text-sm line-through text-gray-500">
+                                                                        ৳{product.price}
+                                                                    </span>
+                                                                    <span className="text-xs bg-red-500 text-white px-2 py-1 rounded">
+                                                                        -{product.discount}%
+                                                                    </span>
+                                                                </div>
+                                                            </>
+                                                        ) : (
+                                                            <p className="text-3xl font-bold text-blue-900">৳{product.price}</p>
+                                                        );
+                                                    }
+                                                })()}
                                             </div>
                                         </div>
                                         <div className="p-4 bg-gradient-to-r from-green-50 to-green-100 rounded-xl">
@@ -178,20 +247,54 @@ export default function ProductViewModal({ product, open, onClose }) {
                                             }`}>
                                                 {product.stock}
                                             </p>
-                                            {product.sizes && Array.isArray(product.sizes) && product.sizes.length > 0 && (
-                                                <div className="mt-2">
-                                                    <p className="text-xs text-green-600 font-medium mb-1">Available Sizes:</p>
-                                                    <div className="flex flex-wrap gap-1">
-                                                        {product.sizes.map((size, index) => (
-                                                            <span key={index} className="px-2 py-1 bg-white text-green-700 text-xs rounded border border-green-200">
-                                                                {typeof size === 'string' ? size : size.name || size.toString()}
-                                                            </span>
-                                                        ))}
-                                                    </div>
-                                                </div>
-                                            )}
                                         </div>
                                     </motion.div>
+
+                                    {/* Available Sizes with Prices */}
+                                    {product.sizes && Array.isArray(product.sizes) && product.sizes.length > 0 && (
+                                        <motion.div
+                                            initial={{ opacity: 0, y: 20 }}
+                                            animate={{ opacity: 1, y: 0 }}
+                                            transition={{ delay: 0.55 }}
+                                            className="p-4 bg-gradient-to-r from-purple-50 to-purple-100 rounded-xl"
+                                        >
+                                            <p className="text-sm text-purple-600 font-medium mb-3">Available Sizes & Prices</p>
+                                            <div className="grid grid-cols-2 gap-2">
+                                                {product.sizes
+                                                    .sort((a, b) => (a.price || 0) - (b.price || 0))
+                                                    .map((size, index) => {
+                                                        const sizeName = typeof size === 'string' ? size : size.name || size.toString();
+                                                        const sizePrice = size.price || 0;
+                                                        const discountedPrice = product.discount 
+                                                            ? sizePrice * (1 - product.discount / 100)
+                                                            : sizePrice;
+                                                        
+                                                        return (
+                                                            <div key={index} className="flex items-center justify-between bg-white p-2 rounded border border-purple-200">
+                                                                <span className="text-sm font-medium text-purple-900">{sizeName}</span>
+                                                                <div className="flex flex-col items-end">
+                                                                    {product.discount && product.discount > 0 ? (
+                                                                        <>
+                                                                            <span className="text-sm font-bold text-green-600">
+                                                                                ৳{discountedPrice.toFixed(2)}
+                                                                            </span>
+                                                                            <span className="text-xs line-through text-gray-400">
+                                                                                ৳{sizePrice}
+                                                                            </span>
+                                                                        </>
+                                                                    ) : (
+                                                                        <span className="text-sm font-bold text-purple-700">
+                                                                            ৳{sizePrice}
+                                                                        </span>
+                                                                    )}
+                                                                </div>
+                                                            </div>
+                                                        );
+                                                    })
+                                                }
+                                            </div>
+                                        </motion.div>
+                                    )}
 
                                     <motion.div 
                                         initial={{ opacity: 0, y: 20 }}

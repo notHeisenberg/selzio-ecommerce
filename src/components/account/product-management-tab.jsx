@@ -14,6 +14,9 @@ import Image from 'next/image';
 import ProductViewModal from '../product/ProductViewModal';
 import ProductFormModal from '../product/ProductFormModal';
 import ProductDeleteModal from '../product/ProductDeleteModal';
+import { useAppData } from '@/providers/optimized-data-provider';
+import { invalidateProductsCache } from '@/data/products';
+import { invalidateCombosCache } from '@/data/combos';
 
 export default function ProductManagementTab() {
     const [products, setProducts] = useState([]);
@@ -45,6 +48,9 @@ export default function ProductManagementTab() {
     const [deleteModalOpen, setDeleteModalOpen] = useState(false);
     const [selectedProduct, setSelectedProduct] = useState(null);
     const [formMode, setFormMode] = useState('add');
+    
+    // Get refresh function from data provider to invalidate cache
+    const { refresh: refreshGlobalCache } = useAppData();
     
     // Check if user is admin
     const isAdmin = user?.role === 'admin';
@@ -202,8 +208,24 @@ export default function ProductManagementTab() {
             // Clear selected product to prevent stale data
             setSelectedProduct(null);
             
-            // Refresh the products list with fresh data
-            await fetchData();
+            // IMPORTANT: Refresh data FIRST, then dispatch events
+            // This ensures all data providers have fresh data before notifying components
+            await Promise.all([
+                refreshGlobalCache(),  // Invalidate cached data across the app
+                fetchData()            // Refresh local products list
+            ]);
+            
+            // Now invalidate other caches and dispatch events
+            // This happens AFTER data provider refresh completes
+            invalidateProductsCache();
+            invalidateCombosCache();
+            
+            // Show success toast
+            toast({
+                title: 'Success',
+                description: `Product ${formMode === 'edit' ? 'updated' : 'created'} successfully. All data has been refreshed.`,
+                variant: 'success'
+            });
             
         } catch (error) {
             console.error('Product save error:', error);
@@ -233,8 +255,24 @@ export default function ProductManagementTab() {
                 throw new Error(errorData.error || 'Failed to delete product');
             }
 
-            // Refresh the products list
-            await fetchData();
+            // IMPORTANT: Refresh data FIRST, then dispatch events
+            // This ensures all data providers have fresh data before notifying components
+            await Promise.all([
+                refreshGlobalCache(),  // Invalidate cached data across the app
+                fetchData()            // Refresh local products list
+            ]);
+            
+            // Now invalidate other caches and dispatch events
+            // This happens AFTER data provider refresh completes
+            invalidateProductsCache();
+            invalidateCombosCache();
+            
+            // Show success toast
+            toast({
+                title: 'Success',
+                description: 'Product deleted successfully. All data has been refreshed.',
+                variant: 'success'
+            });
             
         } catch (error) {
             console.error('Product deletion error:', error);
@@ -258,6 +296,35 @@ export default function ProductManagementTab() {
         lowStock: products?.filter(p => p.status === 'low_stock').length,
         productRevenue: products.reduce((sum, p) => sum + p.revenue, 0),
         productOrders: products.reduce((sum, p) => sum + p.orders, 0)
+    };
+
+    // Utility function to calculate price range from sizes
+    const getPriceRange = (product) => {
+        if (!product.sizes || !Array.isArray(product.sizes) || product.sizes.length === 0) {
+            return null;
+        }
+
+        const prices = product.sizes
+            .filter(size => size.price && size.price > 0)
+            .map(size => size.price);
+
+        if (prices.length === 0) return null;
+
+        const minPrice = Math.min(...prices);
+        const maxPrice = Math.max(...prices);
+
+        // Apply discount if available
+        const discount = product.discount || 0;
+        const minDiscountedPrice = minPrice * (1 - discount / 100);
+        const maxDiscountedPrice = maxPrice * (1 - discount / 100);
+
+        return {
+            min: minDiscountedPrice,
+            max: maxDiscountedPrice,
+            originalMin: minPrice,
+            originalMax: maxPrice,
+            hasRange: minPrice !== maxPrice
+        };
     };
 
     const getStatusBadge = (status) => {
@@ -452,23 +519,63 @@ export default function ProductManagementTab() {
                                                         {/* Price & Stock - Responsive Layout */}
                                                         <div className="flex flex-wrap items-center gap-2 sm:gap-4 mt-2 text-xs sm:text-sm">
                                                             <div className="flex items-center gap-2">
-                                                                {product.discount && product.discount > 0 ? (
-                                                                    <>
-                                                                        <span className="font-medium text-green-600 whitespace-nowrap">
-                                                                            ৳{(product.price * (1 - product.discount / 100)).toFixed(2)}
-                                                                        </span>
-                                                                        <div className="flex items-center gap-1">
-                                                                            <span className="text-xs line-through text-gray-400 whitespace-nowrap">
-                                                                                ৳{product.price}
-                                                                            </span>
-                                                                            <span className="text-xs bg-red-500 text-white px-1 py-0.5 rounded whitespace-nowrap">
-                                                                                -{product.discount}%
-                                                                            </span>
-                                                                        </div>
-                                                                    </>
-                                                                ) : (
-                                                                    <span className="font-medium whitespace-nowrap">৳{product.price}</span>
-                                                                )}
+                                                                {(() => {
+                                                                    const priceRange = getPriceRange(product);
+                                                                    
+                                                                    if (priceRange && priceRange.hasRange) {
+                                                                        // Show price range for products with size variations
+                                                                        return (
+                                                                            <>
+                                                                                <span className="font-medium text-green-600 whitespace-nowrap">
+                                                                                    ৳{priceRange.min.toFixed(2)} - ৳{priceRange.max.toFixed(2)}
+                                                                                </span>
+                                                                                {product.discount && product.discount > 0 && (
+                                                                                    <span className="text-xs bg-red-500 text-white px-1 py-0.5 rounded whitespace-nowrap">
+                                                                                        -{product.discount}%
+                                                                                    </span>
+                                                                                )}
+                                                                            </>
+                                                                        );
+                                                                    } else if (priceRange && !priceRange.hasRange) {
+                                                                        // Single price from sizes
+                                                                        return product.discount && product.discount > 0 ? (
+                                                                            <>
+                                                                                <span className="font-medium text-green-600 whitespace-nowrap">
+                                                                                    ৳{priceRange.min.toFixed(2)}
+                                                                                </span>
+                                                                                <div className="flex items-center gap-1">
+                                                                                    <span className="text-xs line-through text-gray-400 whitespace-nowrap">
+                                                                                        ৳{priceRange.originalMin}
+                                                                                    </span>
+                                                                                    <span className="text-xs bg-red-500 text-white px-1 py-0.5 rounded whitespace-nowrap">
+                                                                                        -{product.discount}%
+                                                                                    </span>
+                                                                                </div>
+                                                                            </>
+                                                                        ) : (
+                                                                            <span className="font-medium whitespace-nowrap">৳{priceRange.min.toFixed(2)}</span>
+                                                                        );
+                                                                    } else {
+                                                                        // Fallback to product.price if no size variations
+                                                                        return product.discount && product.discount > 0 ? (
+                                                                            <>
+                                                                                <span className="font-medium text-green-600 whitespace-nowrap">
+                                                                                    ৳{(product.price * (1 - product.discount / 100)).toFixed(2)}
+                                                                                </span>
+                                                                                <div className="flex items-center gap-1">
+                                                                                    <span className="text-xs line-through text-gray-400 whitespace-nowrap">
+                                                                                        ৳{product.price}
+                                                                                    </span>
+                                                                                    <span className="text-xs bg-red-500 text-white px-1 py-0.5 rounded whitespace-nowrap">
+                                                                                        -{product.discount}%
+                                                                                    </span>
+                                                                                </div>
+                                                                            </>
+                                                                        ) : (
+                                                                            <span className="font-medium whitespace-nowrap">৳{product.price}</span>
+                                                                        );
+                                                                    }
+                                                                })()}
                                                             </div>
                                                             <span className={`whitespace-nowrap ${
                                                                 product.stock === 0 ? 'text-red-600' :
@@ -478,7 +585,7 @@ export default function ProductManagementTab() {
                                                                 Stock: {product.stock}
                                                                 {product.sizes && Array.isArray(product.sizes) && product.sizes.length > 0 && (
                                                                     <span className="text-xs text-muted-foreground ml-1">
-                                                                        ({product.sizes.length})
+                                                                        ({product.sizes.length} sizes)
                                                                     </span>
                                                                 )}
                                                             </span>
