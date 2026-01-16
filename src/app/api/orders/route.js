@@ -10,43 +10,43 @@ export async function GET(req) {
   try {
     // Try to get session from NextAuth first
     const session = await getServerSession(authOptions);
-    
+
     // Try JWT token from header as backup authentication method
     const jwtUser = getAuthUser(req);
-    
+
     // No authentication at all
     if (!session && !jwtUser) {
       console.error('Unauthorized access to orders API - no session or JWT token');
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
-    
+
     // Choose the authenticated user (prefer session, fallback to JWT)
     const user = session?.user || jwtUser;
-    
+
     if (!user) {
       console.error('Unauthorized access to orders API - authenticated but no user data');
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
-    
+
 
     // Fetch full user data from database to check admin role properly
     let isAdmin = false;
     let fullUser = null;
-    
+
     if (user) {
       try {
         const usersCollection = await getUsersCollection();
         const userId = user.id || user._id;
-        
+
         if (userId) {
           // Convert to ObjectId if it's a valid string
           let userObjectId = userId;
           if (typeof userId === 'string' && ObjectId.isValid(userId)) {
             userObjectId = new ObjectId(userId);
           }
-          
+
           fullUser = await usersCollection.findOne({ _id: userObjectId });
-          
+
           if (fullUser) {
             // Check admin role from database
             isAdmin = fullUser.role === 'admin';
@@ -58,7 +58,7 @@ export async function GET(req) {
         isAdmin = user.role === 'admin' || user.isAdmin === true || user.admin === true;
       }
     }
-    
+
     // Get URL parameters
     const url = new URL(req.url);
     const page = parseInt(url.searchParams.get('page') || '1');
@@ -69,48 +69,48 @@ export async function GET(req) {
     const sortBy = url.searchParams.get('sortBy') || 'createdAt';
     const sortOrder = url.searchParams.get('sortOrder') || 'desc';
     const includeUsers = url.searchParams.get('includeUsers') === 'true';
-    
+
     console.log('🔍 Orders API - Admin status:', { isAdmin, includeUsers });
-    
+
     // Prepare query
     let query = {};
-    
+
     // If not admin, only show user's own orders
     if (!isAdmin) {
       // Ensure we use the correct user ID field
       let userIdField = user.id || user._id;
-      
+
       // Make sure it's a string for comparison
       if (userIdField instanceof ObjectId) {
         userIdField = userIdField.toString();
       }
-      
+
       query.user = userIdField;
     } else if (userId && userId !== 'all') {
       // Admin filtering by user
       let userIdToFilter = userId;
-      
+
       // Convert to ObjectId if it's a valid format
       if (ObjectId.isValid(userId)) {
         userIdToFilter = new ObjectId(userId);
       }
-      
+
       query.user = userIdToFilter;
     }
-    
+
     // Filter by status if specified
     if (status && status !== 'all') {
       query.status = status;
     }
-    
+
     // Enhanced search functionality
     if (search && search.trim() && isAdmin) {
       const searchTerm = search.trim();
-      
+
       // Step 1: First search the users collection for matching users
       const usersCollection = await getUsersCollection();
-      
-      
+
+
       // Look for users matching the search term (name, email, phone)
       const userQuery = {
         $or: [
@@ -119,21 +119,21 @@ export async function GET(req) {
           { phone: { $regex: searchTerm, $options: 'i' } }
         ]
       };
-      
-      
+
+
       const matchingUsers = await usersCollection.find(userQuery).toArray();
-      
-      
-      
+
+
+
       // Step 2: Check if we need to search by order ID or user info
       if (matchingUsers.length > 0 || searchTerm.length >= 1) {
         const searchConditions = [];
-        
+
         // Add orders from matching users
         if (matchingUsers.length > 0) {
           // Get user IDs in both string and ObjectId format to ensure we catch all references
           let userIds = [];
-          
+
           matchingUsers.forEach(u => {
             // Add ObjectId version
             if (u._id instanceof ObjectId) {
@@ -141,78 +141,82 @@ export async function GET(req) {
             } else if (ObjectId.isValid(u._id.toString())) {
               userIds.push(new ObjectId(u._id.toString()));
             }
-            
+
             // Add string version
             userIds.push(u._id.toString());
           });
-          
-          
-          
+
+
+
           // Create a user query that handles both ObjectId and string formats
           searchConditions.push({ user: { $in: userIds } });
         }
-        
+
         // Search by full ObjectId if the search term is a valid ObjectId
         if (ObjectId.isValid(searchTerm)) {
           searchConditions.push({ _id: new ObjectId(searchTerm) });
         }
-        
+
         // Search by order ID containing the search term
         // This is especially useful for searching by the last digits
         if (searchTerm.length >= 1) {
           // Get all orders first
           const ordersCollection = await getOrdersCollection();
           const allOrders = await ordersCollection.find({}, { projection: { _id: 1 } }).toArray();
-          
+
+          // Convert search term to lowercase for case-insensitive comparison
+          // MongoDB ObjectIds are lowercase hex strings, but UI shows them as uppercase
+          const searchLower = searchTerm.toLowerCase();
+
           // Filter orders where ID contains the search term
           const matchingOrderIds = allOrders
             .filter(order => {
-              const orderIdStr = order._id.toString();
-              return orderIdStr.endsWith(searchTerm) || orderIdStr.includes(searchTerm);
+              const orderIdStr = order._id.toString().toLowerCase();
+              return orderIdStr.endsWith(searchLower) || orderIdStr.includes(searchLower);
             })
             .map(order => order._id);
-          
+
           if (matchingOrderIds.length > 0) {
             searchConditions.push({ _id: { $in: matchingOrderIds } });
           }
         }
-        
+
         // Search by order number if present
         searchConditions.push({ orderNumber: { $regex: searchTerm, $options: 'i' } });
-        
+
         // Search by status
         const statuses = ['pending', 'processing', 'delivered', 'cancelled'];
         const matchingStatuses = statuses.filter(s => s.toLowerCase().includes(searchTerm.toLowerCase()));
         if (matchingStatuses.length > 0) {
           searchConditions.push({ status: { $in: matchingStatuses } });
         }
-        
+
         // Add all search conditions to the query
         if (searchConditions.length > 0) {
           query.$or = searchConditions;
-          
+
         }
       }
     }
-    
+
     // Log the query for debugging
-    
-    
+
+
     // Pagination
     const skip = (page - 1) * limit;
-    
+
     // Sorting
     const sort = {};
     sort[sortBy] = sortOrder === 'asc' ? 1 : -1;
 
     const ordersCollection = await getOrdersCollection();
-    
+
     // For debugging, log the query
-    
-    
+
+
     // Get total count for pagination
     const total = await ordersCollection.countDocuments(query);
-    
+
     // Get orders with pagination and sorting
     let orders = await ordersCollection
       .find(query)
@@ -220,19 +224,19 @@ export async function GET(req) {
       .skip(skip)
       .limit(limit)
       .toArray();
-    
-    
-    
+
+
+
     // Check for orders with missing user field and log them
     const ordersWithMissingUser = orders.filter(order => !order.user).length;
     if (ordersWithMissingUser > 0) {
-      
+
     }
-    
+
     // If admin, populate user details for each order
     if (isAdmin && orders.length > 0) {
       const usersCollection = await getUsersCollection();
-      
+
       // Get unique user IDs from orders
       const uniqueUserIds = [...new Set(
         orders
@@ -245,7 +249,7 @@ export async function GET(req) {
             return order.user;
           })
       )];
-      
+
       // Fetch user details if there are user IDs
       if (uniqueUserIds.length > 0) {
         // Prepare query to find users
@@ -257,25 +261,25 @@ export async function GET(req) {
             return { _id: id };
           })
         };
-        
+
         // Get user data
         const users = await usersCollection
           .find(userQuery)
           .project({ _id: 1, name: 1, email: 1, role: 1, phone: 1 })
           .toArray();
-        
+
         // Create map for quick user lookup
         const userMap = new Map();
         users.forEach(user => {
           userMap.set(user._id.toString(), user);
         });
-        
+
         // Attach user data to each order
         orders = orders.map(order => {
           if (order.user) {
-            const userId = typeof order.user === 'object' ? 
+            const userId = typeof order.user === 'object' ?
               order.user.toString() : order.user;
-            
+
             const userData = userMap.get(userId);
             if (userData) {
               return {
@@ -292,14 +296,14 @@ export async function GET(req) {
         });
       }
     }
-    
+
     // For non-admin users, we'll enrich with product data if products array is in the order
     let usersWithOrders = [];
-    
+
     // For admin users, also get the list of users with orders
     if (isAdmin && includeUsers) {
       const usersCollection = await getUsersCollection();
-      
+
       // Get unique user IDs from all orders
       const uniqueUserIds = await ordersCollection
         .aggregate([
@@ -307,9 +311,9 @@ export async function GET(req) {
           { $match: { _id: { $ne: null } } }
         ])
         .toArray();
-        
+
       const userIdList = uniqueUserIds.map(item => item._id);
-      
+
       // Get user details
       if (userIdList.length > 0) {
         // Create a query to find users
@@ -321,7 +325,7 @@ export async function GET(req) {
             return { _id: id };
           })
         };
-        
+
         usersWithOrders = await usersCollection
           .find(userQuery)
           .project({ _id: 1, name: 1, email: 1, role: 1, phone: 1 })
@@ -339,12 +343,12 @@ export async function GET(req) {
         totalPages: Math.ceil(total / limit)
       }
     };
-    
+
     // Include users list if requested (for admin)
     if (isAdmin && includeUsers) {
       response.users = usersWithOrders;
     }
-    
+
     return NextResponse.json(response);
   } catch (error) {
     console.error('Error fetching orders:', error);
@@ -355,48 +359,48 @@ export async function GET(req) {
 export async function POST(req) {
   try {
     const orderData = await req.json();
-    
+
     // Check if this is a guest order
     const isGuestOrder = orderData.isGuestOrder === true;
-    
+
     // Only require authentication for non-guest orders
     if (!isGuestOrder) {
       // Try to get session from NextAuth first
       const session = await getServerSession(authOptions);
-      
+
       // Try JWT token from header as backup authentication method
       const jwtUser = getAuthUser(req);
-      
+
       // No authentication at all
       if (!session && !jwtUser) {
         console.error('Unauthorized access to orders POST API - no session or JWT token');
         return NextResponse.json({ error: 'Authentication required to create an order' }, { status: 401 });
       }
-      
+
       // Choose the authenticated user (prefer session, fallback to JWT)
       const user = session?.user || jwtUser;
-      
+
       if (!user) {
         console.error('Unauthorized access to orders POST API - authenticated but no user data');
         return NextResponse.json({ error: 'Valid user information required' }, { status: 401 });
       }
 
       // Add debugging for auth
-      
-      
+
+
       // Get user ID - store it consistently as a string to match existing orders
       const userId = user.id.toString();
-      
+
       // Log the user ID we're using for the order
-      
-      
+
+
       // Add user ID to order data for authenticated users
       orderData.user = userId;
     } else {
-      
+
       // For guest orders, we don't set a user ID
     }
-    
+
     const ordersCollection = await getOrdersCollection();
     const productsCollection = await getProductsCollection();
 
@@ -410,16 +414,16 @@ export async function POST(req) {
     // Check stock availability before creating order
     if (order.items && Array.isArray(order.items)) {
       console.log('📦 Checking stock for order items:', order.items.length);
-      
+
       const stockCheck = await checkProductStock(order.items);
       if (!stockCheck.success) {
-        return NextResponse.json({ 
-          error: 'Insufficient stock', 
+        return NextResponse.json({
+          error: 'Insufficient stock',
           details: stockCheck.issues,
-          message: stockCheck.message 
+          message: stockCheck.message
         }, { status: 400 });
       }
-      
+
       // Update product statistics and stock
       try {
         await updateProductStats(order.items, 'add');
@@ -446,53 +450,53 @@ export async function POST(req) {
 // Handle saving admin notes
 export async function PUT(req) {
   try {
-    
-    
+
+
     // Try to get session from NextAuth first
     const session = await getServerSession(authOptions);
-    
-    
+
+
     // Try JWT token from header as backup authentication method
     const jwtUser = getAuthUser(req);
-    
-    
+
+
     // No authentication at all
     if (!session && !jwtUser) {
       console.error('🔴 Unauthorized access to orders PUT API - no session or JWT token');
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
-    
+
     // Choose the authenticated user (prefer session, fallback to JWT)
     const user = session?.user || jwtUser;
-    
+
     if (!user) {
       console.error('🔴 Unauthorized access to orders PUT API - authenticated but no user data');
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
-    
+
     // Fetch full user data from database to check admin role properly
     let isAdmin = false;
-    
+
     try {
       const usersCollection = await getUsersCollection();
       const userId = user.id || user._id;
-      
+
       if (userId) {
         // Convert to ObjectId if it's a valid string
         let userObjectId = userId;
         if (typeof userId === 'string' && ObjectId.isValid(userId)) {
           userObjectId = new ObjectId(userId);
         }
-        
+
         const fullUser = await usersCollection.findOne({ _id: userObjectId });
-        
+
         if (fullUser) {
           // Check admin role from database
           isAdmin = fullUser.role === 'admin';
-          console.log('🔍 Full user data for admin check:', { 
-            userId: fullUser._id.toString(), 
-            role: fullUser.role, 
-            isAdmin 
+          console.log('🔍 Full user data for admin check:', {
+            userId: fullUser._id.toString(),
+            role: fullUser.role,
+            isAdmin
           });
         } else {
           console.error('🔴 User not found in database:', userId);
@@ -503,89 +507,89 @@ export async function PUT(req) {
       // Fallback to token-based check
       isAdmin = user.role === 'admin' || user.isAdmin === true || user.admin === true;
     }
-    
+
     if (!isAdmin) {
       console.error('🔴 User is not admin', { userId: user.id, role: user.role });
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
-    
+
     // Safely parse request body
     let data;
     try {
       const bodyText = await req.text();
-      
-      
+
+
       if (bodyText.trim()) {
         data = JSON.parse(bodyText);
-        
+
       } else {
         console.error('🔴 Empty request body');
         return NextResponse.json({ error: 'Empty request body' }, { status: 400 });
       }
     } catch (parseError) {
       console.error('🔴 Error parsing request body:', parseError);
-      return NextResponse.json({ 
-        error: 'Invalid request body', 
-        details: parseError.message 
+      return NextResponse.json({
+        error: 'Invalid request body',
+        details: parseError.message
       }, { status: 400 });
     }
-    
+
     const { orderId, adminNotes, status } = data;
-    
+
     if (!orderId) {
       console.error('🔴 Missing orderId in request');
       return NextResponse.json({ error: 'Order ID is required' }, { status: 400 });
     }
-    
+
     // Verify ObjectId is valid
     if (!ObjectId.isValid(orderId)) {
       console.error('🔴 Invalid ObjectId:', orderId);
       return NextResponse.json({ error: 'Invalid order ID format' }, { status: 400 });
     }
-    
+
     const ordersCollection = await getOrdersCollection();
-    
+
     // Prepare update object
     const updateFields = {
       updatedAt: new Date()
     };
-    
+
     // Add admin notes if provided
     if (adminNotes !== undefined) {
       updateFields.adminNotes = adminNotes;
     }
-    
+
     // Add status if provided
     if (status !== undefined) {
-      
+
       updateFields.status = status;
     }
-    
-    
-    
+
+
+
     // Update the order
     const result = await ordersCollection.findOneAndUpdate(
       { _id: new ObjectId(orderId) },
       { $set: updateFields },
       { returnDocument: 'after' }
     );
-    
+
     if (!result.value) {
       console.error('🔴 Order not found with ID:', orderId);
       return NextResponse.json({ error: 'Order not found' }, { status: 404 });
     }
-    
-    
-    return NextResponse.json({ 
+
+
+    return NextResponse.json({
       success: true,
       order: result.value,
       message: status ? 'Order status updated successfully' : 'Order updated successfully'
     });
   } catch (error) {
     console.error('🔴 Unhandled error in PUT handler:', error);
-    return NextResponse.json({ 
-      error: 'Internal Server Error', 
-      message: error.message 
+    return NextResponse.json({
+      error: 'Internal Server Error',
+      message: error.message
     }, { status: 500 });
   }
 }
@@ -593,66 +597,66 @@ export async function PUT(req) {
 // Handle deleting orders (admin only)
 export async function DELETE(req) {
   try {
-    
-    
+
+
     // Get the order ID from the URL parameters
     const url = new URL(req.url);
     const orderId = url.searchParams.get('orderId');
-    
+
     if (!orderId) {
       console.error('🔴 Missing orderId in request');
       return NextResponse.json({ error: 'Order ID is required' }, { status: 400 });
     }
-    
+
     // Verify ObjectId is valid
     if (!ObjectId.isValid(orderId)) {
       console.error('🔴 Invalid ObjectId:', orderId);
       return NextResponse.json({ error: 'Invalid order ID format' }, { status: 400 });
     }
-    
+
     // Try to get session from NextAuth first
     const session = await getServerSession(authOptions);
-    
+
     // Try JWT token from header as backup authentication method
     const jwtUser = getAuthUser(req);
-    
+
     // No authentication at all
     if (!session && !jwtUser) {
       console.error('🔴 Unauthorized access to orders DELETE API - no session or JWT token');
       return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
     }
-    
+
     // Choose the authenticated user (prefer session, fallback to JWT)
     const user = session?.user || jwtUser;
-    
+
     if (!user) {
       console.error('🔴 Unauthorized access to orders DELETE API - authenticated but no user data');
       return NextResponse.json({ error: 'User information required' }, { status: 401 });
     }
-    
+
     // Fetch full user data from database to check admin role properly
     let isAdmin = false;
-    
+
     try {
       const usersCollection = await getUsersCollection();
       const userId = user.id || user._id;
-      
+
       if (userId) {
         // Convert to ObjectId if it's a valid string
         let userObjectId = userId;
         if (typeof userId === 'string' && ObjectId.isValid(userId)) {
           userObjectId = new ObjectId(userId);
         }
-        
+
         const fullUser = await usersCollection.findOne({ _id: userObjectId });
-        
+
         if (fullUser) {
           // Check admin role from database
           isAdmin = fullUser.role === 'admin';
-          console.log('🔍 Full user data for admin check (DELETE):', { 
-            userId: fullUser._id.toString(), 
-            role: fullUser.role, 
-            isAdmin 
+          console.log('🔍 Full user data for admin check (DELETE):', {
+            userId: fullUser._id.toString(),
+            role: fullUser.role,
+            isAdmin
           });
         } else {
           console.error('🔴 User not found in database:', userId);
@@ -663,43 +667,43 @@ export async function DELETE(req) {
       // Fallback to token-based check
       isAdmin = user.role === 'admin' || user.isAdmin === true || user.admin === true;
     }
-    
+
     if (!isAdmin) {
       console.error('🔴 Non-admin user attempting to delete order');
       return NextResponse.json({ error: 'Only administrators can delete orders' }, { status: 403 });
     }
-    
+
     const ordersCollection = await getOrdersCollection();
-    
+
     // First find the order to verify it exists
     const existingOrder = await ordersCollection.findOne({ _id: new ObjectId(orderId) });
-    
+
     if (!existingOrder) {
       console.error('🔴 Order not found with ID:', orderId);
       return NextResponse.json({ error: 'Order not found' }, { status: 404 });
     }
-    
+
     // Delete the order
     const result = await ordersCollection.deleteOne({ _id: new ObjectId(orderId) });
-    
+
     if (result.deletedCount === 1) {
-      return NextResponse.json({ 
-        success: true, 
+      return NextResponse.json({
+        success: true,
         message: 'Order deleted successfully',
         orderId
       });
     } else {
       console.error('🔴 Failed to delete order:', orderId);
-      return NextResponse.json({ 
-        error: 'Failed to delete order', 
-        orderId 
+      return NextResponse.json({
+        error: 'Failed to delete order',
+        orderId
       }, { status: 500 });
     }
   } catch (error) {
     console.error('🔴 Unhandled error in DELETE handler:', error);
-    return NextResponse.json({ 
-      error: 'Internal Server Error', 
-      message: error.message 
+    return NextResponse.json({
+      error: 'Internal Server Error',
+      message: error.message
     }, { status: 500 });
   }
 } 

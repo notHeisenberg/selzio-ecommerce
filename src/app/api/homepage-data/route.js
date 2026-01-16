@@ -25,7 +25,7 @@ export async function GET(req) {
       productsCollection
         .find(
           { topSelling: true },
-          { 
+          {
             projection: {
               productCode: 1,
               name: 1,
@@ -89,7 +89,7 @@ export async function GET(req) {
       // Using index: rating_1_createdAt_-1
       reviewsCollection
         .find(
-          { 
+          {
             rating: { $gte: 4 }, // Only 4 and 5 star reviews
             text: { $exists: true, $ne: "" } // Must have text
           },
@@ -133,13 +133,24 @@ export async function GET(req) {
     });
 
     const featuredCategories = Array.from(subcategoryMap.values())
-      .slice(0, 2) // Only return 2 for homepage
+      .sort((a, b) => {
+        // Prioritize "Sweat shirts" collection
+        const isASweat = a.subcategory === 'Sweat shirts' || a.subcategory === 'Sweat Shirts' || a.subcategory === 'Sweatshirts';
+        const isBSweat = b.subcategory === 'Sweat shirts' || b.subcategory === 'Sweat Shirts' || b.subcategory === 'Sweatshirts';
+
+        if (isASweat && !isBSweat) return -1;
+        if (!isASweat && isBSweat) return 1;
+
+        // For non-priority items, sort by product count (descending)
+        return b.count - a.count;
+      })
+      .slice(0, 3) // Return 3 for homepage
       .map((item, index) => ({
         id: index + 1,
         name: item.subcategory,
         category: item.category,
         count: item.count,
-        discount: Math.min(Math.round(item.maxDiscount / 5) * 5, 50)
+        discount: Math.round(item.maxDiscount || 0)
       }));
 
     // Format testimonials
@@ -166,7 +177,7 @@ export async function GET(req) {
 
     // Aggressive caching headers
     response.headers.set(
-      'Cache-Control', 
+      'Cache-Control',
       'public, max-age=60, stale-while-revalidate=120' // 1 min cache, 2 min stale
     );
     response.headers.set('CDN-Cache-Control', 'max-age=60');

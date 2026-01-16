@@ -4,7 +4,7 @@ import { useState, useRef, useEffect } from 'react';
 import Image from 'next/image';
 import { Badge } from '@/components/ui/badge';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ZoomIn, ZoomOut, X, Loader2 } from 'lucide-react';
+import { ZoomIn, ZoomOut, X } from 'lucide-react';
 
 export default function ProductImageGallery({ product }) {
   const [selectedImage, setSelectedImage] = useState(0);
@@ -12,41 +12,26 @@ export default function ProductImageGallery({ product }) {
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [isHovering, setIsHovering] = useState(false);
   const [zoomPosition, setZoomPosition] = useState({ x: 0, y: 0 });
-  const [imageLoading, setImageLoading] = useState(false);
-  const [loadedImages, setLoadedImages] = useState(new Set([0])); // Track loaded images
   const mainImageRef = useRef(null);
   const thumbnailsRef = useRef(null);
-  
+
   // Generate product images for gallery
   const productImages = Array.isArray(product.image) ? product.image : [product.image];
 
-  // Preload all images when component mounts
-  useEffect(() => {
-    productImages.forEach((src, index) => {
-      if (src && !loadedImages.has(index)) {
-        const img = new window.Image();
-        img.src = src;
-        img.onload = () => {
-          setLoadedImages(prev => new Set([...prev, index]));
-        };
-      }
-    });
-  }, [productImages]);
-
   const handleImageHover = (e) => {
     if (!isHovering && !isZoomed) return;
-    
+
     const { left, top, width, height } = mainImageRef.current.getBoundingClientRect();
     const x = (e.clientX - left) / width;
     const y = (e.clientY - top) / height;
-    
+
     setZoomPosition({ x, y });
   };
 
   const toggleZoom = () => {
     setIsFullscreen(!isFullscreen);
   };
-  
+
   const closeFullscreen = () => {
     setIsFullscreen(false);
   };
@@ -61,7 +46,7 @@ export default function ProductImageGallery({ product }) {
     window.addEventListener('keydown', handleEscKey);
     return () => window.removeEventListener('keydown', handleEscKey);
   }, [isFullscreen]);
-  
+
   const scrollToThumbnail = (index) => {
     if (thumbnailsRef.current) {
       const thumbnailElement = thumbnailsRef.current.children[index];
@@ -76,26 +61,16 @@ export default function ProductImageGallery({ product }) {
 
   const handleThumbnailClick = (index) => {
     if (index === selectedImage) return; // Don't reload if same image
-    
-    // Show loading only if image hasn't been preloaded yet
-    if (!loadedImages.has(index)) {
-      setImageLoading(true);
-    }
-    
+
     setSelectedImage(index);
     scrollToThumbnail(index);
-    
-    // Remove loading state after a short delay
-    setTimeout(() => {
-      setImageLoading(false);
-    }, 300);
   };
 
   return (
     <>
       <div className="lg:w-1/2 lg:sticky lg:top-20 lg:self-start max-h-screen md:mb-14 lg:mb-0" data-gallery-container>
         {/* Main Image */}
-        <motion.div 
+        <motion.div
           className="relative aspect-square w-full overflow-hidden rounded-lg bg-card shadow-sm cursor-zoom-in"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
@@ -108,39 +83,31 @@ export default function ProductImageGallery({ product }) {
           {productImages.length > 0 ? (
             <>
               <div className="w-full h-full overflow-hidden relative">
-                <AnimatePresence mode="wait">
-                  <motion.div
-                    key={selectedImage}
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    exit={{ opacity: 0 }}
-                    transition={{ duration: 0.2 }}
-                    className="w-full h-full relative"
+                {/* Render ALL images but only show the selected one - this preloads them */}
+                {productImages.map((image, index) => (
+                  <div
+                    key={index}
+                    className={`w-full h-full absolute inset-0 transition-opacity duration-300 ${selectedImage === index ? 'opacity-100 z-10' : 'opacity-0 z-0'
+                      }`}
                   >
                     <Image
-                      src={productImages[selectedImage] || ''}
-                      alt={product.name}
+                      src={image || ''}
+                      alt={`${product.name} - Image ${index + 1}`}
                       fill
                       sizes="(min-width: 1024px) 50vw, 100vw"
-                      priority={selectedImage === 0} // Priority for first image
-                      className={`object-cover transition-transform duration-200 ${
-                        isHovering ? 'scale-150' : 'scale-100'
-                      }`}
+                      priority={index < 2} // Priority for first 2 images
+                      className={`object-cover transition-transform duration-200 ${isHovering && selectedImage === index ? 'scale-150' : 'scale-100'
+                        }`}
                       style={
-                        isHovering
+                        isHovering && selectedImage === index
                           ? {
-                              transformOrigin: `${zoomPosition.x * 100}% ${zoomPosition.y * 100}%`,
-                            }
+                            transformOrigin: `${zoomPosition.x * 100}% ${zoomPosition.y * 100}%`,
+                          }
                           : {}
                       }
-                      unoptimized={productImages[selectedImage]?.includes('image1.jpg')}
-                      onLoad={() => {
-                        setImageLoading(false);
-                        setLoadedImages(prev => new Set([...prev, selectedImage]));
-                      }}
+                      unoptimized={image?.includes('image1.jpg')}
                       onError={(e) => {
-                        console.error("Image failed to load:", productImages[selectedImage]);
-                        setImageLoading(false);
+                        console.error("Image failed to load:", image);
                         // Create and replace with placeholder div
                         const parent = e.target.parentNode;
                         if (parent) {
@@ -148,30 +115,16 @@ export default function ProductImageGallery({ product }) {
                           const placeholderDiv = document.createElement('div');
                           placeholderDiv.className = "w-full h-full bg-secondary/30 flex items-center justify-center";
                           placeholderDiv.innerHTML = `<span class="text-muted-foreground">${product.name || 'Product'}</span>`;
-                          
+
                           // Replace the img with the div
                           parent.replaceChild(placeholderDiv, e.target);
                         }
                       }}
                     />
-                  </motion.div>
-                </AnimatePresence>
-
-                {/* Loading overlay */}
-                <AnimatePresence>
-                  {imageLoading && (
-                    <motion.div
-                      initial={{ opacity: 0 }}
-                      animate={{ opacity: 1 }}
-                      exit={{ opacity: 0 }}
-                      className="absolute inset-0 bg-background/80 backdrop-blur-sm flex items-center justify-center z-20"
-                    >
-                      <Loader2 className="h-8 w-8 animate-spin text-primary" />
-                    </motion.div>
-                  )}
-                </AnimatePresence>
+                  </div>
+                ))}
               </div>
-              <button 
+              <button
                 className="absolute bottom-4 right-4 bg-black/50 text-white rounded-full p-2 z-10 hover:bg-black/70 transition-colors"
                 onClick={(e) => {
                   e.stopPropagation();
@@ -180,7 +133,7 @@ export default function ProductImageGallery({ product }) {
               >
                 {isFullscreen ? <ZoomOut size={20} /> : <ZoomIn size={20} />}
               </button>
-              
+
               {/* Zoom hint overlay */}
               {!isHovering && !isFullscreen && (
                 <div className="absolute inset-0 bg-black/0 hover:bg-black/10 flex items-center justify-center transition-all duration-200 opacity-0 hover:opacity-100">
@@ -202,19 +155,18 @@ export default function ProductImageGallery({ product }) {
             </div>
           )}
         </motion.div>
-        
+
         {/* Thumbnail Gallery with horizontal scroll - Now with proper spacing */}
         <div className="mt-6 z-20 relative bg-background pb-2">
-          <div 
+          <div
             className="flex gap-3 overflow-x-auto py-2 px-1 scroll-smooth custom-scrollbar"
             ref={thumbnailsRef}
           >
             {productImages.map((image, index) => (
               <motion.button
                 key={index}
-                className={`relative flex-shrink-0 w-20 h-20 rounded-md overflow-hidden ${
-                  selectedImage === index ? 'ring-2 ring-primary shadow-md' : 'ring-1 ring-border hover:ring-gray-400'
-                } transition-all duration-200`}
+                className={`relative flex-shrink-0 w-20 h-20 rounded-md overflow-hidden ${selectedImage === index ? 'ring-2 ring-primary shadow-md' : 'ring-1 ring-border hover:ring-gray-400'
+                  } transition-all duration-200`}
                 onClick={() => handleThumbnailClick(index)}
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
@@ -238,8 +190,8 @@ export default function ProductImageGallery({ product }) {
                         // Create replacement div
                         const placeholderDiv = document.createElement('div');
                         placeholderDiv.className = "w-full h-full bg-secondary/30 flex items-center justify-center";
-                        placeholderDiv.innerHTML = `<span class="text-xs text-muted-foreground">Image ${index+1}</span>`;
-                        
+                        placeholderDiv.innerHTML = `<span class="text-xs text-muted-foreground">Image ${index + 1}</span>`;
+
                         // Replace the img with the div
                         parent.replaceChild(placeholderDiv, e.target);
                       }
@@ -247,7 +199,7 @@ export default function ProductImageGallery({ product }) {
                   />
                 ) : (
                   <div className="w-full h-full bg-secondary/30 flex items-center justify-center">
-                    <span className="text-xs text-muted-foreground">Image {index+1}</span>
+                    <span className="text-xs text-muted-foreground">Image {index + 1}</span>
                   </div>
                 )}
               </motion.button>
@@ -289,19 +241,19 @@ export default function ProductImageGallery({ product }) {
       {/* Fullscreen view */}
       <AnimatePresence>
         {isFullscreen && (
-          <motion.div 
+          <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             className="fixed inset-0 bg-black/90 z-50 flex items-center justify-center p-4"
           >
-            <button 
+            <button
               className="absolute top-4 right-4 bg-white/20 text-white rounded-full p-2 hover:bg-white/40 transition-colors z-50"
               onClick={closeFullscreen}
             >
               <X size={24} />
             </button>
-            
+
             <div className="relative w-full max-w-5xl h-[80vh]">
               <AnimatePresence mode="wait">
                 <motion.div
@@ -323,16 +275,15 @@ export default function ProductImageGallery({ product }) {
                 </motion.div>
               </AnimatePresence>
             </div>
-            
+
             {/* Fullscreen thumbnails */}
             <div className="absolute bottom-8 left-0 right-0">
               <div className="flex gap-2 justify-center overflow-x-auto pb-2 px-4 custom-scrollbar">
                 {productImages.map((image, index) => (
                   <button
                     key={index}
-                    className={`relative flex-shrink-0 w-16 h-16 rounded-md overflow-hidden transition-all ${
-                      selectedImage === index ? 'ring-2 ring-white scale-110' : 'ring-1 ring-white/30 opacity-70'
-                    }`}
+                    className={`relative flex-shrink-0 w-16 h-16 rounded-md overflow-hidden transition-all ${selectedImage === index ? 'ring-2 ring-white scale-110' : 'ring-1 ring-white/30 opacity-70'
+                      }`}
                     onClick={() => handleThumbnailClick(index)}
                   >
                     {image ? (
@@ -347,7 +298,7 @@ export default function ProductImageGallery({ product }) {
                       />
                     ) : (
                       <div className="w-full h-full bg-gray-800 flex items-center justify-center">
-                        <span className="text-xs text-white/70">Image {index+1}</span>
+                        <span className="text-xs text-white/70">Image {index + 1}</span>
                       </div>
                     )}
                   </button>

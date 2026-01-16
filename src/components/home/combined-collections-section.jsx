@@ -12,22 +12,22 @@ import { Badge } from '../ui/badge';
 export function CombinedCollectionsSection() {
   const { featuredCategories, combos, loading, initialized, error, refresh } = useAppData();
   const [imageErrors, setImageErrors] = useState({});
-  
+
   // Listen for cache invalidation events to refresh homepage data
   useEffect(() => {
     const handleProductsCacheInvalidated = () => {
       // Trigger refresh from data provider
       refresh();
     };
-    
+
     const handleCombosCacheInvalidated = () => {
       // Trigger refresh from data provider
       refresh();
     };
-    
+
     window.addEventListener('products-cache-invalidated', handleProductsCacheInvalidated);
     window.addEventListener('combos-cache-invalidated', handleCombosCacheInvalidated);
-    
+
     // Cleanup listeners
     return () => {
       window.removeEventListener('products-cache-invalidated', handleProductsCacheInvalidated);
@@ -97,7 +97,7 @@ export function CombinedCollectionsSection() {
           ) : (
             <>
               {/* Collections */}
-              {featuredCategories.slice(0, Math.min(2, featuredCategories.length)).map((category, index) => (
+              {featuredCategories.slice(0, Math.min(3, featuredCategories.length)).map((category, index) => (
                 <motion.div
                   key={`category-${category.id}`}
                   initial={{ opacity: 0, y: 20 }}
@@ -117,7 +117,7 @@ export function CombinedCollectionsSection() {
                               </Badge>
                             </div>
                           )}
-                          
+
                           {/* Card Media with stable dimensions */}
                           <div className="card__media h-[300px] w-full relative">
                             {imageErrors[category.id] ? (
@@ -131,7 +131,7 @@ export function CombinedCollectionsSection() {
                               <div className="h-full w-full overflow-hidden">
                                 {/* Static container with hover effect applied to child */}
                                 <div className="h-full w-full relative transform transition-transform duration-300 group-hover:scale-105">
-                                  <Image 
+                                  <Image
                                     src={category.image}
                                     alt={category.name}
                                     fill
@@ -145,7 +145,7 @@ export function CombinedCollectionsSection() {
                             )}
                           </div>
                         </div>
-                          
+
                         {/* Card Content */}
                         <div className="card__content mt-4 text-gray-800 dark:text-white">
                           <div className="card__information">
@@ -156,10 +156,10 @@ export function CombinedCollectionsSection() {
                                 </span>
                                 <span className="ml-2">
                                   <svg viewBox="0 0 14 10" fill="none" aria-hidden="true" focusable="false" className="w-4 h-4 transition-transform duration-300 group-hover:translate-x-1">
-                                    <path 
-                                      fillRule="evenodd" 
-                                      clipRule="evenodd" 
-                                      d="M8.537.808a.5.5 0 01.817-.162l4 4a.5.5 0 010 .708l-4 4a.5.5 0 11-.708-.708L11.793 5.5H1a.5.5 0 010-1h10.793L8.646 1.354a.5.5 0 01-.109-.546z" 
+                                    <path
+                                      fillRule="evenodd"
+                                      clipRule="evenodd"
+                                      d="M8.537.808a.5.5 0 01.817-.162l4 4a.5.5 0 010 .708l-4 4a.5.5 0 11-.708-.708L11.793 5.5H1a.5.5 0 010-1h10.793L8.646 1.354a.5.5 0 01-.109-.546z"
                                       fill="currentColor"
                                     />
                                   </svg>
@@ -173,13 +173,13 @@ export function CombinedCollectionsSection() {
                   </Link>
                 </motion.div>
               ))}
-              
+
               {/* Combos */}
-              {combos.slice(0, Math.min(3 - Math.min(2, featuredCategories.length), combos.length)).map((combo, index) => (
-                <ComboCard 
-                  key={`combo-${combo.comboCode}`} 
-                  combo={combo} 
-                  index={index + featuredCategories.length} 
+              {combos.slice(0, Math.min(3 - Math.min(3, featuredCategories.length), combos.length)).map((combo, index) => (
+                <ComboCard
+                  key={`combo-${combo.comboCode}`}
+                  combo={combo}
+                  index={index + featuredCategories.length}
                 />
               ))}
             </>

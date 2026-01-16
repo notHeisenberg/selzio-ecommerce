@@ -5,7 +5,7 @@ import { createContext, useContext, useState, useEffect, useCallback, useMemo } 
 const DataContext = createContext();
 
 // Cache duration constants
-const CACHE_DURATION = 60 * 1000; // 1 minute (reduced from 10)
+const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes (increased from 1 for better performance)
 const HTTP_CACHE_DURATION = 60; // 1 minute in seconds
 
 // Global cache to prevent duplicate requests across component instances
@@ -25,6 +25,7 @@ const createSlug = (text) => {
 const defaultImages = {
   'Old Money': '/images/categories/Old_money_all.png',
   'Perfume Oil': '/images/categories/Perfume_Oils_All.jpg',
+  'Sweat shirts': '/images/categories/Premium_Sweatshirt_all.jpg',
 };
 
 export const OptimizedDataProvider = ({ children }) => {
@@ -34,12 +35,12 @@ export const OptimizedDataProvider = ({ children }) => {
     featuredCategories: [],
     featuredCombos: [],
     testimonials: [], // Reviews for testimonials section
-    
+
     // Full data (loads after if needed)
     products: [],
     categories: [],
     combos: [],
-    
+
     // Loading states
     homepageLoading: true,
     fullDataLoading: false,
@@ -49,8 +50,8 @@ export const OptimizedDataProvider = ({ children }) => {
 
   // Check if cache is still valid
   const isCacheValid = useCallback((cacheKey) => {
-    return globalCache[cacheKey]?.data && 
-           Date.now() - globalCache[cacheKey].timestamp < CACHE_DURATION;
+    return globalCache[cacheKey]?.data &&
+      Date.now() - globalCache[cacheKey].timestamp < CACHE_DURATION;
   }, []);
 
   // Derive categories from products
@@ -68,7 +69,7 @@ export const OptimizedDataProvider = ({ children }) => {
       const categorySlug = createSlug(cat.category);
       const subcatSlug = createSlug(cat.name);
       const image = defaultImages[cat.name] || '/images/categories/Old_money_all.png';
-      
+
       return {
         id: cat.id || index + 1,
         name: cat.name,
@@ -113,7 +114,7 @@ export const OptimizedDataProvider = ({ children }) => {
 
       globalCache.homepage.loading = true;
       setData(prev => ({ ...prev, homepageLoading: true, error: null }));
-      
+
       // Single optimized API call for homepage
       const response = await fetch('/api/homepage-data', {
         credentials: 'same-origin',
@@ -163,13 +164,13 @@ export const OptimizedDataProvider = ({ children }) => {
         initialized: true,
         error: 'Failed to load homepage data'
       };
-      
+
       globalCache.homepage = {
         data: errorData,
         timestamp: Date.now(),
         loading: false
       };
-      
+
       setData(prev => ({ ...prev, ...errorData }));
     }
   }, [isCacheValid, buildFeaturedCategories]);
@@ -204,7 +205,7 @@ export const OptimizedDataProvider = ({ children }) => {
 
       globalCache.products.loading = true;
       setData(prev => ({ ...prev, fullDataLoading: true }));
-      
+
       // Fetch full product and combo data
       const [productsRes, combosRes] = await Promise.allSettled([
         fetch('/api/products?limit=50', {
@@ -276,7 +277,7 @@ export const OptimizedDataProvider = ({ children }) => {
       const timer = setTimeout(() => {
         loadFullProductsData();
       }, 100);
-      
+
       return () => clearTimeout(timer);
     }
   }, [data.initialized, data.homepageLoading, data.products.length, data.fullDataLoading, loadFullProductsData]);
@@ -298,19 +299,19 @@ export const OptimizedDataProvider = ({ children }) => {
     }
 
     const subcategoriesByCategory = {};
-    
+
     data.products.forEach(product => {
       if (product.category && product.subcategory) {
         const categoryName = product.category.trim();
         const subcategoryName = product.subcategory.trim();
-        
+
         if (!subcategoriesByCategory[categoryName]) {
           subcategoriesByCategory[categoryName] = new Set();
         }
         subcategoriesByCategory[categoryName].add(subcategoryName);
       }
     });
-    
+
     return Object.entries(subcategoriesByCategory).map(([category, subcategories]) => ({
       category,
       subcategories: Array.from(subcategories).map(subcategory => ({
@@ -327,7 +328,7 @@ export const OptimizedDataProvider = ({ children }) => {
       homepage: { data: null, timestamp: 0, loading: false },
       products: { data: null, timestamp: 0, loading: false }
     };
-    
+
     // Reload both homepage and full data to ensure everything is fresh
     await Promise.all([
       loadHomepageData(),
@@ -349,18 +350,18 @@ export const OptimizedDataProvider = ({ children }) => {
     featuredCategories: data.featuredCategories,
     combos: data.featuredCombos, // For homepage, show featured combos
     testimonials: data.testimonials, // Reviews for testimonials section
-    
+
     // Full data (lazy loaded)
     products: data.products,
     categories: data.categories,
     allCombos: data.combos,
-    
+
     // Loading states
     loading: data.homepageLoading, // Main loading state for homepage
     fullDataLoading: data.fullDataLoading,
     initialized: data.initialized,
     error: data.error,
-    
+
     // Helper functions
     getTopSellingProducts,
     getCategorizedSubcategories,
