@@ -25,6 +25,7 @@ export default function ProductFormModal({ product, open, onClose, onSave, mode 
         topSelling: false,
         image: '',
         discount: '',
+        discountAmount: '',
         additionalInfo: '',
         sizes: []
     });
@@ -90,6 +91,7 @@ export default function ProductFormModal({ product, open, onClose, onSave, mode 
                 topSelling: product.topSelling || false,
                 image: Array.isArray(product.image) ? product.image.join(', ') : product.image || '',
                 discount: product.discount?.toString() || '',
+                discountAmount: product.discountAmount?.toString() || '',
                 additionalInfo: product.additionalInfo || '',
                 sizes: sizesArray
             });
@@ -108,6 +110,7 @@ export default function ProductFormModal({ product, open, onClose, onSave, mode 
                 topSelling: false,
                 image: '',
                 discount: '',
+                discountAmount: '',
                 additionalInfo: '',
                 sizes: []
             });
@@ -177,6 +180,7 @@ export default function ProductFormModal({ product, open, onClose, onSave, mode 
                 tags: formData.tags.split(',').map(tag => tag.trim()).filter(tag => tag),
                 image: processedImages,
                 discount: formData.discount ? parseFloat(formData.discount) : 0,
+                discountAmount: formData.discountAmount ? parseFloat(formData.discountAmount) : 0,
                 sizes: processedSizes.length > 0 ? processedSizes : []
             };
 
@@ -343,7 +347,7 @@ export default function ProductFormModal({ product, open, onClose, onSave, mode 
     };
 
     const predefinedCategories = [
-        'Clothing','Beauty', 'Health', 'Perfumes'
+        'Clothing', 'Beauty', 'Health', 'Perfumes'
     ];
 
     // Build categories list: include predefined categories + product's category if not in list
@@ -586,21 +590,38 @@ export default function ProductFormModal({ product, open, onClose, onSave, mode 
                                                     </div>
                                                 </div>
 
-                                                <div className="space-y-2">
-                                                    <Label htmlFor="discount">Discount (%)</Label>
-                                                    <Input
-                                                        id="discount"
-                                                        type="number"
-                                                        min="0"
-                                                        max="100"
-                                                        step="0.1"
-                                                        value={formData.discount}
-                                                        onChange={(e) => handleInputChange('discount', e.target.value)}
-                                                        placeholder="0"
-                                                    />
-                                                    <p className="text-xs text-muted-foreground">
-                                                        Enter discount percentage (0-100)
-                                                    </p>
+                                                <div className="grid grid-cols-2 gap-4">
+                                                    <div className="space-y-2">
+                                                        <Label htmlFor="discount">Discount (%)</Label>
+                                                        <Input
+                                                            id="discount"
+                                                            type="number"
+                                                            min="0"
+                                                            max="100"
+                                                            step="0.1"
+                                                            value={formData.discount}
+                                                            onChange={(e) => handleInputChange('discount', e.target.value)}
+                                                            placeholder="0"
+                                                        />
+                                                        <p className="text-xs text-muted-foreground">
+                                                            Discount percentage (0-100)
+                                                        </p>
+                                                    </div>
+                                                    <div className="space-y-2">
+                                                        <Label htmlFor="discountAmount">Save Amount (৳)</Label>
+                                                        <Input
+                                                            id="discountAmount"
+                                                            type="number"
+                                                            min="0"
+                                                            step="1"
+                                                            value={formData.discountAmount}
+                                                            onChange={(e) => handleInputChange('discountAmount', e.target.value)}
+                                                            placeholder={formData.price && formData.discount ? Math.round(parseFloat(formData.price) * parseFloat(formData.discount) / 100).toString() : '0'}
+                                                        />
+                                                        <p className="text-xs text-muted-foreground">
+                                                            Badge shows "Save X ৳"
+                                                        </p>
+                                                    </div>
                                                 </div>
 
                                                 {/* Size-wise Inventory */}
@@ -779,8 +800,8 @@ export default function ProductFormModal({ product, open, onClose, onSave, mode 
                                                                                         <Label
                                                                                             htmlFor={`image-upload-${index}`}
                                                                                             className={`flex items-center gap-1 text-xs px-3 py-1.5 bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 rounded transition-colors ${uploadingImages[index]
-                                                                                                    ? 'opacity-50 cursor-not-allowed'
-                                                                                                    : 'cursor-pointer hover:bg-blue-100 dark:hover:bg-blue-900/30'
+                                                                                                ? 'opacity-50 cursor-not-allowed'
+                                                                                                : 'cursor-pointer hover:bg-blue-100 dark:hover:bg-blue-900/30'
                                                                                                 }`}
                                                                                         >
                                                                                             <Upload className="h-3 w-3" />

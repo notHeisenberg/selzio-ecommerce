@@ -26,7 +26,7 @@ export async function GET(req) {
 
     // Execute query with projection and parallel execution
     const skip = (page - 1) * limit;
-    
+
     // Optimize: Only fetch needed fields
     const projection = {
       comboCode: 1,
@@ -35,13 +35,17 @@ export async function GET(req) {
       price: 1,
       originalPrice: 1,
       discount: 1,
+      discountAmount: 1,
+      sizeDiscounts: 1,
+      minComboPrice: 1,
+      maxSaveAmount: 1,
       image: 1,
       images: 1,
       products: 1,
       featured: 1,
       createdAt: 1
     };
-    
+
     // Execute both queries in parallel
     const [total, combos] = await Promise.all([
       combosCollection.countDocuments(query),
@@ -67,7 +71,7 @@ export async function GET(req) {
     response.headers.set('Cache-Control', 'public, max-age=600, stale-while-revalidate=300');
     response.headers.set('CDN-Cache-Control', 'max-age=1200');
     response.headers.set('Vary', 'Accept-Encoding');
-    
+
     return response;
   } catch (error) {
     console.error('Error fetching combos:', error);
@@ -88,7 +92,7 @@ export async function POST(req) {
     }
 
     const body = await req.json();
-    
+
     // Get combos collection
     const combosCollection = await getCombosCollection();
 
@@ -103,10 +107,10 @@ export async function POST(req) {
       createdAt: new Date(),
       updatedAt: new Date()
     };
-    
+
     // Insert combo
     const result = await combosCollection.insertOne(combo);
-    
+
     // Revalidate all combo-related paths and tags
     try {
       revalidatePath('/combos');
@@ -116,12 +120,12 @@ export async function POST(req) {
     } catch (revalidateError) {
       console.warn('Cache revalidation warning:', revalidateError);
     }
-    
+
     return NextResponse.json(
-      { 
+      {
         ...combo,
-        _id: result.insertedId 
-      }, 
+        _id: result.insertedId
+      },
       { status: 201 }
     );
   } catch (error) {

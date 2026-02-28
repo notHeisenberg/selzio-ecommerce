@@ -19,14 +19,16 @@ export default function ComboImageGallery({ combo }) {
 
   useEffect(() => {
     if (combo) {
-      // Use images array if available, fallback to single image, or use placeholder
+      // Flatten images - handle nested arrays and mixed formats
+      let rawImages = [];
       if (combo.images && combo.images.length > 0) {
-        setImages(combo.images);
+        rawImages = combo.images.flat();
       } else if (combo.image) {
-        setImages([combo.image]);
-      } else {
-        setImages(['/images/product-placeholder.jpg']);
+        rawImages = Array.isArray(combo.image) ? combo.image.flat() : [combo.image];
       }
+      // Filter out any non-string values
+      const validImages = rawImages.filter(img => typeof img === 'string' && img.length > 0);
+      setImages(validImages.length > 0 ? validImages : ['/images/product-placeholder.jpg']);
       setLoading(false);
     }
   }, [combo]);
@@ -54,18 +56,18 @@ export default function ComboImageGallery({ combo }) {
 
   const handleImageHover = (e) => {
     if (!isHovering && !isZoomed) return;
-    
+
     const { left, top, width, height } = mainImageRef.current.getBoundingClientRect();
     const x = (e.clientX - left) / width;
     const y = (e.clientY - top) / height;
-    
+
     setZoomPosition({ x, y });
   };
 
   const toggleZoom = () => {
     setIsFullscreen(!isFullscreen);
   };
-  
+
   const closeFullscreen = () => {
     setIsFullscreen(false);
   };
@@ -110,7 +112,7 @@ export default function ComboImageGallery({ combo }) {
     <>
       <div className="w-full lg:sticky lg:top-24 lg:h-[calc(100vh-12rem)] flex flex-col">
         {/* Main Image */}
-        <motion.div 
+        <motion.div
           className="relative aspect-square w-full overflow-hidden rounded-lg bg-white dark:bg-gray-800 cursor-zoom-in shadow-sm group"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
@@ -135,14 +137,13 @@ export default function ComboImageGallery({ combo }) {
                   src={images[selectedImage]}
                   alt={`${combo.name} - Image ${selectedImage + 1}`}
                   fill
-                  className={`object-cover transition-transform duration-300 ${
-                    isHovering ? 'scale-125' : 'scale-100'
-                  }`}
+                  className={`object-cover transition-transform duration-300 ${isHovering ? 'scale-125' : 'scale-100'
+                    }`}
                   style={
                     isHovering
                       ? {
-                          transformOrigin: `${zoomPosition.x * 100}% ${zoomPosition.y * 100}%`,
-                        }
+                        transformOrigin: `${zoomPosition.x * 100}% ${zoomPosition.y * 100}%`,
+                      }
                       : {}
                   }
                   sizes="(min-width: 1024px) 500px, 100vw"
@@ -156,7 +157,7 @@ export default function ComboImageGallery({ combo }) {
                       const placeholderDiv = document.createElement('div');
                       placeholderDiv.className = "w-full h-full bg-secondary/30 flex items-center justify-center";
                       placeholderDiv.innerHTML = `<span class="text-muted-foreground">${combo.name || 'Combo'}</span>`;
-                      
+
                       // Replace the img with the div
                       parent.replaceChild(placeholderDiv, e.target);
                     }
@@ -167,7 +168,7 @@ export default function ComboImageGallery({ combo }) {
           </AnimatePresence>
 
           {/* Zoom button */}
-          <button 
+          <button
             className="absolute bottom-4 right-4 bg-black/50 text-white rounded-full p-2 z-10 hover:bg-black/70 transition-colors"
             onClick={(e) => {
               e.stopPropagation();
@@ -204,12 +205,12 @@ export default function ComboImageGallery({ combo }) {
           )}
 
           {/* Discount badge if applicable */}
-          {combo.discount > 0 && (
+          {((combo.sizeDiscounts && combo.sizeDiscounts.length > 0) || combo.discount > 0) && (
             <div className="absolute top-4 left-4 z-10">
-              <Badge 
+              <Badge
                 className="rounded-md bg-black/80 text-white border-0 text-sm font-medium px-2.5 py-1.5 shadow-sm"
               >
-                {combo.discount}% OFF
+                Save up to {combo.maxSaveAmount ? Math.round(combo.maxSaveAmount) : combo.discountAmount ? Math.round(combo.discountAmount) : Math.round(combo.price * combo.discount / 100)} ৳
               </Badge>
             </div>
           )}
@@ -217,7 +218,7 @@ export default function ComboImageGallery({ combo }) {
 
         {/* Thumbnails with animation */}
         <div className="mt-6 z-20 relative bg-background pb-2">
-          <div 
+          <div
             className="flex gap-3 overflow-x-auto py-2 px-1 scroll-smooth custom-scrollbar"
             ref={thumbnailsRef}
           >
@@ -225,11 +226,10 @@ export default function ComboImageGallery({ combo }) {
               <motion.button
                 key={index}
                 onClick={() => handleThumbnailClick(index)}
-                className={`relative flex-shrink-0 w-20 h-20 rounded-md overflow-hidden transition-all duration-200 ${
-                  selectedImage === index 
-                    ? 'ring-2 ring-primary shadow-md scale-105' 
-                    : 'ring-1 ring-border hover:ring-gray-400'
-                }`}
+                className={`relative flex-shrink-0 w-20 h-20 rounded-md overflow-hidden transition-all duration-200 ${selectedImage === index
+                  ? 'ring-2 ring-primary shadow-md scale-105'
+                  : 'ring-1 ring-border hover:ring-gray-400'
+                  }`}
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
                 initial={{ opacity: 0, y: 10 }}
@@ -249,8 +249,8 @@ export default function ComboImageGallery({ combo }) {
                       // Create replacement div
                       const placeholderDiv = document.createElement('div');
                       placeholderDiv.className = "w-full h-full bg-secondary/30 flex items-center justify-center";
-                      placeholderDiv.innerHTML = `<span class="text-xs text-muted-foreground">Image ${index+1}</span>`;
-                      
+                      placeholderDiv.innerHTML = `<span class="text-xs text-muted-foreground">Image ${index + 1}</span>`;
+
                       // Replace the img with the div
                       parent.replaceChild(placeholderDiv, e.target);
                     }
@@ -294,20 +294,20 @@ export default function ComboImageGallery({ combo }) {
 
       {/* Fullscreen view */}
       {isFullscreen && (
-        <motion.div 
+        <motion.div
           className="fixed inset-0 bg-black/90 z-50 flex items-center justify-center p-4"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           transition={{ duration: 0.2 }}
         >
-          <button 
+          <button
             className="absolute top-4 right-4 bg-white/20 text-white rounded-full p-2 hover:bg-white/40 transition-colors"
             onClick={closeFullscreen}
           >
             <X size={24} />
           </button>
-          
+
           <div className="relative w-full max-w-5xl h-[80vh]">
             <AnimatePresence mode="wait">
               <motion.div
@@ -329,7 +329,7 @@ export default function ComboImageGallery({ combo }) {
               </motion.div>
             </AnimatePresence>
           </div>
-          
+
           {/* Fullscreen navigation */}
           {images.length > 1 && (
             <>
@@ -347,16 +347,15 @@ export default function ComboImageGallery({ combo }) {
               </button>
             </>
           )}
-          
+
           {/* Fullscreen thumbnails */}
           <div className="absolute bottom-8 left-0 right-0">
             <div className="flex gap-2 justify-center overflow-x-auto pb-2 px-4 custom-scrollbar">
               {images.map((image, index) => (
                 <motion.button
                   key={index}
-                  className={`relative flex-shrink-0 w-16 h-16 rounded-md overflow-hidden transition-all ${
-                    selectedImage === index ? 'ring-2 ring-white scale-110' : 'ring-1 ring-white/30 opacity-70'
-                  }`}
+                  className={`relative flex-shrink-0 w-16 h-16 rounded-md overflow-hidden transition-all ${selectedImage === index ? 'ring-2 ring-white scale-110' : 'ring-1 ring-white/30 opacity-70'
+                    }`}
                   onClick={() => setSelectedImage(index)}
                   whileHover={{ scale: 1.1, opacity: 1 }}
                   whileTap={{ scale: 0.95 }}

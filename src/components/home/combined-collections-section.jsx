@@ -113,7 +113,7 @@ export function CombinedCollectionsSection() {
                           {category.discount > 0 && (
                             <div className="absolute top-3 right-3 z-10">
                               <Badge className="bg-red-500 text-white text-xs px-2 py-1 font-semibold shadow-md">
-                                Up to {category.discount}% OFF
+                                Save up to {category.discount}% OFF
                               </Badge>
                             </div>
                           )}

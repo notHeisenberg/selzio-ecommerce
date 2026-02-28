@@ -17,8 +17,9 @@ export function ComboCard({ combo, index }) {
 
   if (!combo) return null;
 
-  // Get image to display - prefer dedicated image field, then first image from array, then fallback
-  const displayImage = combo.image || (combo.images && combo.images.length > 0 ? combo.images[0] : '/images/product-placeholder.jpg');
+  // Get image to display - handle both string and array format
+  const rawImage = combo.image || (combo.images && combo.images.length > 0 ? combo.images[0] : null);
+  const displayImage = Array.isArray(rawImage) ? rawImage[0] : rawImage || '/images/product-placeholder.jpg';
 
   return (
     <motion.div
@@ -44,7 +45,7 @@ export function ComboCard({ combo, index }) {
                   <div className="h-full w-full overflow-hidden rounded-none">
                     {/* Static container with hover effect applied to child */}
                     <div className="h-full w-full relative transform transition-transform duration-300 group-hover:scale-105">
-                      <Image 
+                      <Image
                         src={displayImage}
                         alt={combo.name}
                         fill
@@ -58,7 +59,7 @@ export function ComboCard({ combo, index }) {
                 )}
               </div>
             </div>
-              
+
             {/* Card Content */}
             <div className="card__content mt-4 text-gray-800 dark:text-white">
               <div className="card__information">
@@ -67,21 +68,32 @@ export function ComboCard({ combo, index }) {
                     <span className="group-hover:underline transition-all duration-200">{combo.name}</span>
                     <span className="ml-2">
                       <svg viewBox="0 0 14 10" fill="none" aria-hidden="true" focusable="false" className="w-4 h-4 transition-transform duration-300 group-hover:translate-x-1">
-                        <path 
-                          fillRule="evenodd" 
-                          clipRule="evenodd" 
-                          d="M8.537.808a.5.5 0 01.817-.162l4 4a.5.5 0 010 .708l-4 4a.5.5 0 11-.708-.708L11.793 5.5H1a.5.5 0 010-1h10.793L8.646 1.354a.5.5 0 01-.109-.546z" 
+                        <path
+                          fillRule="evenodd"
+                          clipRule="evenodd"
+                          d="M8.537.808a.5.5 0 01.817-.162l4 4a.5.5 0 010 .708l-4 4a.5.5 0 11-.708-.708L11.793 5.5H1a.5.5 0 010-1h10.793L8.646 1.354a.5.5 0 01-.109-.546z"
                           fill="currentColor"
                         />
                       </svg>
                     </span>
                   </span>
                 </h3>
-                
+
                 {/* Price and Discount */}
                 {combo.price && (
                   <div className="mt-2 flex items-baseline gap-2 flex-wrap">
-                    {combo.discount > 0 ? (
+                    {combo.sizeDiscounts && combo.sizeDiscounts.length > 0 ? (
+                      <>
+                        <span className="text-lg font-medium text-primary">
+                          Starting from {formatPrice(combo.minComboPrice || combo.sizeDiscounts[0]?.comboPrice || combo.price)}
+                        </span>
+                        {(combo.maxSaveAmount > 0 || combo.sizeDiscounts.some(sd => sd.saveAmount > 0)) && (
+                          <Badge variant="secondary" className="text-xs px-2 py-0.5 bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-400">
+                            Save up to {combo.maxSaveAmount || Math.max(...combo.sizeDiscounts.map(sd => sd.saveAmount || 0))} ৳
+                          </Badge>
+                        )}
+                      </>
+                    ) : combo.discount > 0 ? (
                       <>
                         <span className="text-sm line-through text-muted-foreground font-medium">
                           {formatPrice(combo.price)}
@@ -90,7 +102,7 @@ export function ComboCard({ combo, index }) {
                           {formatPrice(getDiscountedPrice(combo.price, combo.discount))}
                         </span>
                         <Badge variant="secondary" className="text-xs px-2 py-0.5 bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-400">
-                          {combo.discount}% OFF
+                          Save {combo.discountAmount ? Math.round(combo.discountAmount) : Math.round(combo.price - getDiscountedPrice(combo.price, combo.discount))} ৳
                         </Badge>
                       </>
                     ) : (

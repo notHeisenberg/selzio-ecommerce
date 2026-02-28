@@ -35,54 +35,54 @@ export async function GET(req) {
       ];
     }
     if (topSelling === 'true') query.topSelling = true;
-    
+
     // Handle tags querying (comma-separated list)
     if (tags) {
       const tagArray = tags.split(',').map(tag => tag.trim());
       query.tags = { $in: tagArray };
     }
-    
+
     // Exclude current product if specified
     if (excludeProductCode) {
       query.productCode = { $ne: excludeProductCode };
     }
-    
+
     // Handle related products query (special case)
     if (relatedTo) {
       try {
         // First get the product to relate to
         const sourceProduct = await productsCollection.findOne({ productCode: relatedTo });
-        
+
         if (sourceProduct) {
           // Build query to find related products
           // MUST be in same category (mandatory)
-          const relatedQuery = { 
+          const relatedQuery = {
             productCode: { $ne: relatedTo },
             category: sourceProduct.category  // Mandatory: same category
           };
-          
+
           // PREFER same subcategory (if exists)
           // This will narrow down further (e.g., only show t-shirts for t-shirts, not pants)
           if (sourceProduct.subcategory) {
             relatedQuery.subcategory = sourceProduct.subcategory;
           }
-          
+
           // Additional optional filters for better matching
           const orConditions = [];
-          
+
           // Matching tags (for more relevant suggestions)
           if (sourceProduct.tags && sourceProduct.tags.length > 0) {
             orConditions.push({ tags: { $in: sourceProduct.tags } });
           }
-          
+
           // Top selling products in same category
           orConditions.push({ topSelling: true });
-          
+
           // If we have optional conditions, add them as OR
           if (orConditions.length > 0) {
             relatedQuery.$or = orConditions;
           }
-          
+
           // Replace the original query
           Object.assign(query, relatedQuery);
         }
@@ -99,6 +99,7 @@ export async function GET(req) {
       price: 1,
       originalPrice: 1,
       discount: 1,
+      discountAmount: 1,
       image: 1,
       images: 1,
       stock: 1,
@@ -133,7 +134,7 @@ export async function GET(req) {
 
     // Check if this is an admin request (has timestamp parameter)
     const isAdminRequest = searchParams.get('t');
-    
+
     if (isAdminRequest) {
       // For admin requests, disable caching to ensure fresh data
       response.headers.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
@@ -144,9 +145,9 @@ export async function GET(req) {
       response.headers.set('Cache-Control', 'public, max-age=600, stale-while-revalidate=300');
       response.headers.set('CDN-Cache-Control', 'max-age=1200');
     }
-    
+
     response.headers.set('Vary', 'Accept-Encoding');
-    
+
     return response;
   } catch (error) {
     console.error('Products fetch error:', error);
@@ -166,7 +167,7 @@ export async function POST(req) {
     }
 
     const body = await req.json();
-    
+
     // Get products collection
     const productsCollection = await getProductsCollection();
 
@@ -192,10 +193,10 @@ export async function POST(req) {
 
     // Insert product
     const result = await productsCollection.insertOne(product);
-    
+
     // Fetch the created product
     const createdProduct = await productsCollection.findOne({ _id: result.insertedId });
-    
+
     // Revalidate all product-related paths and tags
     try {
       revalidatePath('/store');
@@ -206,12 +207,12 @@ export async function POST(req) {
     } catch (revalidateError) {
       console.warn('Cache revalidation warning:', revalidateError);
     }
-    
+
     return NextResponse.json(
-      { 
+      {
         success: true,
         product: createdProduct
-      }, 
+      },
       { status: 201 }
     );
   } catch (error) {

@@ -7,7 +7,6 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
 import { useCart } from '@/hooks/use-cart';
 import { Card, CardContent } from '@/components/ui/card';
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
@@ -17,13 +16,21 @@ import { formatPrice, getDiscountedPrice } from '@/lib/utils';
 import ComboImageGallery from './ComboImageGallery';
 import { motion } from 'framer-motion';
 
+// Helper to get first image from various formats
+function getFirstImage(img) {
+  if (!img) return '/images/product-placeholder.jpg';
+  if (Array.isArray(img)) return img[0] || '/images/product-placeholder.jpg';
+  return img;
+}
+
 export default function ComboDetail({ comboCode }) {
   const [combo, setCombo] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [selectedProducts, setSelectedProducts] = useState([]);
-  const [selectedSizes, setSelectedSizes] = useState({});
+  const [selectedSize, setSelectedSize] = useState(''); // Single size for all products
   const [suggestedCombinations, setSuggestedCombinations] = useState([]);
+  const [allProductDetails, setAllProductDetails] = useState([]); // All available products
   const { toast } = useToast();
   const { addToCart } = useCart();
 
@@ -34,38 +41,40 @@ export default function ComboDetail({ comboCode }) {
         setLoading(true);
         const data = await getComboByCode(comboCode);
         setCombo(data);
-        
+
         // Initialize product selections
         if (data && data.productOptions) {
           // Fetch all product details
           const productDetails = await Promise.all(
             data.productOptions.map(async (productCode) => {
               const product = await getProductByCode(productCode);
-              // Add the product-specific image from combo if available
-              if (data.productImages && data.productImages[productCode]) {
+              if (product && data.productImages && data.productImages[productCode]) {
                 product.comboSpecificImage = data.productImages[productCode];
               }
               return product;
             })
           );
-          
+
+          setAllProductDetails(productDetails.filter(Boolean));
+
           // Create suggested combinations
           const suggestions = data.suggestedCombinations || [];
           setSuggestedCombinations(suggestions);
-          
-          // Set initial selections to the first product and first size
+
+          // Set initial selections to the first 3 products
           if (productDetails.length > 0) {
-            const initialSelections = productDetails.slice(0, 3);
+            const initialSelections = productDetails.filter(Boolean).slice(0, 3);
             setSelectedProducts(initialSelections);
-            
-            // Initialize sizes with first available size for each product
-            const initialSizes = {};
-            initialSelections.forEach((product, index) => {
-              if (product && product.sizes && product.sizes.length > 0) {
-                initialSizes[`product-${index}`] = product.sizes[0].name;
+
+            // Initialize size from sizeDiscounts if available, otherwise from products
+            if (data.sizeDiscounts && data.sizeDiscounts.length > 0) {
+              setSelectedSize(data.sizeDiscounts[0].size);
+            } else {
+              const firstProductWithSizes = initialSelections.find(p => p?.sizes?.length > 0);
+              if (firstProductWithSizes) {
+                setSelectedSize(firstProductWithSizes.sizes[0].name);
               }
-            });
-            setSelectedSizes(initialSizes);
+            }
           }
         }
       } catch (err) {
@@ -85,25 +94,15 @@ export default function ComboDetail({ comboCode }) {
   const handleProductSelection = async (productCode, slotIndex) => {
     try {
       const product = await getProductByCode(productCode);
-      
+
       if (product) {
-        // Add combo-specific image if available
         if (combo.productImages && combo.productImages[productCode]) {
           product.comboSpecificImage = combo.productImages[productCode];
         }
-        
-        // Update the selected products array
+
         const updatedProducts = [...selectedProducts];
         updatedProducts[slotIndex] = product;
         setSelectedProducts(updatedProducts);
-        
-        // Initialize with first size if available
-        if (product.sizes && product.sizes.length > 0) {
-          setSelectedSizes(prev => ({
-            ...prev,
-            [`product-${slotIndex}`]: product.sizes[0].name
-          }));
-        }
       }
     } catch (err) {
       console.error('Error selecting product:', err);
@@ -115,12 +114,9 @@ export default function ComboDetail({ comboCode }) {
     }
   };
 
-  // Handle size selection
-  const handleSizeChange = (slotIndex, size) => {
-    setSelectedSizes(prev => ({
-      ...prev,
-      [`product-${slotIndex}`]: size
-    }));
+  // Handle single size selection for all products
+  const handleSizeChange = (size) => {
+    setSelectedSize(size);
   };
 
   // Handle suggested combination selection
@@ -129,23 +125,20 @@ export default function ComboDetail({ comboCode }) {
       const products = await Promise.all(
         suggestion.products.map(async (productCode) => {
           const product = await getProductByCode(productCode);
-          // Add combo-specific image if available
-          if (combo.productImages && combo.productImages[productCode]) {
+          if (product && combo.productImages && combo.productImages[productCode]) {
             product.comboSpecificImage = combo.productImages[productCode];
           }
           return product;
         })
       );
-      
-      setSelectedProducts(products);
-      
-      // Set sizes from suggestion
-      const newSizes = {};
-      suggestion.sizes.forEach((size, index) => {
-        newSizes[`product-${index}`] = size;
-      });
-      setSelectedSizes(newSizes);
-      
+
+      setSelectedProducts(products.filter(Boolean));
+
+      // Set the single size from the suggestion (use first size)
+      if (suggestion.sizes && suggestion.sizes.length > 0) {
+        setSelectedSize(suggestion.sizes[0]);
+      }
+
       toast({
         title: "Suggestion Applied",
         description: "The suggested combination has been applied.",
@@ -160,42 +153,70 @@ export default function ComboDetail({ comboCode }) {
     }
   };
 
-  // Calculate combo price
+  // Calculate combo price based on selected size
   const calculateComboPrice = () => {
     if (!combo) return 0;
-    
-    // If there's a set combo price with discount, use that
+
+    // If sizeDiscounts are available, use the selected size's combo price
+    if (combo.sizeDiscounts && combo.sizeDiscounts.length > 0 && selectedSize) {
+      const sizeEntry = combo.sizeDiscounts.find(sd => sd.size === selectedSize);
+      if (sizeEntry && sizeEntry.comboPrice > 0) {
+        return sizeEntry.comboPrice;
+      }
+    }
+
+    // Fallback: If there's a set combo price with discount, use that
     if (combo.price && combo.discount) {
       return getDiscountedPrice(combo.price, combo.discount);
     }
-    
-    // Otherwise calculate based on selected products
-    let totalPrice = combo.basePrice || 0;
-    
-    // Add price for each selected product with its size
-    selectedProducts.forEach((product, index) => {
-      if (product) {
-        const selectedSize = selectedSizes[`product-${index}`];
-        const sizeOption = product.sizes?.find(s => s.name === selectedSize);
-        
-        // Add product price or size-specific price
-        if (sizeOption && sizeOption.price) {
-          totalPrice += sizeOption.price;
-        } else if (product.price) {
-          totalPrice += product.price;
-        }
+
+    return combo.price || 0;
+  };
+
+  // Get available sizes from sizeDiscounts first, then from products
+  const getAvailableSizes = () => {
+    // Prefer sizeDiscounts as the source of truth
+    if (combo?.sizeDiscounts && combo.sizeDiscounts.length > 0) {
+      return combo.sizeDiscounts.map(sd => sd.size);
+    }
+    // Fallback to product sizes
+    const sizeSet = new Set();
+    const products = selectedProducts.length > 0 ? selectedProducts : allProductDetails;
+    products.forEach(product => {
+      if (product?.sizes) {
+        product.sizes.forEach(size => sizeSet.add(size.name));
       }
     });
-    
-    return totalPrice;
+    return Array.from(sizeSet);
+  };
+
+  // Get the save amount for the currently selected size
+  const getSaveAmount = () => {
+    if (!combo) return 0;
+    if (combo.sizeDiscounts && combo.sizeDiscounts.length > 0 && selectedSize) {
+      const sizeEntry = combo.sizeDiscounts.find(sd => sd.size === selectedSize);
+      if (sizeEntry) return Math.round(sizeEntry.saveAmount || 0);
+    }
+    if (combo.discountAmount) return Math.round(combo.discountAmount);
+    if (combo.discount > 0) return Math.round(combo.price - getDiscountedPrice(combo.price, combo.discount));
+    return 0;
+  };
+
+  // Get the max save amount across all sizes (for badge)
+  const getMaxSaveAmount = () => {
+    if (!combo) return 0;
+    if (combo.maxSaveAmount) return Math.round(combo.maxSaveAmount);
+    if (combo.sizeDiscounts && combo.sizeDiscounts.length > 0) {
+      return Math.round(Math.max(...combo.sizeDiscounts.map(sd => sd.saveAmount || 0)));
+    }
+    return getSaveAmount();
   };
 
   // Add combo to cart
   const handleAddToCart = () => {
-    // Check if all slots have a product selected
-    const isComplete = selectedProducts.length === 3 && 
+    const isComplete = selectedProducts.length === 3 &&
       selectedProducts.every(product => product && product.productCode);
-    
+
     if (!isComplete) {
       toast({
         title: "Incomplete Selection",
@@ -204,37 +225,39 @@ export default function ComboDetail({ comboCode }) {
       });
       return;
     }
-    
-    // Create a combo item for the cart
+
+    const currentComboPrice = calculateComboPrice();
+    const currentSave = getSaveAmount();
+
     const comboCartItem = {
       comboCode: combo.comboCode,
       name: combo.name,
-      // Use original combo price, not the calculated discounted price
-      price: combo.price || 0,
-      image: combo.image || (combo.images && combo.images.length > 0 ? combo.images[0] : null),
+      price: currentComboPrice,
+      originalPrice: combo.price || 0,
+      image: getFirstImage(combo.image),
       isCombo: true,
       description: combo.description || null,
       shortDescription: combo.shortDescription || null,
-      // Pass the original discount - cart will handle applying it correctly
-      discount: combo.discount || 0,
-      products: selectedProducts.map((product, index) => ({
+      selectedSize: selectedSize,
+      saveAmount: currentSave,
+      products: selectedProducts.map((product) => ({
         productCode: product.productCode,
         name: product.name,
-        size: selectedSizes[`product-${index}`],
-        image: product.comboSpecificImage || product.image || product.images?.[0]
+        size: selectedSize,
+        image: product.comboSpecificImage || getFirstImage(product.image || product.images?.[0])
       }))
     };
-    
-    // Add to cart
+
     addToCart(comboCartItem, 1);
   };
 
-  // Buy now (add to cart and redirect to checkout)
+  // Buy now
   const handleBuyNow = () => {
     handleAddToCart();
-    // Redirect to checkout page
     window.location.href = '/checkout';
   };
+
+
 
   if (loading) {
     return (
@@ -269,6 +292,9 @@ export default function ComboDetail({ comboCode }) {
     );
   }
 
+  const availableSizes = getAvailableSizes();
+  const currentSaveAmount = getSaveAmount();
+
   return (
     <div className="container mx-auto px-4 py-8">
       <div className="flex flex-col lg:flex-row gap-8">
@@ -280,7 +306,7 @@ export default function ComboDetail({ comboCode }) {
         {/* Right side - Combo details and product selection */}
         <div className="lg:w-1/2">
           <div className="sticky top-24">
-            <motion.h1 
+            <motion.h1
               className="text-3xl font-bold mb-2"
               initial={{ opacity: 0, y: -20 }}
               animate={{ opacity: 1, y: 0 }}
@@ -288,14 +314,25 @@ export default function ComboDetail({ comboCode }) {
             >
               {combo.name}
             </motion.h1>
-            
-            <motion.div 
-              className="mb-6 flex items-baseline gap-3"
+
+            <motion.div
+              className="mb-6 flex items-baseline gap-3 flex-wrap"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ duration: 0.5, delay: 0.1 }}
             >
-              {combo.discount > 0 ? (
+              {combo.sizeDiscounts && combo.sizeDiscounts.length > 0 ? (
+                <>
+                  <span className="text-2xl font-medium">
+                    {formatPrice(calculateComboPrice())}
+                  </span>
+                  {currentSaveAmount > 0 && (
+                    <Badge className="ml-2 rounded-md bg-black/80 text-white dark:bg-white/90 dark:text-black">
+                      Save {currentSaveAmount} ৳
+                    </Badge>
+                  )}
+                </>
+              ) : combo.discount > 0 ? (
                 <>
                   <span className="text-lg line-through text-muted-foreground font-medium">
                     {formatPrice(combo.price)}
@@ -303,9 +340,11 @@ export default function ComboDetail({ comboCode }) {
                   <span className="text-2xl font-medium">
                     {formatPrice(calculateComboPrice())}
                   </span>
-                  <Badge className="ml-2 rounded-md bg-black/80 text-white dark:bg-white/90 dark:text-black">
-                    {combo.discount}% OFF
-                  </Badge>
+                  {currentSaveAmount > 0 && (
+                    <Badge className="ml-2 rounded-md bg-black/80 text-white dark:bg-white/90 dark:text-black">
+                      Save {currentSaveAmount} ৳
+                    </Badge>
+                  )}
                 </>
               ) : (
                 <span className="text-2xl font-medium">
@@ -313,8 +352,8 @@ export default function ComboDetail({ comboCode }) {
                 </span>
               )}
             </motion.div>
-            
-            <motion.div 
+
+            <motion.div
               className="prose prose-sm max-w-none mb-8"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
@@ -323,9 +362,38 @@ export default function ComboDetail({ comboCode }) {
               <p className="text-muted-foreground">{combo.description}</p>
             </motion.div>
 
+            {/* Single Size Selection for all products */}
+            {availableSizes.length > 0 && (
+              <motion.div
+                className="mb-8"
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.5, delay: 0.25 }}
+              >
+                <Label className="font-medium mb-3 block text-lg">Select Size</Label>
+                <p className="text-sm text-muted-foreground mb-3">This size will apply to all products in the combo</p>
+                <div className="flex flex-wrap gap-2">
+                  {availableSizes.map((size) => (
+                    <motion.button
+                      key={size}
+                      onClick={() => handleSizeChange(size)}
+                      className={`py-2 px-4 rounded-none border transition-all duration-200 ${selectedSize === size
+                        ? 'bg-primary text-primary-foreground font-medium border-primary'
+                        : 'bg-transparent hover:bg-secondary/50 border-input'
+                        }`}
+                      whileHover={{ scale: 1.05 }}
+                      whileTap={{ scale: 0.95 }}
+                    >
+                      {size}
+                    </motion.button>
+                  ))}
+                </div>
+              </motion.div>
+            )}
+
             {/* Suggested combinations */}
             {suggestedCombinations.length > 0 && (
-              <motion.div 
+              <motion.div
                 className="mb-8"
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -334,8 +402,8 @@ export default function ComboDetail({ comboCode }) {
                 <h3 className="text-lg font-medium mb-3">Suggested Combinations</h3>
                 <div className="flex flex-wrap gap-2">
                   {suggestedCombinations.map((suggestion, index) => (
-                    <Button 
-                      key={index} 
+                    <Button
+                      key={index}
                       variant="outline"
                       onClick={() => handleSuggestionSelect(suggestion)}
                       className="rounded-none hover:bg-secondary/80 transition-all duration-300"
@@ -348,17 +416,17 @@ export default function ComboDetail({ comboCode }) {
             )}
 
             {/* Product selection */}
-            <motion.div 
+            <motion.div
               className="space-y-6 mb-8"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ duration: 0.5, delay: 0.4 }}
             >
               <h3 className="text-lg font-medium mb-3">Select Your Products</h3>
-              
+
               {[0, 1, 2].map((slotIndex) => {
                 const selectedProduct = selectedProducts[slotIndex];
-                
+
                 return (
                   <motion.div
                     key={slotIndex}
@@ -371,63 +439,48 @@ export default function ComboDetail({ comboCode }) {
                         <div className="flex flex-col md:flex-row gap-4">
                           {/* Product image */}
                           {selectedProduct && (
-                            <motion.div 
+                            <motion.div
                               className="w-full md:w-1/4"
                               whileHover={{ scale: 1.05 }}
                               transition={{ duration: 0.2 }}
                             >
                               <div className="aspect-square relative rounded-md overflow-hidden border">
-                                <img 
-                                  src={selectedProduct.comboSpecificImage || selectedProduct.image || (selectedProduct.images && selectedProduct.images.length > 0 ? selectedProduct.images[0] : '/images/product-placeholder.jpg')}
+                                <img
+                                  src={selectedProduct.comboSpecificImage || getFirstImage(selectedProduct.image || selectedProduct.images?.[0])}
                                   alt={selectedProduct.name}
                                   className="object-cover w-full h-full"
                                 />
                               </div>
                             </motion.div>
                           )}
-                          
-                          {/* Product selection */}
+
+                          {/* Product selection dropdown - shows product NAMES */}
                           <div className="flex-1">
                             <div className="mb-4">
                               <Label htmlFor={`product-${slotIndex}`} className="font-medium mb-1.5 block">Product {slotIndex + 1}</Label>
-                              <Select 
-                                value={selectedProduct?.productCode || ''} 
+                              <Select
+                                value={selectedProduct?.productCode || ''}
                                 onValueChange={(value) => handleProductSelection(value, slotIndex)}
                               >
                                 <SelectTrigger id={`product-${slotIndex}`} className="rounded-none border-input bg-transparent">
                                   <SelectValue placeholder="Select product" />
                                 </SelectTrigger>
                                 <SelectContent>
-                                  {combo.productOptions?.map((productCode) => (
-                                    <SelectItem key={productCode} value={productCode}>
-                                      {productCode}
+                                  {allProductDetails.map((product) => (
+                                    <SelectItem key={product.productCode} value={product.productCode}>
+                                      {product.name}
                                     </SelectItem>
                                   ))}
                                 </SelectContent>
                               </Select>
                             </div>
-                            
-                            {/* Size selection - as option buttons */}
-                            {selectedProduct && selectedProduct.sizes && selectedProduct.sizes.length > 0 && (
-                              <div>
-                                <Label className="font-medium mb-1.5 block">Size</Label>
-                                <div className="flex flex-wrap gap-2">
-                                  {selectedProduct.sizes.map((size) => (
-                                    <motion.button
-                                      key={size.name}
-                                      onClick={() => handleSizeChange(slotIndex, size.name)}
-                                      className={`py-2 px-3 rounded-none border transition-all duration-200 ${
-                                        selectedSizes[`product-${slotIndex}`] === size.name
-                                          ? 'bg-primary text-primary-foreground font-medium border-primary'
-                                          : 'bg-transparent hover:bg-secondary/50 border-input'
-                                      }`}
-                                      whileHover={{ scale: 1.05 }}
-                                      whileTap={{ scale: 0.95 }}
-                                    >
-                                      {size.name}
-                                    </motion.button>
-                                  ))}
-                                </div>
+
+                            {/* Show selected size badge (read-only, not editable per product) */}
+                            {selectedProduct && selectedSize && (
+                              <div className="flex items-center gap-2">
+                                <Badge variant="outline" className="rounded-none">
+                                  Size: {selectedSize}
+                                </Badge>
                               </div>
                             )}
                           </div>
@@ -440,13 +493,13 @@ export default function ComboDetail({ comboCode }) {
             </motion.div>
 
             {/* Add to cart and buy now buttons */}
-            <motion.div 
+            <motion.div
               className="flex flex-col sm:flex-row gap-4"
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.5, delay: 0.7 }}
             >
-              <Button 
+              <Button
                 onClick={handleAddToCart}
                 className="flex-1 rounded-none py-4 sm:py-4 text-base font-medium w-full"
                 size="lg"
@@ -454,7 +507,7 @@ export default function ComboDetail({ comboCode }) {
               >
                 Add to Cart
               </Button>
-              <Button 
+              <Button
                 onClick={handleBuyNow}
                 variant="outline"
                 className="flex-1 rounded-none py-4 sm:py-4 text-base font-medium w-full"
@@ -469,4 +522,4 @@ export default function ComboDetail({ comboCode }) {
       </div>
     </div>
   );
-} 
+}

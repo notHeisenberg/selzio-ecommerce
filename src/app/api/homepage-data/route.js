@@ -32,6 +32,7 @@ export async function GET(req) {
               price: 1,
               originalPrice: 1,
               discount: 1,
+              discountAmount: 1,
               image: 1,
               images: 1,
               stock: 1,
@@ -133,13 +134,18 @@ export async function GET(req) {
     });
 
     const featuredCategories = Array.from(subcategoryMap.values())
+      // Hide "Sweat shirts" from featured collections
+      .filter(item => {
+        const name = item.subcategory?.toLowerCase().replace(/\s+/g, '');
+        return name !== 'Sweat shirts';
+      })
       .sort((a, b) => {
-        // Prioritize "Sweat shirts" collection
-        const isASweat = a.subcategory === 'Sweat shirts' || a.subcategory === 'Sweat Shirts' || a.subcategory === 'Sweatshirts';
-        const isBSweat = b.subcategory === 'Sweat shirts' || b.subcategory === 'Sweat Shirts' || b.subcategory === 'Sweatshirts';
+        // Prioritize "Perfume Oil" collection to appear first
+        const isAPerfume = a.subcategory === 'Perfume Oil' || a.subcategory === 'Perfume oil';
+        const isBPerfume = b.subcategory === 'Perfume Oil' || b.subcategory === 'Perfume oil';
 
-        if (isASweat && !isBSweat) return -1;
-        if (!isASweat && isBSweat) return 1;
+        if (isAPerfume && !isBPerfume) return -1;
+        if (!isAPerfume && isBPerfume) return 1;
 
         // For non-priority items, sort by product count (descending)
         return b.count - a.count;

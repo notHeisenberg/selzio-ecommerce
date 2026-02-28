@@ -14,6 +14,8 @@ import Image from 'next/image';
 import ProductViewModal from '../product/ProductViewModal';
 import ProductFormModal from '../product/ProductFormModal';
 import ProductDeleteModal from '../product/ProductDeleteModal';
+import ComboFormModal from '../combo/ComboFormModal';
+import ComboDeleteModal from '../combo/ComboDeleteModal';
 import { useAppData } from '@/providers/optimized-data-provider';
 import { invalidateProductsCache } from '@/data/products';
 import { invalidateCombosCache } from '@/data/combos';
@@ -41,23 +43,33 @@ export default function ProductManagementTab() {
     const [filter, setFilter] = useState('all');
     const { toast } = useToast();
     const { user } = useAuth();
-    
+
     // Modal states
     const [viewModalOpen, setViewModalOpen] = useState(false);
     const [formModalOpen, setFormModalOpen] = useState(false);
     const [deleteModalOpen, setDeleteModalOpen] = useState(false);
     const [selectedProduct, setSelectedProduct] = useState(null);
     const [formMode, setFormMode] = useState('add');
-    
+
+    // Combo states
+    const [combos, setCombos] = useState([]);
+    const [comboSearchTerm, setComboSearchTerm] = useState('');
+    const [comboFormModalOpen, setComboFormModalOpen] = useState(false);
+    const [comboDeleteModalOpen, setComboDeleteModalOpen] = useState(false);
+    const [selectedCombo, setSelectedCombo] = useState(null);
+    const [comboFormMode, setComboFormMode] = useState('add');
+    const [combosLoading, setCombosLoading] = useState(false);
+
     // Get refresh function from data provider to invalidate cache
     const { refresh: refreshGlobalCache } = useAppData();
-    
+
     // Check if user is admin
     const isAdmin = user?.role === 'admin';
 
     useEffect(() => {
         if (isAdmin) {
             fetchData();
+            fetchCombos();
         } else {
             setLoading(false);
         }
@@ -69,12 +81,12 @@ export default function ProductManagementTab() {
 
             // Get authentication token
             const token = localStorage.getItem('auth_token');
-            
+
             // Create headers for authenticated requests
             const headers = {
                 'Content-Type': 'application/json'
             };
-            
+
             if (token) {
                 headers['Authorization'] = `Bearer ${token}`;
             }
@@ -131,7 +143,7 @@ export default function ProductManagementTab() {
             }));
 
             setProducts(fetchedProducts);
-            
+
         } catch (error) {
             console.error('Failed to fetch data:', error);
             toast({
@@ -173,7 +185,7 @@ export default function ProductManagementTab() {
             const headers = {
                 'Content-Type': 'application/json'
             };
-            
+
             if (token) {
                 headers['Authorization'] = `Bearer ${token}`;
             }
@@ -204,29 +216,29 @@ export default function ProductManagementTab() {
 
             // Close the modal first
             setFormModalOpen(false);
-            
+
             // Clear selected product to prevent stale data
             setSelectedProduct(null);
-            
+
             // IMPORTANT: Refresh data FIRST, then dispatch events
             // This ensures all data providers have fresh data before notifying components
             await Promise.all([
                 refreshGlobalCache(),  // Invalidate cached data across the app
                 fetchData()            // Refresh local products list
             ]);
-            
+
             // Now invalidate other caches and dispatch events
             // This happens AFTER data provider refresh completes
             invalidateProductsCache();
             invalidateCombosCache();
-            
+
             // Show success toast
             toast({
                 title: 'Success',
                 description: `Product ${formMode === 'edit' ? 'updated' : 'created'} successfully. All data has been refreshed.`,
                 variant: 'success'
             });
-            
+
         } catch (error) {
             console.error('Product save error:', error);
             throw error; // Re-throw to be handled by the modal
@@ -239,7 +251,7 @@ export default function ProductManagementTab() {
             const headers = {
                 'Content-Type': 'application/json'
             };
-            
+
             if (token) {
                 headers['Authorization'] = `Bearer ${token}`;
             }
@@ -261,31 +273,160 @@ export default function ProductManagementTab() {
                 refreshGlobalCache(),  // Invalidate cached data across the app
                 fetchData()            // Refresh local products list
             ]);
-            
+
             // Now invalidate other caches and dispatch events
             // This happens AFTER data provider refresh completes
             invalidateProductsCache();
             invalidateCombosCache();
-            
+
             // Show success toast
             toast({
                 title: 'Success',
                 description: 'Product deleted successfully. All data has been refreshed.',
                 variant: 'success'
             });
-            
+
         } catch (error) {
             console.error('Product deletion error:', error);
             throw error; // Re-throw to be handled by the modal
         }
     };
 
+    // --- Combo Handlers ---
+    const fetchCombos = async () => {
+        try {
+            setCombosLoading(true);
+            const token = localStorage.getItem('auth_token');
+            const headers = { 'Content-Type': 'application/json' };
+            if (token) headers['Authorization'] = `Bearer ${token}`;
+
+            const response = await fetch('/api/combos?limit=100&t=' + Date.now(), {
+                headers,
+                cache: 'no-store'
+            });
+            const data = await response.json();
+            if (!response.ok) throw new Error(data.error || 'Failed to fetch combos');
+            setCombos(data.combos || []);
+        } catch (error) {
+            console.error('Failed to fetch combos:', error);
+        } finally {
+            setCombosLoading(false);
+        }
+    };
+
+    const handleAddCombo = () => {
+        setSelectedCombo(null);
+        setComboFormMode('add');
+        setComboFormModalOpen(true);
+    };
+
+    const handleEditCombo = (combo) => {
+        setSelectedCombo(combo);
+        setComboFormMode('edit');
+        setComboFormModalOpen(true);
+    };
+
+    const handleDeleteCombo = (combo) => {
+        setSelectedCombo(combo);
+        setComboDeleteModalOpen(true);
+    };
+
+    const handleSaveCombo = async (comboData) => {
+        try {
+            const token = localStorage.getItem('auth_token');
+            const headers = { 'Content-Type': 'application/json' };
+            if (token) headers['Authorization'] = `Bearer ${token}`;
+
+            let response;
+            if (comboFormMode === 'edit' && selectedCombo) {
+                const comboId = selectedCombo.comboCode || selectedCombo._id;
+                response = await fetch(`/api/combos/${comboId}`, {
+                    method: 'PUT',
+                    headers,
+                    credentials: 'include',
+                    body: JSON.stringify(comboData)
+                });
+            } else {
+                response = await fetch('/api/combos', {
+                    method: 'POST',
+                    headers,
+                    credentials: 'include',
+                    body: JSON.stringify(comboData)
+                });
+            }
+
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.error || `Failed to ${comboFormMode === 'edit' ? 'update' : 'create'} combo`);
+            }
+
+            setComboFormModalOpen(false);
+            setSelectedCombo(null);
+
+            await Promise.all([
+                refreshGlobalCache(),
+                fetchCombos()
+            ]);
+            invalidateCombosCache();
+
+            toast({
+                title: 'Success',
+                description: `Combo ${comboFormMode === 'edit' ? 'updated' : 'created'} successfully.`,
+                variant: 'success'
+            });
+        } catch (error) {
+            console.error('Combo save error:', error);
+            throw error;
+        }
+    };
+
+    const handleComboDeletion = async (combo) => {
+        try {
+            const token = localStorage.getItem('auth_token');
+            const headers = { 'Content-Type': 'application/json' };
+            if (token) headers['Authorization'] = `Bearer ${token}`;
+
+            const comboId = combo.comboCode || combo._id;
+            const response = await fetch(`/api/combos/${comboId}`, {
+                method: 'DELETE',
+                headers,
+                credentials: 'include'
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.error || 'Failed to delete combo');
+            }
+
+            await Promise.all([
+                refreshGlobalCache(),
+                fetchCombos()
+            ]);
+            invalidateCombosCache();
+
+            toast({
+                title: 'Success',
+                description: 'Combo deleted successfully.',
+                variant: 'success'
+            });
+        } catch (error) {
+            console.error('Combo deletion error:', error);
+            throw error;
+        }
+    };
+
     // Filter products based on search and filter criteria
     const filteredProducts = products.filter(product => {
         const matchesSearch = product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                             product.category.toLowerCase().includes(searchTerm.toLowerCase());
+            product.category.toLowerCase().includes(searchTerm.toLowerCase());
         const matchesFilter = filter === 'all' || product.status === filter;
         return matchesSearch && matchesFilter;
+    });
+
+    // Filter combos based on search
+    const filteredCombos = combos.filter(combo => {
+        if (!comboSearchTerm) return true;
+        return combo.name?.toLowerCase().includes(comboSearchTerm.toLowerCase());
     });
 
     // Calculate local product stats
@@ -334,7 +475,7 @@ export default function ProductManagementTab() {
             low_stock: 'bg-yellow-500',
             inactive: 'bg-gray-500'
         };
-        
+
         const labels = {
             active: 'Active',
             out_of_stock: 'Out of Stock',
@@ -391,7 +532,7 @@ export default function ProductManagementTab() {
                         </p>
                     </CardContent>
                 </Card>
-                
+
                 <Card>
                     <CardContent className="p-3 sm:p-4">
                         <div className="flex items-center gap-2">
@@ -404,7 +545,7 @@ export default function ProductManagementTab() {
                         </p>
                     </CardContent>
                 </Card>
-                
+
                 <Card>
                     <CardContent className="p-3 sm:p-4">
                         <div className="flex items-center gap-2">
@@ -417,7 +558,7 @@ export default function ProductManagementTab() {
                         </p>
                     </CardContent>
                 </Card>
-                
+
                 <Card>
                     <CardContent className="p-3 sm:p-4">
                         <div className="flex items-center gap-2">
@@ -436,11 +577,12 @@ export default function ProductManagementTab() {
             <Card>
                 <CardContent className="p-3 sm:p-6">
                     <Tabs defaultValue="products" className="space-y-4 sm:space-y-6">
-                        <TabsList className="w-full grid grid-cols-2">
+                        <TabsList className="w-full grid grid-cols-3">
                             <TabsTrigger value="products">Products</TabsTrigger>
+                            <TabsTrigger value="combos">Combos</TabsTrigger>
                             <TabsTrigger value="analytics">Analytics</TabsTrigger>
                         </TabsList>
-                        
+
                         <TabsContent value="products" className="space-y-4 overflow-x-hidden">
                             {/* Controls */}
                             <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 items-stretch sm:items-center justify-between">
@@ -503,7 +645,7 @@ export default function ProductManagementTab() {
                                                             }}
                                                         />
                                                     </div>
-                                                    
+
                                                     {/* Product Info */}
                                                     <div className="flex-1 min-w-0">
                                                         <div className="flex items-start justify-between gap-2">
@@ -515,13 +657,13 @@ export default function ProductManagementTab() {
                                                                 {getStatusBadge(product.status)}
                                                             </div>
                                                         </div>
-                                                        
+
                                                         {/* Price & Stock - Responsive Layout */}
                                                         <div className="flex flex-wrap items-center gap-2 sm:gap-4 mt-2 text-xs sm:text-sm">
                                                             <div className="flex items-center gap-2">
                                                                 {(() => {
                                                                     const priceRange = getPriceRange(product);
-                                                                    
+
                                                                     if (priceRange && priceRange.hasRange) {
                                                                         // Show price range for products with size variations
                                                                         return (
@@ -577,11 +719,10 @@ export default function ProductManagementTab() {
                                                                     }
                                                                 })()}
                                                             </div>
-                                                            <span className={`whitespace-nowrap ${
-                                                                product.stock === 0 ? 'text-red-600' :
-                                                                product.stock < 50 ? 'text-yellow-600' :
-                                                                'text-green-600'
-                                                            }`}>
+                                                            <span className={`whitespace-nowrap ${product.stock === 0 ? 'text-red-600' :
+                                                                    product.stock < 50 ? 'text-yellow-600' :
+                                                                        'text-green-600'
+                                                                }`}>
                                                                 Stock: {product.stock}
                                                                 {product.sizes && Array.isArray(product.sizes) && product.sizes.length > 0 && (
                                                                     <span className="text-xs text-muted-foreground ml-1">
@@ -593,14 +734,14 @@ export default function ProductManagementTab() {
                                                                 {product.orders} orders • ৳{product.revenue.toLocaleString()}
                                                             </span>
                                                         </div>
-                                                        
+
                                                         {/* Mobile-only revenue info */}
                                                         <div className="sm:hidden mt-1 text-xs text-muted-foreground">
                                                             {product.orders} orders • ৳{product.revenue.toLocaleString()} revenue
                                                         </div>
                                                     </div>
                                                 </div>
-                                                
+
                                                 {/* Actions */}
                                                 <div className="flex items-center gap-1 sm:gap-2 justify-end sm:justify-start flex-shrink-0">
                                                     <Button variant="ghost" size="sm" onClick={() => handleViewProduct(product)} className="h-8 w-8 sm:h-9 sm:w-9 p-0">
@@ -619,7 +760,96 @@ export default function ProductManagementTab() {
                                 </div>
                             )}
                         </TabsContent>
-                        
+
+                        {/* Combos Tab */}
+                        <TabsContent value="combos" className="space-y-4 overflow-x-hidden">
+                            <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 items-stretch sm:items-center justify-between">
+                                <div className="relative flex-1 sm:max-w-sm w-full">
+                                    <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                                    <Input
+                                        placeholder="Search combos..."
+                                        value={comboSearchTerm}
+                                        onChange={(e) => setComboSearchTerm(e.target.value)}
+                                        className="pl-9 w-full"
+                                    />
+                                </div>
+                                <Button className="hover:bg-primary/90 w-full sm:w-auto" onClick={handleAddCombo}>
+                                    <Plus className="h-4 w-4 mr-2" />
+                                    Add Combo
+                                </Button>
+                            </div>
+
+                            {combosLoading ? (
+                                <div className="text-center py-12">
+                                    <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+                                    <p className="text-muted-foreground">Loading combos...</p>
+                                </div>
+                            ) : filteredCombos.length === 0 ? (
+                                <div className="text-center py-12">
+                                    <Package className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                                    <p className="text-muted-foreground">
+                                        {comboSearchTerm ? 'No combos match your search' : 'No combos found'}
+                                    </p>
+                                </div>
+                            ) : (
+                                <div className="space-y-3">
+                                    {filteredCombos.map((combo) => (
+                                        <div key={combo._id || combo.comboCode} className="border rounded-sm p-3 sm:p-4 hover:bg-muted/50 transition-colors">
+                                            <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4">
+                                                <div className="flex items-start gap-3 flex-1 min-w-0">
+                                                    <div className="relative w-16 h-16 rounded-sm overflow-hidden bg-muted flex-shrink-0">
+                                                        <Image
+                                                            src={Array.isArray(combo.image) ? combo.image[0] : combo.image || '/images/product-placeholder.png'}
+                                                            alt={combo.name}
+                                                            fill
+                                                            className="object-cover"
+                                                            onError={(e) => { e.target.style.display = 'none'; }}
+                                                        />
+                                                    </div>
+                                                    <div className="flex-1 min-w-0">
+                                                        <div className="flex items-start justify-between gap-2">
+                                                            <div className="flex-1 min-w-0">
+                                                                <h3 className="font-medium truncate text-sm sm:text-base">{combo.name}</h3>
+                                                                <p className="text-xs sm:text-sm text-muted-foreground truncate">
+                                                                    {combo.comboCode}
+                                                                </p>
+                                                            </div>
+                                                            <div className="flex-shrink-0 flex gap-1">
+                                                                {combo.featured && (
+                                                                    <Badge className="bg-purple-500 text-white text-xs">Featured</Badge>
+                                                                )}
+                                                            </div>
+                                                        </div>
+                                                        <div className="flex flex-wrap items-center gap-2 sm:gap-4 mt-2 text-xs sm:text-sm">
+                                                            <span className="font-medium text-green-600 whitespace-nowrap">
+                                                                ৳{combo.price}
+                                                            </span>
+                                                            {combo.discount > 0 && (
+                                                                <span className="text-xs bg-red-500 text-white px-1 py-0.5 rounded whitespace-nowrap">
+                                                                    {combo.discountAmount ? `Save ${Math.round(combo.discountAmount)} ৳` : `-${combo.discount}%`}
+                                                                </span>
+                                                            )}
+                                                            <span className="text-muted-foreground whitespace-nowrap">
+                                                                {combo.products?.length || combo.productOptions?.length || 0} products
+                                                            </span>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                <div className="flex items-center gap-1 sm:gap-2 justify-end sm:justify-start flex-shrink-0">
+                                                    <Button variant="ghost" size="sm" onClick={() => handleEditCombo(combo)} className="h-8 w-8 sm:h-9 sm:w-9 p-0">
+                                                        <Edit className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                                                    </Button>
+                                                    <Button variant="ghost" size="sm" className="text-red-600 hover:text-red-700 h-8 w-8 sm:h-9 sm:w-9 p-0" onClick={() => handleDeleteCombo(combo)}>
+                                                        <Trash2 className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                                                    </Button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+                        </TabsContent>
+
                         <TabsContent value="analytics" className="space-y-4">
                             <div className="text-center py-12">
                                 <BarChart3 className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
@@ -630,7 +860,7 @@ export default function ProductManagementTab() {
                     </Tabs>
                 </CardContent>
             </Card>
-            
+
             {/* Modals */}
             <ProductViewModal
                 product={selectedProduct}
@@ -651,6 +881,23 @@ export default function ProductManagementTab() {
                 open={deleteModalOpen}
                 onClose={() => setDeleteModalOpen(false)}
                 onDelete={handleProductDeletion}
+            />
+
+            {/* Combo Modals */}
+            <ComboFormModal
+                combo={selectedCombo}
+                open={comboFormModalOpen}
+                onClose={() => setComboFormModalOpen(false)}
+                onSave={handleSaveCombo}
+                mode={comboFormMode}
+                allProducts={products}
+            />
+
+            <ComboDeleteModal
+                combo={selectedCombo}
+                open={comboDeleteModalOpen}
+                onClose={() => setComboDeleteModalOpen(false)}
+                onDelete={handleComboDeletion}
             />
         </div>
     );

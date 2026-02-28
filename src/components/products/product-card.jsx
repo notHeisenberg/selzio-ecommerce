@@ -281,18 +281,18 @@ export function ProductCard({ product, index = 0, animationEnabled = true }) {
     if (!product?.sizes || product.sizes.length === 0) {
       return null;
     }
-    
+
     const prices = product.sizes
       .map(size => size.price)
       .filter(price => price != null && !isNaN(price));
-    
+
     if (prices.length === 0) {
       return null;
     }
-    
+
     const minPrice = Math.min(...prices);
     const maxPrice = Math.max(...prices);
-    
+
     return { minPrice, maxPrice };
   };
 
@@ -334,7 +334,9 @@ export function ProductCard({ product, index = 0, animationEnabled = true }) {
               {product.discount > 0 && (
                 <div className="absolute bottom-3 left-2 z-10">
                   <div className="bg-black/70 text-white text-xs font-medium px-3 py-1.5 shadow-sm">
-                    -{product.discount}% OFF
+                    Save {product.discountAmount
+                      ? Math.round(product.discountAmount)
+                      : Math.round(product.price * product.discount / 100)} ৳
                   </div>
                 </div>
               )}
