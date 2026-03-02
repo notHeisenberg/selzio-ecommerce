@@ -108,7 +108,7 @@ export function CombinedCollectionsSection() {
                   <Link href={category.href} className="block">
                     <div className="card-wrapper">
                       <div className="card group">
-                        <div className="relative overflow-hidden min-h-[300px] bg-white dark:bg-gray-800">
+                        <div className="relative overflow-hidden">
                           {/* Discount Badge */}
                           {category.discount > 0 && (
                             <div className="absolute top-3 right-3 z-10">
@@ -118,8 +118,8 @@ export function CombinedCollectionsSection() {
                             </div>
                           )}
 
-                          {/* Card Media with stable dimensions */}
-                          <div className="card__media h-[300px] w-full relative">
+                          {/* Card Media - fixed height, full width, no crop */}
+                          <div className="card__media h-[380px] w-full relative overflow-hidden">
                             {imageErrors[category.id] ? (
                               // Placeholder when image fails to load
                               <div className="w-full h-full flex items-center justify-center bg-gray-200 dark:bg-gray-700">
@@ -136,8 +136,8 @@ export function CombinedCollectionsSection() {
                                     alt={category.name}
                                     fill
                                     priority={index < 3}
-                                    className="object-cover"
-                                    sizes="(min-width: 1200px) 366px, (min-width: 750px) calc((100vw - 10rem) / 2), calc(100vw - 3rem)"
+                                    className="object-cover object-center"
+                                    sizes="(min-width: 1200px) 450px, (min-width: 750px) calc((100vw - 10rem) / 2), calc(100vw - 3rem)"
                                     onError={() => handleImageError(category.id)}
                                   />
                                 </div>

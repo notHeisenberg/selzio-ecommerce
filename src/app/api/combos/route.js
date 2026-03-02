@@ -42,6 +42,9 @@ export async function GET(req) {
       image: 1,
       images: 1,
       products: 1,
+      productOptions: 1,
+      suggestedCombinations: 1,
+      discountPercentage: 1,
       featured: 1,
       createdAt: 1
     };

@@ -5,55 +5,13 @@ import { Button } from '@/components/ui/button';
 import { ProductCard } from '@/components/products/product-card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ArrowRight } from 'lucide-react';
-import { useEffect, useState } from 'react';
-import { getProducts } from '@/data/products';
+import { useAppData } from '@/providers/data-provider';
 
 export function TopSellingSection() {
-  const [topSellingProducts, setTopSellingProducts] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
+  const { topSellingProducts, loading, initialized } = useAppData();
 
-  // Function to load top selling products
-  const loadTopSellingProducts = async () => {
-    try {
-      setLoading(true);
-      setError(null);
-      
-      // Use getProducts() from @/data/products which has built-in cache invalidation
-      const products = await getProducts();
-      
-      // Sort by sales and get top 4
-      const sortedProducts = products
-        .filter(p => p.stock > 0)
-        .sort((a, b) => (b.sales || 0) - (a.sales || 0))
-        .slice(0, 4);
-      
-      setTopSellingProducts(sortedProducts);
-    } catch (err) {
-      console.error('Failed to load top selling products:', err);
-      setError('Failed to load products. Please try again later.');
-    } finally {
-      setLoading(false);
-    }
-  };
-  
-  // Load products on mount and listen for cache invalidation events
-  useEffect(() => {
-    loadTopSellingProducts();
-    
-    // Listen for cache invalidation events to refresh homepage data
-    const handleProductsCacheInvalidated = () => {
-      // Reload products when cache is invalidated
-      loadTopSellingProducts();
-    };
-    
-    window.addEventListener('products-cache-invalidated', handleProductsCacheInvalidated);
-    
-    // Cleanup listener
-    return () => {
-      window.removeEventListener('products-cache-invalidated', handleProductsCacheInvalidated);
-    };
-  }, []);
+  // Use data from the provider — no separate API call needed
+  const displayProducts = topSellingProducts?.slice(0, 8) || [];
 
   // Skeleton loader for loading state
   const ProductSkeleton = () => (
@@ -74,21 +32,15 @@ export function TopSellingSection() {
           </h2>
         </div>
 
-        {error && (
-          <div className="text-center text-red-500 mb-8">
-            {error}
-          </div>
-        )}
-
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
-          {loading ? (
+          {(loading || !initialized) ? (
             // Show skeletons when loading
             Array(4).fill(0).map((_, index) => (
               <ProductSkeleton key={index} />
             ))
           ) : (
             // Show products when loaded
-            topSellingProducts.map((product, index) => (
+            displayProducts.map((product, index) => (
               <ProductCard
                 key={product.productCode}
                 product={product}
@@ -109,4 +61,4 @@ export function TopSellingSection() {
       </div>
     </section>
   );
-} 
+}

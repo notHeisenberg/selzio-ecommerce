@@ -19,40 +19,40 @@ export function Hero() {
 
   // Button hover animation variants
   const buttonVariants = {
-    initial: { 
+    initial: {
       scale: 1,
       boxShadow: "0px 0px 0px rgba(0,0,0,0)"
     },
-    hover: { 
+    hover: {
       scale: 1.05,
       boxShadow: "0px 5px 15px rgba(0,0,0,0.1)",
-      transition: { 
+      transition: {
         type: "spring",
         stiffness: 400,
         damping: 10
       }
     },
-    tap: { 
+    tap: {
       scale: 0.98
     }
   };
 
   return (
-    <div className="relative w-full overflow-hidden h-[300px] md:h-[500px] lg:h-[550px]">
+    <div className="relative w-full overflow-hidden h-[300px] md:h-[500px] lg:h-[650px]">
       {/* Background Image with Overlay */}
       <div className="absolute inset-0">
         <Image
-          src="/images/cp.jpg"
+          src="/images/banner_ramadan.png"
           alt="Hero background"
           fill
-          className="sm:object-cover object-contain h-full w-full"
+          className="sm:object-cover object-cover h-full w-full"
           priority
         />
       </div>
 
       {/* Content */}
       <div className="relative h-full container mx-auto px-4 flex items-end md:pb-6 pb-2 justify-center">
-        <motion.div 
+        <motion.div
           className="text-center mb-2 sm:mb-4"
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -67,8 +67,8 @@ export function Hero() {
                   whileHover="hover"
                   whileTap="tap"
                 >
-                  <Button 
-                    asChild 
+                  <Button
+                    asChild
                     className="bg-transparent border border-white text-white hover:bg-white/10 rounded-none py-4 px-8 sm:py-4 sm:px-12 md:py-6 md:px-16 text-base md:text-lg transition-all duration-300 hover:border-2"
                   >
                     <Link href="/store" className="flex items-center">
@@ -92,8 +92,8 @@ export function Hero() {
                   whileHover="hover"
                   whileTap="tap"
                 >
-                  <Button 
-                    asChild 
+                  <Button
+                    asChild
                     className="bg-transparent text-gray-800 hover:bg-gray-800/10 border border-gray-800 rounded-none py-4 px-8 sm:py-5 sm:px-12 md:py-6 md:px-16 text-base md:text-lg transition-all duration-300 hover:border-2"
                   >
                     <Link href="/store" className="flex items-center">
@@ -113,7 +113,7 @@ export function Hero() {
           </div>
         </motion.div>
       </div>
-      
+
       {/* Scroll Indicator - Only visible on mobile */}
       {/* <motion.div 
         className="absolute bottom-2 left-0 right-0 flex justify-center sm:hidden"

@@ -1,15 +1,18 @@
 "use client";
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
+import { roundToNext10 } from '@/lib/utils';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Command, CommandInput, CommandList, CommandEmpty, CommandGroup, CommandItem } from '@/components/ui/command';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
 import { useToast } from '@/hooks/use-toast';
-import { Plus, Edit, Save, X, Upload, AlertCircle, Trash2, Package, Sparkles } from 'lucide-react';
+import { Plus, Edit, Save, X, Upload, AlertCircle, Trash2, Package, Sparkles, ChevronDown, Check } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 // Pre-built suggestion combo templates
@@ -36,6 +39,7 @@ export default function ComboFormModal({ combo, open, onClose, onSave, mode = 'a
         name: '',
         description: '',
         price: '',
+        discountPercentage: '',
         featured: false,
         image: '',
     });
@@ -45,6 +49,8 @@ export default function ComboFormModal({ combo, open, onClose, onSave, mode = 'a
     const [loading, setLoading] = useState(false);
     const [errors, setErrors] = useState({});
     const [mainImageUploading, setMainImageUploading] = useState(false);
+    const [openProductPopover, setOpenProductPopover] = useState({});
+    const [productSearchQueries, setProductSearchQueries] = useState({});
     const { toast } = useToast();
 
     const isEditMode = mode === 'edit' && combo;
@@ -55,6 +61,7 @@ export default function ComboFormModal({ combo, open, onClose, onSave, mode = 'a
                 name: combo.name || '',
                 description: combo.description || '',
                 price: combo.price?.toString() || '',
+                discountPercentage: combo.discountPercentage?.toString() || '',
                 featured: combo.featured || false,
                 image: Array.isArray(combo.image) ? combo.image[0] : combo.image || '',
             });
@@ -101,6 +108,7 @@ export default function ComboFormModal({ combo, open, onClose, onSave, mode = 'a
                 name: '',
                 description: '',
                 price: '',
+                discountPercentage: '',
                 featured: false,
                 image: '',
             });
@@ -154,10 +162,13 @@ export default function ComboFormModal({ combo, open, onClose, onSave, mode = 'a
             const prices = processedSizeDiscounts.map(sd => sd.comboPrice).filter(p => p > 0);
             const saves = processedSizeDiscounts.map(sd => sd.saveAmount).filter(s => s > 0);
 
+            const discountPct = parseFloat(formData.discountPercentage) || 0;
+
             const comboData = {
                 name: formData.name,
                 description: formData.description,
                 price: parseFloat(formData.price),
+                discountPercentage: discountPct,
                 featured: formData.featured,
                 image: processedImage,
                 images: processedImage,
@@ -197,6 +208,23 @@ export default function ComboFormModal({ combo, open, onClose, onSave, mode = 'a
         }
     };
 
+    // Auto-recalculate size combo prices when discount percentage or base price changes
+    const recalculateSizePrices = useCallback(() => {
+        const basePrice = parseFloat(formData.price);
+        const discountPct = parseFloat(formData.discountPercentage);
+        if (!basePrice || !discountPct || discountPct <= 0) return;
+
+        setSizeDiscounts(prev => prev.map(sd => {
+            const discounted = roundToNext10(basePrice * (1 - discountPct / 100));
+            const save = basePrice - discounted;
+            return {
+                ...sd,
+                comboPrice: discounted.toString(),
+                saveAmount: save > 0 ? save.toString() : '0',
+            };
+        }));
+    }, [formData.price, formData.discountPercentage]);
+
     // --- Combo Products ---
     const addComboProduct = () => {
         setComboProducts(prev => [...prev, { productCode: '', name: '', image: '' }]);
@@ -225,6 +253,17 @@ export default function ComboFormModal({ combo, open, onClose, onSave, mode = 'a
         }
     };
 
+    // Handle typing a custom product name (not from database)
+    const handleCustomProductName = (index, customName) => {
+        setComboProducts(prev => prev.map((p, i) =>
+            i === index ? {
+                productCode: customName.toLowerCase().replace(/\s+/g, '-'),
+                name: customName,
+                image: '',
+            } : p
+        ));
+    };
+
     // --- Suggestion Combos ---
     const addSuggestion = () => {
         setSuggestedCombinations(prev => [...prev, { name: '', products: [], sizes: [] }]);
@@ -244,8 +283,7 @@ export default function ComboFormModal({ combo, open, onClose, onSave, mode = 'a
         setSuggestedCombinations(prev => prev.map((s, i) =>
             i === suggestionIndex ? {
                 ...s,
-                products: [...s.products, ''],
-                sizes: [...s.sizes, '']
+                products: [...s.products, '']
             } : s
         ));
     };
@@ -272,8 +310,7 @@ export default function ComboFormModal({ combo, open, onClose, onSave, mode = 'a
         setSuggestedCombinations(prev => prev.map((s, i) =>
             i === suggestionIndex ? {
                 ...s,
-                products: s.products.filter((_, j) => j !== productIndex),
-                sizes: s.sizes.filter((_, j) => j !== productIndex)
+                products: s.products.filter((_, j) => j !== productIndex)
             } : s
         ));
     };
@@ -519,6 +556,35 @@ export default function ComboFormModal({ combo, open, onClose, onSave, mode = 'a
                                                 <p className="text-xs text-muted-foreground">Original price before any discount</p>
                                             </div>
 
+                                            {/* Discount Percentage */}
+                                            <div className="space-y-2">
+                                                <Label htmlFor="discountPercentage">Discount Percentage (%)</Label>
+                                                <div className="flex gap-2">
+                                                    <Input
+                                                        id="discountPercentage"
+                                                        type="number"
+                                                        min="0"
+                                                        max="100"
+                                                        step="1"
+                                                        value={formData.discountPercentage}
+                                                        onChange={(e) => handleInputChange('discountPercentage', e.target.value)}
+                                                        placeholder="e.g., 15"
+                                                        className="flex-1"
+                                                    />
+                                                    <Button
+                                                        type="button"
+                                                        size="sm"
+                                                        variant="outline"
+                                                        onClick={recalculateSizePrices}
+                                                        disabled={!formData.price || !formData.discountPercentage}
+                                                        className="whitespace-nowrap"
+                                                    >
+                                                        Apply to Sizes
+                                                    </Button>
+                                                </div>
+                                                <p className="text-xs text-muted-foreground">Discount % off base price. Click "Apply to Sizes" to auto-fill combo prices (rounded to nearest ৳10).</p>
+                                            </div>
+
                                             {/* Size Discounts Table */}
                                             <div className="space-y-3 pt-2">
                                                 <div className="flex items-center justify-between">
@@ -668,35 +734,91 @@ export default function ComboFormModal({ combo, open, onClose, onSave, mode = 'a
                                                         >
                                                             {/* Product image thumbnail */}
                                                             <div className="w-12 h-12 rounded-md overflow-hidden bg-gray-100 dark:bg-gray-800 border flex-shrink-0">
-                                                                {cp.image ? (
-                                                                    <img src={cp.image} alt={cp.name} className="w-full h-full object-cover" />
-                                                                ) : (
-                                                                    <div className="w-full h-full flex items-center justify-center">
-                                                                        <Package className="h-4 w-4 text-gray-400" />
-                                                                    </div>
-                                                                )}
+                                                                <img
+                                                                    src={cp.image || '/images/product-placeholder.png'}
+                                                                    alt={cp.name || 'Product'}
+                                                                    className="w-full h-full object-cover"
+                                                                    onError={(e) => { e.target.src = '/images/product-placeholder.png'; }}
+                                                                />
                                                             </div>
 
-                                                            {/* Product selector */}
+                                                            {/* Searchable product selector */}
                                                             <div className="flex-1 min-w-0">
-                                                                <Select
-                                                                    value={cp.productCode || undefined}
-                                                                    onValueChange={(value) => handleProductSelect(index, value)}
+                                                                <Popover
+                                                                    open={openProductPopover[index] || false}
+                                                                    onOpenChange={(open) => {
+                                                                        setOpenProductPopover(prev => ({ ...prev, [index]: open }));
+                                                                        if (!open) setProductSearchQueries(prev => ({ ...prev, [index]: '' }));
+                                                                    }}
+                                                                    modal={true}
                                                                 >
-                                                                    <SelectTrigger className="h-9">
-                                                                        <SelectValue placeholder="Choose a product" />
-                                                                    </SelectTrigger>
-                                                                    <SelectContent>
-                                                                        {allProducts.map(product => (
-                                                                            <SelectItem key={product.productCode} value={product.productCode}>
-                                                                                {product.name}
-                                                                            </SelectItem>
-                                                                        ))}
-                                                                    </SelectContent>
-                                                                </Select>
-                                                                {cp.name && (
-                                                                    <p className="text-xs text-muted-foreground mt-1 truncate">{cp.name}</p>
-                                                                )}
+                                                                    <PopoverTrigger asChild>
+                                                                        <Button
+                                                                            type="button"
+                                                                            variant="outline"
+                                                                            role="combobox"
+                                                                            className="h-9 w-full justify-between font-normal text-sm"
+                                                                        >
+                                                                            <span className="truncate">
+                                                                                {cp.name || 'Search or type product name...'}
+                                                                            </span>
+                                                                            <ChevronDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                                                                        </Button>
+                                                                    </PopoverTrigger>
+                                                                    <PopoverContent className="w-[300px] p-0" align="start" onWheel={(e) => e.stopPropagation()} onOpenAutoFocus={(e) => e.preventDefault()}>
+                                                                        <Command shouldFilter={true}>
+                                                                            <CommandInput
+                                                                                placeholder="Type product name..."
+                                                                                onValueChange={(value) => setProductSearchQueries(prev => ({ ...prev, [index]: value }))}
+                                                                            />
+                                                                            <CommandList>
+                                                                                <CommandEmpty>
+                                                                                    {productSearchQueries[index] ? (
+                                                                                        <button
+                                                                                            type="button"
+                                                                                            className="w-full text-left px-2 py-2 text-sm hover:bg-accent rounded cursor-pointer"
+                                                                                            onClick={() => {
+                                                                                                handleCustomProductName(index, productSearchQueries[index]);
+                                                                                                setOpenProductPopover(prev => ({ ...prev, [index]: false }));
+                                                                                                setProductSearchQueries(prev => ({ ...prev, [index]: '' }));
+                                                                                            }}
+                                                                                        >
+                                                                                            <span className="text-primary font-medium">+ Add &quot;{productSearchQueries[index]}&quot;</span>
+                                                                                            <span className="block text-xs text-muted-foreground">as custom product name</span>
+                                                                                        </button>
+                                                                                    ) : (
+                                                                                        <span>Type to search or add a custom name</span>
+                                                                                    )}
+                                                                                </CommandEmpty>
+                                                                                <CommandGroup>
+                                                                                    {allProducts.map(product => (
+                                                                                        <CommandItem
+                                                                                            key={product.productCode}
+                                                                                            value={product.name}
+                                                                                            onSelect={() => {
+                                                                                                handleProductSelect(index, product.productCode);
+                                                                                                setOpenProductPopover(prev => ({ ...prev, [index]: false }));
+                                                                                                setProductSearchQueries(prev => ({ ...prev, [index]: '' }));
+                                                                                            }}
+                                                                                            className="flex items-center gap-2"
+                                                                                        >
+                                                                                            <img
+                                                                                                src={Array.isArray(product.image) ? product.image[0] : product.image || '/images/product-placeholder.png'}
+                                                                                                alt={product.name}
+                                                                                                className="w-6 h-6 rounded object-cover flex-shrink-0"
+                                                                                                onError={(e) => { e.target.src = '/images/product-placeholder.png'; }}
+                                                                                            />
+                                                                                            <span className="truncate flex-1">{product.name}</span>
+                                                                                            {cp.productCode === product.productCode && (
+                                                                                                <Check className="h-4 w-4 text-primary flex-shrink-0" />
+                                                                                            )}
+                                                                                        </CommandItem>
+                                                                                    ))}
+                                                                                </CommandGroup>
+                                                                            </CommandList>
+                                                                        </Command>
+                                                                    </PopoverContent>
+                                                                </Popover>
                                                             </div>
 
                                                             {/* Remove button */}
@@ -730,13 +852,13 @@ export default function ComboFormModal({ combo, open, onClose, onSave, mode = 'a
                                 >
                                     <div className="flex items-center justify-between">
                                         <div>
-                                            <h3 className="font-semibold text-gray-900 dark:text-gray-100">Suggestion Combos</h3>
+                                            <h3 className="font-semibold text-gray-900 dark:text-gray-100">Sub-Combos</h3>
                                             <p className="text-xs text-muted-foreground mt-1">
-                                                Pre-built combos users can quick-select on the storefront
+                                                Pre-built product sets users can quick-select. Products are chosen from this combo&apos;s product list above.
                                             </p>
                                         </div>
                                         <Button type="button" size="sm" onClick={addSuggestion} variant="outline">
-                                            <Plus className="h-4 w-4 mr-1" /> Add Suggestion
+                                            <Plus className="h-4 w-4 mr-1" /> Add Sub-Combo
                                         </Button>
                                     </div>
 
@@ -753,7 +875,7 @@ export default function ComboFormModal({ combo, open, onClose, onSave, mode = 'a
                                                         <Input
                                                             value={suggestion.name}
                                                             onChange={(e) => updateSuggestionName(sIndex, e.target.value)}
-                                                            placeholder="Suggestion name (e.g., Classic Mix)"
+                                                            placeholder="Sub-combo name (e.g., Luxury, Oud & Spicy)"
                                                             className="h-8 text-sm flex-1"
                                                         />
                                                         <Button
@@ -775,22 +897,16 @@ export default function ComboFormModal({ combo, open, onClose, onSave, mode = 'a
                                                                     onValueChange={(value) => updateSuggestionProduct(sIndex, pIndex, value)}
                                                                 >
                                                                     <SelectTrigger className="h-8 text-xs flex-1">
-                                                                        <SelectValue placeholder="Select product" />
+                                                                        <SelectValue placeholder="Select product from combo" />
                                                                     </SelectTrigger>
                                                                     <SelectContent>
-                                                                        {allProducts.map(product => (
+                                                                        {comboProducts.filter(p => p.productCode).map(product => (
                                                                             <SelectItem key={product.productCode} value={product.productCode}>
-                                                                                {product.name}
+                                                                                {product.name || product.productCode}
                                                                             </SelectItem>
                                                                         ))}
                                                                     </SelectContent>
                                                                 </Select>
-                                                                <Input
-                                                                    value={suggestion.sizes[pIndex] || ''}
-                                                                    onChange={(e) => updateSuggestionSize(sIndex, pIndex, e.target.value)}
-                                                                    placeholder="Size"
-                                                                    className="h-8 text-xs w-20"
-                                                                />
                                                                 <Button
                                                                     type="button"
                                                                     size="sm"
@@ -809,7 +925,7 @@ export default function ComboFormModal({ combo, open, onClose, onSave, mode = 'a
                                                             onClick={() => addProductToSuggestion(sIndex)}
                                                             className="text-xs h-7"
                                                         >
-                                                            <Plus className="h-3 w-3 mr-1" /> Add Product to Suggestion
+                                                            <Plus className="h-3 w-3 mr-1" /> Add Product
                                                         </Button>
                                                     </div>
                                                 </motion.div>

@@ -12,7 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Badge } from '@/components/ui/badge';
 import { getComboByCode } from '@/data/combos';
 import { getProductByCode } from '@/data/products';
-import { formatPrice, getDiscountedPrice } from '@/lib/utils';
+import { formatPrice, getDiscountedPrice, roundToNext10 } from '@/lib/utils';
 import ComboImageGallery from './ComboImageGallery';
 import { motion } from 'framer-motion';
 
@@ -31,6 +31,7 @@ export default function ComboDetail({ comboCode }) {
   const [selectedSize, setSelectedSize] = useState(''); // Single size for all products
   const [suggestedCombinations, setSuggestedCombinations] = useState([]);
   const [allProductDetails, setAllProductDetails] = useState([]); // All available products
+  const [selectedPrebuilt, setSelectedPrebuilt] = useState(null); // Track which pre-built combo is selected
   const { toast } = useToast();
   const { addToCart } = useCart();
 
@@ -47,23 +48,65 @@ export default function ComboDetail({ comboCode }) {
           // Fetch all product details
           const productDetails = await Promise.all(
             data.productOptions.map(async (productCode) => {
-              const product = await getProductByCode(productCode);
-              if (product && data.productImages && data.productImages[productCode]) {
-                product.comboSpecificImage = data.productImages[productCode];
-              }
-              return product;
+              try {
+                const product = await getProductByCode(productCode);
+                if (product) {
+                  if (data.productImages && data.productImages[productCode]) {
+                    product.comboSpecificImage = data.productImages[productCode];
+                  }
+                  return product;
+                }
+              } catch { }
+              // Custom or not found — use combo's stored product info
+              const stored = data.products?.find(p => p.productCode === productCode);
+              return {
+                productCode,
+                name: stored?.name || productCode,
+                image: stored?.image || '/images/product-placeholder.png',
+                sizes: [],
+              };
             })
           );
 
           setAllProductDetails(productDetails.filter(Boolean));
 
-          // Create suggested combinations
+          // Set initial selections — use suggestedCombinations first product set if available
           const suggestions = data.suggestedCombinations || [];
           setSuggestedCombinations(suggestions);
 
-          // Set initial selections to the first 3 products
-          if (productDetails.length > 0) {
-            const initialSelections = productDetails.filter(Boolean).slice(0, 3);
+          if (suggestions.length > 0 && suggestions[0].products?.length > 0) {
+            // Auto-select the first pre-built combo
+            const firstSuggestionProducts = await Promise.all(
+              suggestions[0].products.map(async (productCode) => {
+                try {
+                  const product = await getProductByCode(productCode);
+                  if (product) {
+                    if (data.productImages && data.productImages[productCode]) {
+                      product.comboSpecificImage = data.productImages[productCode];
+                    }
+                    return product;
+                  }
+                } catch { }
+                // Custom or not found — use combo's stored product info
+                const stored = data.products?.find(p => p.productCode === productCode);
+                return {
+                  productCode,
+                  name: stored?.name || productCode,
+                  image: stored?.image || '/images/product-placeholder.png',
+                  sizes: [],
+                };
+              })
+            );
+            setSelectedProducts(firstSuggestionProducts.filter(Boolean));
+            setSelectedPrebuilt(0);
+
+            // Initialize size from sizeDiscounts if available
+            if (data.sizeDiscounts && data.sizeDiscounts.length > 0) {
+              setSelectedSize(data.sizeDiscounts[0].size);
+            }
+          } else if (productDetails.length > 0) {
+            // Fallback: select all products
+            const initialSelections = productDetails.filter(Boolean);
             setSelectedProducts(initialSelections);
 
             // Initialize size from sizeDiscounts if available, otherwise from products
@@ -124,15 +167,28 @@ export default function ComboDetail({ comboCode }) {
     try {
       const products = await Promise.all(
         suggestion.products.map(async (productCode) => {
-          const product = await getProductByCode(productCode);
-          if (product && combo.productImages && combo.productImages[productCode]) {
-            product.comboSpecificImage = combo.productImages[productCode];
-          }
-          return product;
+          try {
+            const product = await getProductByCode(productCode);
+            if (product) {
+              if (combo.productImages && combo.productImages[productCode]) {
+                product.comboSpecificImage = combo.productImages[productCode];
+              }
+              return product;
+            }
+          } catch { }
+          // Custom or not found — use combo's stored product info
+          const stored = combo.products?.find(p => p.productCode === productCode);
+          return {
+            productCode,
+            name: stored?.name || productCode,
+            image: stored?.image || '/images/product-placeholder.png',
+            sizes: [],
+          };
         })
       );
 
       setSelectedProducts(products.filter(Boolean));
+      setSelectedPrebuilt(suggestedCombinations.indexOf(suggestion));
 
       // Set the single size from the suggestion (use first size)
       if (suggestion.sizes && suggestion.sizes.length > 0) {
@@ -161,13 +217,18 @@ export default function ComboDetail({ comboCode }) {
     if (combo.sizeDiscounts && combo.sizeDiscounts.length > 0 && selectedSize) {
       const sizeEntry = combo.sizeDiscounts.find(sd => sd.size === selectedSize);
       if (sizeEntry && sizeEntry.comboPrice > 0) {
-        return sizeEntry.comboPrice;
+        return roundToNext10(sizeEntry.comboPrice);
       }
+    }
+
+    // If discountPercentage exists, calculate from base price
+    if (combo.discountPercentage > 0 && combo.price) {
+      return roundToNext10(combo.price * (1 - combo.discountPercentage / 100));
     }
 
     // Fallback: If there's a set combo price with discount, use that
     if (combo.price && combo.discount) {
-      return getDiscountedPrice(combo.price, combo.discount);
+      return roundToNext10(getDiscountedPrice(combo.price, combo.discount));
     }
 
     return combo.price || 0;
@@ -214,13 +275,13 @@ export default function ComboDetail({ comboCode }) {
 
   // Add combo to cart
   const handleAddToCart = () => {
-    const isComplete = selectedProducts.length === 3 &&
+    const isComplete = selectedProducts.length > 0 &&
       selectedProducts.every(product => product && product.productCode);
 
     if (!isComplete) {
       toast({
         title: "Incomplete Selection",
-        description: "Please select all 3 products for the combo.",
+        description: "Please select products for the combo.",
         variant: "destructive"
       });
       return;
@@ -324,22 +385,13 @@ export default function ComboDetail({ comboCode }) {
               {combo.sizeDiscounts && combo.sizeDiscounts.length > 0 ? (
                 <>
                   <span className="text-2xl font-medium">
-                    {formatPrice(calculateComboPrice())}
+                    {formatPrice(calculateComboPrice())} BDT
                   </span>
-                  {currentSaveAmount > 0 && (
-                    <Badge className="ml-2 rounded-md bg-black/80 text-white dark:bg-white/90 dark:text-black">
-                      Save {currentSaveAmount} ৳
+                  {combo.discountPercentage > 0 && (
+                    <Badge className="ml-1 rounded-md bg-red-500 text-white">
+                      {combo.discountPercentage}% OFF
                     </Badge>
                   )}
-                </>
-              ) : combo.discount > 0 ? (
-                <>
-                  <span className="text-lg line-through text-muted-foreground font-medium">
-                    {formatPrice(combo.price)}
-                  </span>
-                  <span className="text-2xl font-medium">
-                    {formatPrice(calculateComboPrice())}
-                  </span>
                   {currentSaveAmount > 0 && (
                     <Badge className="ml-2 rounded-md bg-black/80 text-white dark:bg-white/90 dark:text-black">
                       Save {currentSaveAmount} ৳
@@ -399,16 +451,19 @@ export default function ComboDetail({ comboCode }) {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.5, delay: 0.3 }}
               >
-                <h3 className="text-lg font-medium mb-3">Suggested Combinations</h3>
+                <h3 className="text-lg font-medium mb-3">Pre-built Combos</h3>
                 <div className="flex flex-wrap gap-2">
                   {suggestedCombinations.map((suggestion, index) => (
                     <Button
                       key={index}
-                      variant="outline"
+                      variant={selectedPrebuilt === index ? 'default' : 'outline'}
                       onClick={() => handleSuggestionSelect(suggestion)}
-                      className="rounded-none hover:bg-secondary/80 transition-all duration-300"
+                      className={`rounded-none transition-all duration-300 ${selectedPrebuilt === index
+                        ? 'ring-2 ring-primary ring-offset-2'
+                        : 'hover:bg-secondary/80'
+                        }`}
                     >
-                      {suggestion.name || `Suggestion ${index + 1}`}
+                      {suggestion.name || `Combo ${index + 1}`}
                     </Button>
                   ))}
                 </div>
@@ -424,8 +479,7 @@ export default function ComboDetail({ comboCode }) {
             >
               <h3 className="text-lg font-medium mb-3">Select Your Products</h3>
 
-              {[0, 1, 2].map((slotIndex) => {
-                const selectedProduct = selectedProducts[slotIndex];
+              {selectedProducts.map((selectedProduct, slotIndex) => {
 
                 return (
                   <motion.div
@@ -446,9 +500,10 @@ export default function ComboDetail({ comboCode }) {
                             >
                               <div className="aspect-square relative rounded-md overflow-hidden border">
                                 <img
-                                  src={selectedProduct.comboSpecificImage || getFirstImage(selectedProduct.image || selectedProduct.images?.[0])}
+                                  src={selectedProduct.comboSpecificImage || getFirstImage(selectedProduct.image || selectedProduct.images?.[0]) || '/images/product-placeholder.png'}
                                   alt={selectedProduct.name}
                                   className="object-cover w-full h-full"
+                                  onError={(e) => { e.target.src = '/images/product-placeholder.png'; }}
                                 />
                               </div>
                             </motion.div>

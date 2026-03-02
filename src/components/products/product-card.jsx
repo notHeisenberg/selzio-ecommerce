@@ -473,25 +473,39 @@ export function ProductCard({ product, index = 0, animationEnabled = true }) {
           <div className="flex justify-between gap-2">
             {/* Price information */}
             <div className="flex items-center gap-2 mt-2">
-              {product.discount > 0 ? (
+              {priceRange && priceRange.minPrice !== priceRange.maxPrice ? (
+                // Size-based pricing with different prices
+                <>
+                  <span className="text-sm font-medium text-rose-500">
+                    {product.discount > 0
+                      ? `Start from ${Math.round(priceRange.minPrice * (1 - product.discount / 100))} to ${Math.round(priceRange.maxPrice * (1 - product.discount / 100))} BDT`
+                      : `Start from ${priceRange.minPrice} to ${priceRange.maxPrice} BDT`
+                    }
+                  </span>
+                  {product.discount > 0 && (
+                    <span className="text-xs line-through text-neutral-500 dark:text-neutral-400">
+                      {priceRange.minPrice} - {priceRange.maxPrice} BDT
+                    </span>
+                  )}
+                </>
+              ) : product.discount > 0 ? (
+                // Single price with discount
                 <>
                   <span className="text-sm font-medium text-rose-500">
                     {priceRange
-                      ? `Starting from ৳${Math.round(priceRange.minPrice * (1 - product.discount / 100))} to ৳${Math.round(priceRange.maxPrice * (1 - product.discount / 100))}`
+                      ? `${Math.round(priceRange.minPrice * (1 - product.discount / 100))} BDT`
                       : `${discountedPrice} BDT`
                     }
                   </span>
                   <span className="text-xs line-through text-neutral-500 dark:text-neutral-400">
-                    {priceRange
-                      ? `৳${priceRange.minPrice} - ৳${priceRange.maxPrice}`
-                      : `${originalPrice} BDT`
-                    }
+                    {priceRange ? `${priceRange.minPrice} BDT` : `${originalPrice} BDT`}
                   </span>
                 </>
               ) : (
+                // Single price, no discount
                 <span className="text-sm font-medium text-rose-500">
                   {priceRange
-                    ? `Starting from ৳${priceRange.minPrice} to ৳${priceRange.maxPrice}`
+                    ? `${priceRange.minPrice} BDT`
                     : product.price
                       ? `${product.price} BDT`
                       : 'Price not available'

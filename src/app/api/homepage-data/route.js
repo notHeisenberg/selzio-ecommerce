@@ -37,6 +37,7 @@ export async function GET(req) {
               images: 1,
               stock: 1,
               topSelling: 1,
+              sales: 1,
               category: 1,
               subcategory: 1,
               featured: 1
@@ -44,7 +45,7 @@ export async function GET(req) {
           }
         )
         .sort({ topSelling: -1, createdAt: -1 }) // Index-optimized sort
-        .limit(4)
+        .limit(8)
         .toArray(),
 
       // Get products for featured categories (minimal fields)
@@ -78,7 +79,11 @@ export async function GET(req) {
               image: 1,
               images: 1,
               products: 1,
-              featured: 1
+              featured: 1,
+              discountPercentage: 1,
+              sizeDiscounts: 1,
+              minComboPrice: 1,
+              maxSaveAmount: 1
             }
           }
         )

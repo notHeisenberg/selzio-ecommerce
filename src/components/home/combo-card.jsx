@@ -4,7 +4,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
 import { useState } from 'react';
-import { formatPrice, getDiscountedPrice } from '@/lib/utils';
+import { formatPrice, getDiscountedPrice, roundToNext10 } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
 
 export function ComboCard({ combo, index }) {
@@ -32,6 +32,14 @@ export function ComboCard({ combo, index }) {
         <div className="card-wrapper">
           <div className="card group">
             <div className="relative overflow-hidden min-h-[300px] bg-white dark:bg-gray-800 border border-border rounded-none">
+              {/* Discount Percentage Badge */}
+              {combo.discountPercentage > 0 && (
+                <div className="absolute top-3 right-3 z-10">
+                  <Badge className="bg-red-500 text-white text-xs px-2 py-1 font-semibold shadow-md">
+                    {combo.discountPercentage}% OFF
+                  </Badge>
+                </div>
+              )}
               {/* Card Media with stable dimensions */}
               <div className="card__media h-[300px] w-full relative">
                 {imageError ? (
@@ -85,7 +93,7 @@ export function ComboCard({ combo, index }) {
                     {combo.sizeDiscounts && combo.sizeDiscounts.length > 0 ? (
                       <>
                         <span className="text-lg font-medium text-primary">
-                          Starting from {formatPrice(combo.minComboPrice || combo.sizeDiscounts[0]?.comboPrice || combo.price)}
+                          Starting from {formatPrice(roundToNext10(combo.minComboPrice || combo.sizeDiscounts[0]?.comboPrice || combo.price))}
                         </span>
                         {(combo.maxSaveAmount > 0 || combo.sizeDiscounts.some(sd => sd.saveAmount > 0)) && (
                           <Badge variant="secondary" className="text-xs px-2 py-0.5 bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-400">
@@ -99,7 +107,7 @@ export function ComboCard({ combo, index }) {
                           {formatPrice(combo.price)}
                         </span>
                         <span className="text-lg font-medium text-primary">
-                          {formatPrice(getDiscountedPrice(combo.price, combo.discount))}
+                          {formatPrice(roundToNext10(getDiscountedPrice(combo.price, combo.discount)))}
                         </span>
                         <Badge variant="secondary" className="text-xs px-2 py-0.5 bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-400">
                           Save {combo.discountAmount ? Math.round(combo.discountAmount) : Math.round(combo.price - getDiscountedPrice(combo.price, combo.discount))} ৳

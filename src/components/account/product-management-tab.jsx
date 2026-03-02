@@ -94,7 +94,7 @@ export default function ProductManagementTab() {
             // Fetch both products and admin stats in parallel
             // Add cache busting to ensure fresh data
             const [productsResponse, statsResponse] = await Promise.all([
-                fetch('/api/products?t=' + Date.now(), {
+                fetch('/api/products?limit=500&t=' + Date.now(), {
                     headers,
                     cache: 'no-store'
                 }),
@@ -720,8 +720,8 @@ export default function ProductManagementTab() {
                                                                 })()}
                                                             </div>
                                                             <span className={`whitespace-nowrap ${product.stock === 0 ? 'text-red-600' :
-                                                                    product.stock < 50 ? 'text-yellow-600' :
-                                                                        'text-green-600'
+                                                                product.stock < 50 ? 'text-yellow-600' :
+                                                                    'text-green-600'
                                                                 }`}>
                                                                 Stock: {product.stock}
                                                                 {product.sizes && Array.isArray(product.sizes) && product.sizes.length > 0 && (

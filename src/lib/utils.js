@@ -22,3 +22,8 @@ export function getDiscountedPrice(price, discount) {
   }
   return discountedPrice;
 }
+
+// Round price up to the nearest 10 (e.g., 378 → 380, 370 → 370)
+export function roundToNext10(price) {
+  return Math.ceil(price / 10) * 10;
+}
