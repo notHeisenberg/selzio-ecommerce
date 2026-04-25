@@ -404,8 +404,13 @@ export async function POST(req) {
     const ordersCollection = await getOrdersCollection();
     const productsCollection = await getProductsCollection();
 
+    // Generate a unique order number if not provided
+    const orderNumber = orderData.orderNumber ||
+      `ORD-${Date.now()}-${Math.random().toString(36).substring(2, 7).toUpperCase()}`;
+
     const order = {
       ...orderData,
+      orderNumber,
       status: orderData.status || 'pending',
       createdAt: new Date(),
       updatedAt: new Date()
